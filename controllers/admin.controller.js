@@ -1,5 +1,6 @@
 const User = require("../models/user.model");
 const Story = require("../models/story.model");
+const bcrypt = require("bcrypt");
 
 exports.dashboard = async (req, res) => {
   try {
@@ -82,20 +83,79 @@ exports.userDetail = async (req, res) => {
 
 exports.userUpdate = async (req, res) => {
   try {
-    const { username, email, role, currency } = req.body;
+    const {
+      username,
+      email,
+      role,
+      currency,
+      totalEndingsFound,
+      storiesRead,
+      deathMedal,
+      trueMedal,
+    } = req.body;
+
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).send("User not found");
 
     user.username = username;
     user.email = email;
     user.role = role;
-    user.currency = currency;
+    user.currency = Number(currency);
+    user.totalEndingsFound = Number(totalEndingsFound);
+    user.storiesRead = Number(storiesRead);
+    user.medals.death = deathMedal;
+    user.medals.trueEnding = trueMedal;
 
     await user.save();
     res.redirect(`/admin/users/${user._id}`);
   } catch (err) {
     console.error(err);
     res.status(500).send("Error updating user");
+  }
+};
+
+exports.userResetPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).send("User not found");
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    user.passwordHash = hash;
+    await user.save();
+
+    res.redirect(`/admin/users/${user._id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error resetting password");
+  }
+};
+
+exports.userDelete = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.redirect("/admin/users");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error deleting user");
+  }
+};
+
+// show add user form
+exports.userAddForm = (req, res) => {
+  res.render("admin/userAdd", { title: "Add User" });
+};
+
+// handle add user form submission
+exports.userAddPost = async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+    const hash = await bcrypt.hash(password, 12);
+    await User.create({ username, email, passwordHash: hash, role });
+    res.redirect("/admin/users");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error creating user");
   }
 };
 

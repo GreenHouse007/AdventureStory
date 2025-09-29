@@ -7,6 +7,11 @@
 
     <% if (user) { %>
     <a href="/u/stats">My Stats</a>
+
+    <% if (user.role === 'admin') { %>
+    <a href="/admin">Admin</a>
+    <% } %>
+
     <!-- Logout as a link but still POST under the hood -->
     <form action="/logout" method="post" class="logout-form">
       <button type="submit">Logout</button>

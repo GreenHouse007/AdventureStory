@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+    <link rel="stylesheet" href="../../public/admin.css" />
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <h1 class="title">Add New User</h1>
+      <form action="/admin/users/add" method="post" class="panel stack">
+        <label>Username</label>
+        <input type="text" name="username" required />
+
+        <label>Email</label>
+        <input type="email" name="email" required />
+
+        <label>Password</label>
+        <input type="password" name="password" />
+        <!--required minlength="8"-->
+
+        <label>Role</label>
+        <select name="role">
+          <option value="user" selected>User</option>
+          <option value="admin">Admin</option>
+        </select>
+
+        <button type="submit" class="cta-button">Create User</button>
+      </form>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

@@ -1,61 +1,107 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <%- include('../partials/head') %>
+    <link rel="stylesheet" href="../../public/admin.css">
   </head>
   <body>
     <%- include('../partials/header', { user }) %>
 
+    <main class="container">
+      <div class="back-link">
+        <a href="/admin/users" class="cta-button small">← Back to Users</a>
+      </div>
 
-<main class="container">
-  <h1 class="title">Manage User</h1>
+      <h1 class="title">Manage User</h1>
 
-  <form action="/admin/users/<%= user._id %>" method="post" class="stack">
-    <label>
-      Username:
-      <input type="text" name="username" value="<%= user.username %>" required>
-    </label>
+      <!-- Main User Form -->
+      <form action="/admin/users/<%= user._id %>" method="post" class="panel form-section">
+        <fieldset>
+          <legend>Core Info</legend>
 
-    <label>
-      Email:
-      <input type="email" name="email" value="<%= user.email %>" required>
-    </label>
+          <label>Username</label>
+          <input type="text" name="username" value="<%= user.username %>" required>
 
-    <label>
-      Role:
-      <select name="role">
-        <option value="user" <%= user.role === 'user' ? 'selected' : '' %>>User</option>
-        <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>Admin</option>
-      </select>
-    </label>
+          <label>Email</label>
+          <input type="email" name="email" value="<%= user.email %>" required>
 
-    <label>
-      Currency:
-      <input type="number" name="currency" value="<%= user.currency || 0 %>">
-    </label>
+          <label>Role</label>
+          <select name="role">
+            <option value="user" <%= user.role === 'user' ? 'selected' : '' %>>User</option>
+            <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>Admin</option>
+          </select>
 
-    <button type="submit" class="cta-button">Save Changes</button>
-  </form>
+          <label>Currency</label>
+          <input type="number" name="currency" value="<%= user.currency || 0 %>">
+        </fieldset>
 
-  <section class="user-stats">
-    <h2>Progress</h2>
-    <% if (user.progress.length === 0) { %>
-      <p>No stories played yet.</p>
-    <% } else { %>
-      <ul>
-        <% user.progress.forEach(p => { %>
-          <li>
-            <strong><%= p.story.title %></strong> —
-            <%= p.endingsFound.length %> endings found
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
-  </section>
-</main>
+        <fieldset>
+          <legend>Player Stats</legend>
 
+          <label>Total Endings Found</label>
+          <input type="number" name="totalEndingsFound" value="<%= user.totalEndingsFound || 0 %>">
 
-<%- include('../partials/footer') %>
+          <label>Stories Read</label>
+          <input type="number" name="storiesRead" value="<%= user.storiesRead || 0 %>">
+
+          <label>Death Medal</label>
+          <select name="deathMedal">
+            <option value="none" <%= user.medals.death === 'none' ? 'selected' : '' %>>None</option>
+            <option value="bronze" <%= user.medals.death === 'bronze' ? 'selected' : '' %>>Bronze</option>
+            <option value="silver" <%= user.medals.death === 'silver' ? 'selected' : '' %>>Silver</option>
+            <option value="gold" <%= user.medals.death === 'gold' ? 'selected' : '' %>>Gold</option>
+            <option value="platinum" <%= user.medals.death === 'platinum' ? 'selected' : '' %>>Platinum</option>
+          </select>
+
+          <label>True Ending Medal</label>
+          <select name="trueMedal">
+            <option value="none" <%= user.medals.trueEnding === 'none' ? 'selected' : '' %>>None</option>
+            <option value="bronze" <%= user.medals.trueEnding === 'bronze' ? 'selected' : '' %>>Bronze</option>
+            <option value="silver" <%= user.medals.trueEnding === 'silver' ? 'selected' : '' %>>Silver</option>
+            <option value="gold" <%= user.medals.trueEnding === 'gold' ? 'selected' : '' %>>Gold</option>
+            <option value="platinum" <%= user.medals.trueEnding === 'platinum' ? 'selected' : '' %>>Platinum</option>
+          </select>
+        </fieldset>
+
+        <button type="submit" class="cta-button">Save Changes</button>
+      </form>
+
+      <!-- Password Reset -->
+      <form action="/admin/users/<%= user._id %>/reset-password" method="post" class="panel form-section">
+        <fieldset>
+          <legend>Reset Password</legend>
+
+          <label>New Password</label>
+          <input type="password" name="newPassword" required minlength="8">
+
+          <button type="submit" class="cta-button danger">Update Password</button>
+        </fieldset>
+      </form>
+
+      <!-- Delete User -->
+      <form action="/admin/users/<%= user._id %>/delete" method="post" class="panel form-section"
+            onsubmit="return confirm('Are you sure you want to delete this user? This cannot be undone.');">
+        <fieldset>
+          <legend>Delete User</legend>
+          <button type="submit" class="cta-button danger">Delete User</button>
+        </fieldset>
+      </form>
+
+      <!-- Progress Overview -->
+      <section class="panel form-section">
+        <h2>Progress</h2>
+        <% if (user.progress.length === 0) { %>
+          <p>No stories played yet.</p>
+        <% } else { %>
+          <ul>
+            <% user.progress.forEach(p => { %>
+              <li><strong><%= p.story.title %></strong> — <%= p.endingsFound.length %> endings found</li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </section>
+    </main>
+
+    <%- include('../partials/footer') %>
   </body>
 </html>
