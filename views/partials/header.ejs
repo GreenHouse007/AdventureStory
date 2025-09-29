@@ -1,0 +1,19 @@
+<header class="site-header">
+  <h1>Shadow Paths</h1>
+  <nav class="top-nav">
+    <a href="/">Home</a>
+    <a href="/u/library">Library</a>
+    <a href="/about">About</a>
+
+    <% if (user) { %>
+    <a href="/u/stats">My Stats</a>
+    <!-- Logout as a link but still POST under the hood -->
+    <form action="/logout" method="post" class="logout-form">
+      <button type="submit">Logout</button>
+    </form>
+    <% } else { %>
+    <a href="/login">Login</a>
+    <a href="/signup">Sign Up</a>
+    <% } %>
+  </nav>
+</header>

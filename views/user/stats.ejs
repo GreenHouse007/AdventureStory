@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <h1 class="title">Player Stats</h1>
+      <p>Welcome, <%= user.username %>!</p>
+
+      <section class="stats-summary">
+        <p>
+          <strong>Total Endings Found:</strong>
+          <%= (user && typeof user.totalEndingsFound !== 'undefined') ?
+          user.totalEndingsFound : 0 %>
+        </p>
+        <p>
+          <strong>Stories Read:</strong>
+          <%= (user && typeof user.storiesRead !== 'undefined') ?
+          user.storiesRead : 0 %>
+        </p>
+        <p>
+          <strong>Currency:</strong>
+          <%= (user && typeof user.currency !== 'undefined') ? user.currency : 0
+          %> 🪙
+        </p>
+      </section>
+
+      <section class="medals">
+        <h2>Medals</h2>
+        <p>
+          Death Medal: <%= (user && user.medals && typeof user.medals.death !==
+          'undefined') ? user.medals.death : '—' %>
+        </p>
+        <p>
+          True Ending Medal: <%= (user && user.medals && typeof
+          user.medals.trueEnding !== 'undefined') ? user.medals.trueEnding : '—'
+          %>
+        </p>
+      </section>
+
+      <section class="progress">
+        <h2>Stories Progress</h2>
+        <% if (user && Array.isArray(user.progress) && user.progress.length) {
+        %>
+        <ul>
+          <% user.progress.forEach(function(p) { %>
+          <li>
+            <strong
+              ><%= (p && p.story && p.story.title) ? p.story.title : 'Untitled'
+              %></strong
+            >
+            — <%= (p && Array.isArray(p.endingsFound)) ? p.endingsFound.length :
+            0 %> out of <%= (p && p.story && Array.isArray(p.story.endings)) ?
+            p.story.endings.length : 0 %> endings found
+          </li>
+          <% }) %>
+        </ul>
+        <% } else { %>
+        <p class="muted">No progress recorded yet.</p>
+        <% } %>
+      </section>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

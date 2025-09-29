@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <h2><%= story.title %></h2>
+
+      <% if (node.image) { %>
+      <img src="<%= node.image %>" class="node-image" alt="" />
+      <% } %>
+
+      <p><%= node.text %></p>
+
+      <div class="choices">
+        <% node.choices.forEach(choice => { %> <% if
+        (choice.nextNodeId.startsWith('ending')) { %>
+        <a
+          href="/u/play/<%= story._id %>/ending/<%= choice.nextNodeId %>"
+          class="choice-button"
+        >
+          <%= choice.label %>
+        </a>
+        <% } else { %>
+        <a
+          href="/u/play/<%= story._id %>/<%= choice.nextNodeId %>"
+          class="choice-button"
+        >
+          <%= choice.label %>
+        </a>
+        <% } %> <% }) %>
+      </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

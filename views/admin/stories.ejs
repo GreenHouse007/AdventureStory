@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <h1 class="title">Manage Stories</h1>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Endings</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% stories.forEach(s => { %>
+          <tr>
+            <td><%= s.title %></td>
+            <td><%= s.description %></td>
+            <td><%= s.endings.length %></td>
+            <td><%= s.createdAt.toDateString() %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

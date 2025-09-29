@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container library">
+      <h1 class="title">Story Library</h1>
+      <p class="muted">
+        Browse the adventures you can begin. Your choices will shape the endings
+        you find.
+      </p>
+
+      <% if (!Array.isArray(stories) || stories.length === 0) { %>
+      <div class="empty-state">
+        <p>No stories available yet. Check back soon!</p>
+      </div>
+      <% } else { %>
+      <div class="grid card-grid">
+        <% stories.forEach(function(story) { %>
+        <article class="story-card">
+          <img
+            src="<%= (story && story.coverImage) ? story.coverImage : '/images/placeholder.jpg' %>"
+            alt="Cover for <%= story && story.title ? story.title : 'Untitled' %>"
+          />
+          <div class="card-body">
+            <h2><%= story.title %></h2>
+            <p><%= story && story.description ? story.description : '' %></p>
+            <p class="muted">
+              Endings: <%= (story && Array.isArray(story.endings)) ?
+              story.endings.length : 0 %>
+            </p>
+            <a href="/u/story/<%= story._id %>" class="cta-button small"
+              >Play</a
+            >
+          </div>
+        </article>
+        <% }) %>
+      </div>
+      <% } %>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

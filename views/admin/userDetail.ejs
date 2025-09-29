@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+
+<main class="container">
+  <h1 class="title">Manage User</h1>
+
+  <form action="/admin/users/<%= user._id %>" method="post" class="stack">
+    <label>
+      Username:
+      <input type="text" name="username" value="<%= user.username %>" required>
+    </label>
+
+    <label>
+      Email:
+      <input type="email" name="email" value="<%= user.email %>" required>
+    </label>
+
+    <label>
+      Role:
+      <select name="role">
+        <option value="user" <%= user.role === 'user' ? 'selected' : '' %>>User</option>
+        <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>Admin</option>
+      </select>
+    </label>
+
+    <label>
+      Currency:
+      <input type="number" name="currency" value="<%= user.currency || 0 %>">
+    </label>
+
+    <button type="submit" class="cta-button">Save Changes</button>
+  </form>
+
+  <section class="user-stats">
+    <h2>Progress</h2>
+    <% if (user.progress.length === 0) { %>
+      <p>No stories played yet.</p>
+    <% } else { %>
+      <ul>
+        <% user.progress.forEach(p => { %>
+          <li>
+            <strong><%= p.story.title %></strong> —
+            <%= p.endingsFound.length %> endings found
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+</main>
+
+
+<%- include('../partials/footer') %>
+  </body>
+</html>

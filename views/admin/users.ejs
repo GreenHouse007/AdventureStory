@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <h1 class="title">Manage Users</h1>
+
+      <form method="get" action="/admin/users" class="search-bar">
+        <input
+          type="text"
+          name="q"
+          placeholder="Search by name or email"
+          value="<%= q %>"
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Currency</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(u => { %>
+          <tr>
+            <td><%= u.username %></td>
+            <td><%= u.email %></td>
+            <td><%= u.role %></td>
+            <td><%= u.currency || 0 %></td>
+            <td>
+              <a href="/admin/users/<%= u._id %>" class="cta-button small"
+                >View</a
+              >
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

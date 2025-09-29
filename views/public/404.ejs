@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <section class="empty-state">
+        <h1 class="title">404 — Lost in the dark</h1>
+        <p class="muted">
+          That path doesn’t exist. Perhaps the story branched elsewhere.
+        </p>
+        <a class="cta-button" href="/">Return home</a>
+      </section>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <section class="empty-state">
+        <h1 class="title">Something broke (500)</h1>
+        <% const fallbackMessage = 'An unexpected error occurred.'; %>
+        <p class="muted">
+          <%= typeof message !== 'undefined' ? message : fallbackMessage %>
+        </p>
+        <a class="cta-button" href="/">Back to safety</a>
+      </section>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

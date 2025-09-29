@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <h2><%= ending.label %></h2>
+
+      <% if (ending.image) { %>
+      <img src="<%= ending.image %>" class="ending-image" alt="" />
+      <% } %>
+
+      <p><%= ending.text %></p>
+
+      <div class="actions">
+        <a href="/u/story/<%= story._id %>" class="cta-button">Replay Story</a>
+        <a href="/u/library" class="cta-button">Back to Library</a>
+      </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

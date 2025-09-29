@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }); %>
+
+    <main class="container about">
+      <section class="page-hero">
+        <h1 class="title">About Shadow Paths</h1>
+        <p class="lead">
+          A clean, distraction-light platform for interactive, spooky-fantasy
+          stories. Your choices shape the path—your stats and trophies remember
+          the journey.
+        </p>
+      </section>
+
+      <section class="grid two-col">
+        <div>
+          <h2>What is this?</h2>
+          <p>
+            <strong>Shadow Paths</strong> is a choose-your-own-adventure site
+            with a DnD-inspired vibe. Stories are built as branching nodes, so
+            every decision can unlock new scenes, endings, and achievements.
+          </p>
+
+          <h3>Key Features</h3>
+          <ul>
+            <li>
+              <strong>Interactive Library:</strong> Browse story cards by genre
+              and difficulty.
+            </li>
+            <li>
+              <strong>Auto-Save:</strong> Your progress sticks—pick up right
+              where you left off.
+            </li>
+            <li>
+              <strong>Player Stats:</strong> Track endings unlocked, routes
+              explored, and time played.
+            </li>
+            <li>
+              <strong>Awards:</strong> Earn badges for bold choices and rare
+              outcomes.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>For Creators</h2>
+          <p>
+            Our admin tools let you build stories visually with nodes and
+            choices, edit live content safely, and roll out updates without
+            breaking player saves.
+          </p>
+
+          <h3>Our Aesthetic</h3>
+          <p>
+            Minimal UI, concept-art illustrations (suggestive, not literal),
+            dark mode by default, and crisp typography for long reads.
+          </p>
+        </div>
+      </section>
+
+      <section class="grid two-col">
+        <div>
+          <h2>Privacy & Safety</h2>
+          <ul>
+            <li>No trackers beyond what’s needed to run the site.</li>
+            <li>Passwords are hashed, sessions are secured.</li>
+            <li>You control your data: export or delete on request.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2>Contact & Feedback</h2>
+          <p>Found a bug, want a feature, or have a story idea?</p>
+          <p>
+            <a class="link" href="/contact">Send feedback</a> — we read
+            everything.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

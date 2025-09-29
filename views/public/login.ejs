@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head'); %>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <%- include('../partials/header', { user }); %>
+
+    <main class="container auth">
+      <section class="form-card">
+        <h1 class="title">Welcome back</h1>
+        <p class="muted">Log in to continue your adventure.</p>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert error"><%= error %></div>
+        <% } %> <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert success"><%= success %></div>
+        <% } %>
+
+        <form action="/login" method="post" class="stack" novalidate>
+          <!-- CSRF token if you enable it -->
+          <% if (locals.csrfToken) { %>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <% } %>
+
+          <label class="field">
+            <span>Email</span>
+            <input
+              type="email"
+              name="email"
+              inputmode="email"
+              autocomplete="email"
+              required
+              placeholder="you@example.com"
+            />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              required
+              placeholder="••••••••"
+            />
+          </label>
+
+          <label class="checkbox">
+            <input type="checkbox" name="remember" value="1" />
+            <span>Remember me on this device</span>
+          </label>
+
+          <button class="cta-button" type="submit">Log In</button>
+        </form>
+
+        <div class="auth-links">
+          <a class="link" href="/forgot-password">Forgot password?</a>
+          <span>·</span>
+          <a class="link" href="/signup">Create an account</a>
+        </div>
+
+        <!-- Optional: Social logins (hide until wired up) -->
+        <!--
+      <div class="divider"><span>or</span></div>
+      <a class="button ghost" href="/auth/google">Continue with Google</a>
+      --></section>
+    </main>
+
+    <%- include('../partials/footer'); %>
+  </body>
+</html>
