@@ -9,22 +9,38 @@
     <main class="container">
       <h1 class="title">Manage Stories</h1>
 
+      <a href="/admin/stories/add" class="cta-button">+ Add Story</a>
+
       <table class="admin-table">
         <thead>
           <tr>
             <th>Title</th>
             <th>Description</th>
-            <th>Endings</th>
-            <th>Created</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           <% stories.forEach(s => { %>
           <tr>
             <td><%= s.title %></td>
-            <td><%= s.description %></td>
-            <td><%= s.endings.length %></td>
-            <td><%= s.createdAt.toDateString() %></td>
+            <td><%= s.description.substring(0, 80) %>...</td>
+            <td>
+              <a
+                href="/admin/stories/<%= s._id %>/edit"
+                class="cta-button small"
+                >Edit</a
+              >
+              <form
+                action="/admin/stories/<%= s._id %>/delete"
+                method="post"
+                class="inline-form"
+                onsubmit="return confirm('Delete this story? This cannot be undone.');"
+              >
+                <button type="submit" class="cta-button danger small">
+                  Delete
+                </button>
+              </form>
+            </td>
           </tr>
           <% }) %>
         </tbody>

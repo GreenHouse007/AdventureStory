@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+      <div class="back-link">
+        <a href="/admin/stories/<%= story._id %>/edit" class="cta-button small"
+          >← Back to Story</a
+        >
+      </div>
+
+      <h1 class="title">Image Library for <%= story.title %></h1>
+
+      <form
+        action="/admin/stories/<%= story._id %>/images/upload"
+        method="post"
+        enctype="multipart/form-data"
+        class="panel stack"
+      >
+        <label>Upload new image</label>
+        <input type="file" name="image" accept="image/*" required />
+        <button type="submit" class="cta-button">Upload</button>
+      </form>
+
+      <section class="gallery">
+        <% if (images.length === 0) { %>
+        <p>No images uploaded yet.</p>
+        <% } else { %>
+        <ul class="image-grid">
+          <% images.forEach(img => { %>
+          <li class="image-item">
+            <img src="<%= img %>" alt="Story image" />
+            <div class="image-actions">
+              <input
+                type="text"
+                value="<%= img %>"
+                readonly
+                class="image-url"
+              />
+              <button
+                type="button"
+                class="copy-btn"
+                onclick="copyToClipboard('<%= img %>')"
+              >
+                Copy URL
+              </button>
+            </div>
+          </li>
+          <% }) %>
+        </ul>
+        <% } %>
+      </section>
+    </main>
+
+    <script>
+      function copyToClipboard(text) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            alert("Copied to clipboard: " + text);
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+          });
+      }
+    </script>
+
+    <style>
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        list-style: none;
+        padding: 0;
+      }
+      .image-item {
+        border: 1px solid #ccc;
+        padding: 0.5rem;
+        background: #fafafa;
+        text-align: center;
+        border-radius: 6px;
+      }
+      .image-item img {
+        max-width: 200px;
+        height: auto;
+        border-radius: 4px;
+      }
+      .image-actions {
+        margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .image-url {
+        font-size: 0.8rem;
+        text-align: center;
+        border: none;
+        background: #eee;
+        padding: 0.25rem;
+        border-radius: 3px;
+      }
+      .copy-btn {
+        background: #333;
+        color: #fff;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .copy-btn:hover {
+        background: #555;
+      }
+    </style>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>

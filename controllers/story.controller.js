@@ -6,10 +6,14 @@ exports.storyLanding = async (req, res) => {
   const story = await Story.findById(req.params.id);
   if (!story) return res.status(404).send("Story not found");
 
-  // Later: lookup user progress
+  // Fallback: if no startNodeId, default to the first node
+  const startNodeId =
+    story.startNodeId || (story.nodes.length > 0 ? story.nodes[0]._id : null);
+
   res.render("user/storyLanding", {
     title: story.title,
     story,
+    startNodeId,
     user: req.user,
   });
 };

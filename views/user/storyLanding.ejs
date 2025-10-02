@@ -16,9 +16,13 @@
       <p><%= story && story.description ? story.description : '' %></p>
 
       <div class="actions">
-        <a href="/u/play/<%= story._id %>/start" class="cta-button"
+        <% if (startNodeId) { %>
+        <a href="/u/play/<%= story._id %>/<%= startNodeId %>" class="cta-button"
           >Start from Beginning</a
         >
+        <% } else { %>
+        <p class="muted">This story doesn't have a starting node yet.</p>
+        <% } %>
       </div>
     </main>
 

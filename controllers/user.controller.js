@@ -17,7 +17,7 @@ exports.stats = async (req, res) => {
 exports.library = async (req, res) => {
   try {
     const stories = await Story.find().select(
-      "title description coverImage endings"
+      "title description coverImage endings status"
     );
     res.render("user/library", { title: "Library", stories });
   } catch (err) {

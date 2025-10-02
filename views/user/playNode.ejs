@@ -16,22 +16,14 @@
       <p><%= node.text %></p>
 
       <div class="choices">
-        <% node.choices.forEach(choice => { %> <% if
-        (choice.nextNodeId.startsWith('ending')) { %>
-        <a
-          href="/u/play/<%= story._id %>/ending/<%= choice.nextNodeId %>"
-          class="choice-button"
-        >
-          <%= choice.label %>
-        </a>
-        <% } else { %>
-        <a
-          href="/u/play/<%= story._id %>/<%= choice.nextNodeId %>"
-          class="choice-button"
-        >
-          <%= choice.label %>
-        </a>
-        <% } %> <% }) %>
+        <% node.choices.forEach(c => { const isEnding = story.endings.some(e =>
+        e._id === c.nextNodeId); const href = isEnding ?
+        `/u/play/${story._id}/ending/${c.nextNodeId}` :
+        `/u/play/${story._id}/${c.nextNodeId}`; %>
+
+        <a class="cta-button" href="<%= href %>"><%= c.label %></a>
+
+        <% }) %>
       </div>
     </main>
 

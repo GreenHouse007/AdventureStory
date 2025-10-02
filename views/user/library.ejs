@@ -20,23 +20,20 @@
       <% } else { %>
       <div class="grid card-grid">
         <% stories.forEach(function(story) { %>
-        <article class="story-card">
+        <div class="story-card">
           <img
-            src="<%= (story && story.coverImage) ? story.coverImage : '/images/placeholder.jpg' %>"
-            alt="Cover for <%= story && story.title ? story.title : 'Untitled' %>"
+            src="<%= story.coverImage || '/images/default-cover.jpg' %>"
+            alt="<%= story.title %>"
           />
-          <div class="card-body">
-            <h2><%= story.title %></h2>
-            <p><%= story && story.description ? story.description : '' %></p>
-            <p class="muted">
-              Endings: <%= (story && Array.isArray(story.endings)) ?
-              story.endings.length : 0 %>
-            </p>
-            <a href="/u/story/<%= story._id %>" class="cta-button small"
-              >Play</a
-            >
-          </div>
-        </article>
+          <h3><%= story.title %></h3>
+          <p><%= story.description %></p>
+
+          <% if (story.status === "public") { %>
+          <a href="/u/story/<%= story._id %>" class="cta-button">Play</a>
+          <% } else { %>
+          <span class="coming-soon">Coming Soon</span>
+          <% } %>
+        </div>
         <% }) %>
       </div>
       <% } %>

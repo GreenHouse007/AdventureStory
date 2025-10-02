@@ -1,9 +1,12 @@
 const mongoose = require("mongoose");
 
-const choiceSchema = new mongoose.Schema({
-  label: String,
-  nextNodeId: String, // could be another node OR an ending
-});
+const choiceSchema = new mongoose.Schema(
+  {
+    label: String,
+    nextNodeId: String,
+  },
+  { _id: true }
+);
 
 const nodeSchema = new mongoose.Schema({
   _id: String, // "start", "forest1"
@@ -20,12 +23,22 @@ const endingSchema = new mongoose.Schema({
   image: String,
 });
 
-const storySchema = new mongoose.Schema({
-  title: String,
-  description: String,
-  coverImage: String,
-  nodes: [nodeSchema],
-  endings: [endingSchema],
-});
+const storySchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: String,
+    coverImage: String,
+    nodes: [nodeSchema],
+    endings: [endingSchema],
+    status: {
+      type: String,
+      enum: ["public", "coming_soon"],
+      default: "coming_soon",
+    },
+    startNodeId: { type: String, default: null },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Story", storySchema);

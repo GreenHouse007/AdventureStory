@@ -267,6 +267,16 @@ footer {
   font-size: 0.9rem;
 }
 
+.coming-soon {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: #444;
+  color: #bbb;
+  font-weight: bold;
+  cursor: not-allowed;
+}
+
 /* admin */
 .stats-grid {
   display: flex;

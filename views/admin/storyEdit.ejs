@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container">
+  <div class="back-link">
+    <a href="/admin/stories" class="cta-button small">← Back to Stories</a>
+  </div>
+
+  <h1 class="title">Edit Story: <%= story.title %></h1>
+
+  <!-- Metadata form -->
+  <form action="/admin/stories/<%= story._id %>/edit" method="post" class="panel stack">
+    <label>Title</label>
+    <input type="text" name="title" value="<%= story.title %>" required>
+
+    <label>Description</label>
+    <textarea name="description" rows="4" required><%= story.description %></textarea>
+
+    <label>Cover Image URL</label>
+    <input type="text" name="coverImage" value="<%= story.coverImage %>">
+
+    <label>Status</label>
+    <select name="status">
+      <option value="public" <%= story.status === "public" ? "selected" : "" %>>Public</option>
+      <option value="coming_soon" <%= story.status === "coming_soon" ? "selected" : "" %>>Coming Soon</option>
+    </select>
+
+    <label>Start Node</label>
+      <select name="startNodeId">
+        <option value="">-- Select a starting node --</option>
+          <% story.nodes.forEach(n => { %>
+          <option value="<%= n._id %>" <%= story.startNodeId === n._id ? "selected" : "" %>>
+          <%= n._id %>
+        </option>
+        <% }) %>
+      </select>
+
+
+    <button type="submit" class="cta-button">Save Story Info</button>
+  </form>
+
+    <!-- Image Library -->
+    <section class="panel">
+      <h2>Image Library</h2>
+      <p>Manage and upload images for this story. Uploaded files will be stored in a dedicated folder and available at URLs you can use for cover, nodes, and endings.</p>
+      <a href="/admin/stories/<%= story._id %>/images" class="cta-button small">
+        Manage Images
+     </a>
+    </section>
+
+    
+  <!-- Nodes -->
+  <section class="panel">
+    <h2>Nodes</h2>
+    <a href="/admin/stories/<%= story._id %>/nodes/add" class="cta-button small">+ Add Node</a>
+    <ul>
+      <% story.nodes.forEach(n => { %>
+        <li>
+          <strong><%= n._id %></strong> — <%= n.text.substring(0, 60) %>...
+          <a href="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/edit">Edit</a>
+          <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete" method="post" class="inline-form"
+                onsubmit="return confirm('Delete this node?');">
+            <button type="submit" class="cta-button danger small">Delete</button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+
+  <!-- Endings -->
+  <section class="panel">
+    <h2>Endings</h2>
+    <a href="/admin/stories/<%= story._id %>/endings/add" class="cta-button small">+ Add Ending</a>
+    <ul>
+      <% story.endings.forEach(e => { %>
+        <li>
+          <strong><%= e._id %></strong> — <%= e.label %> (<%= e.type %>)
+          <a href="/admin/stories/<%= story._id %>/endings/<%= e._id %>/edit">Edit</a>
+          <form action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/delete" method="post" class="inline-form"
+                onsubmit="return confirm('Delete this ending?');">
+            <button type="submit" class="cta-button danger small">Delete</button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+</main>
+
+    <%- include('../partials/footer') %>
+  </body>
+</html>
