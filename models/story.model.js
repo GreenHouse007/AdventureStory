@@ -9,10 +9,15 @@ const choiceSchema = new mongoose.Schema(
 );
 
 const nodeSchema = new mongoose.Schema({
-  _id: String, // "start", "forest1"
-  text: String,
+  _id: String, // unique ID ("start", "forest1", "divider_xxx")
+  type: { type: String, enum: ["node", "divider"], default: "node" },
+  label: String, // used for dividers
+  text: String, // story text (nodes only)
   image: String,
-  choices: [choiceSchema],
+  notes: String, // private notes for each node
+  choiceNotes: String, // shared notes for the choices section
+  color: { type: String, default: "gray" }, // divider color
+  choices: [choiceSchema], // choices only apply if type === "node"
 });
 
 const endingSchema = new mongoose.Schema({
@@ -21,6 +26,7 @@ const endingSchema = new mongoose.Schema({
   type: { type: String, enum: ["true", "death", "other"], default: "other" },
   text: String,
   image: String,
+  notes: String, // private notes for ending
 });
 
 const storySchema = new mongoose.Schema(
@@ -28,8 +34,6 @@ const storySchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: String,
     coverImage: String,
-    nodes: [nodeSchema],
-    endings: [endingSchema],
     status: {
       type: String,
       enum: ["public", "coming_soon"],
@@ -37,6 +41,14 @@ const storySchema = new mongoose.Schema(
     },
     startNodeId: { type: String, default: null },
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    notes: String,
+
+    nodes: [nodeSchema],
+    endings: [endingSchema],
+
+    // NEW
+    displayOrder: { type: Number, default: 0 }, // for library sorting
   },
   { timestamps: true }
 );

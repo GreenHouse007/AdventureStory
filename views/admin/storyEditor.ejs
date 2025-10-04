@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('../partials/head') %>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    main.container { max-width: 1200px; }
+    .panel {
+      background: #1a1a1a;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+    }
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+    }
+
+    .node-card, .ending-card, .divider-card {
+      margin-bottom: 1.5rem; border-radius: 8px; background: #111;
+      padding: 1rem 1.25rem; border: 1px solid #333;
+    }
+    .node-card   { border-left: 4px solid #555; }
+    .ending-card { border-left: 4px solid #5d3fd3; }
+
+    .divider-card {
+      text-align: center; padding: 0.75rem 1rem; font-weight: 600;
+      border: 1px dashed #444; border-radius: 8px;
+    }
+    .divider-gray  { background: #2a2a2a; }
+    .divider-red   { background: #3a2222; }
+    .divider-blue  { background: #222f3a; }
+    .divider-green { background: #223a2a; }
+
+    .node-header, .ending-header {
+      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
+    }
+    .header-left { display:flex; gap:1rem; align-items:center; }
+    .header-actions { display:flex; gap:0.5rem; align-items:center; }
+
+    .notes-inline {
+      width: 380px; max-width: 40vw;
+      background: #1f1f1f; border: 1px solid #333; border-radius: 4px;
+      color: #ccc; font-size: 0.9rem; padding: 0.35rem 0.5rem;
+    }
+
+    .node-body, .ending-body { margin-top: 1rem; }
+
+    .grid.two-col {
+      display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    @media (max-width: 900px){ .grid.two-col { grid-template-columns: 1fr; } }
+
+    input[type="text"], select, textarea {
+      width: 100%; padding: 0.6rem; border-radius: 6px;
+      border: 1px solid #333; background: #151515; color: #eee;
+    }
+    textarea.big-text {
+      min-height: 280px; font-size: 1rem; line-height: 1.5;
+    }
+
+    .choices-section {
+      margin-top: 1rem; padding: 1rem; background: #202020; border-radius: 6px; color: #ccc;
+    }
+    .choice-row {
+      display:flex; gap:0.5rem; align-items:center; margin-bottom: 0.5rem;
+    }
+
+    .btn.small {
+      padding: 0.25rem 0.75rem; font-size: 0.85rem; background: #333; color:#eee;
+      border:none; border-radius:4px; cursor:pointer;
+    }
+    .btn.small:hover { background:#444; }
+    .btn.small.danger { background:#5a1a1a; }
+    .btn.small.danger:hover { background:#822; }
+
+    .search-bar { margin: 0.5rem 0 1rem; display:flex; gap:0.5rem; }
+    .search-bar input { flex:1; }
+  </style>
+</head>
+<body>
+  <%- include('../partials/header', { user }) %>
+
+  <main class="container">
+    <div class="section-header">
+      <a href="/admin/stories" class="btn small">← Back</a>
+      <a href="/admin/stories/<%= story._id %>/images" class="btn small">Manage Images</a>
+    </div>
+
+    <h1>Edit Story: <%= story.title %></h1>
+
+    <!-- Story Info -->
+    <form action="/admin/stories/<%= story._id %>/update-inline" method="post" class="panel stack">
+      <div class="grid two-col">
+        <div>
+          <label>Title</label>
+          <input type="text" name="title" value="<%= story.title %>">
+        </div>
+        <div>
+          <label>Cover Image</label>
+          <input type="text" name="coverImage" value="<%= story.coverImage || '' %>">
+        </div>
+        <div>
+          <label>Status</label>
+          <select name="status">
+            <option value="public" <%= story.status==="public"?"selected":"" %>>Public</option>
+            <option value="coming_soon" <%= story.status==="coming_soon"?"selected":"" %>>Coming Soon</option>
+          </select>
+        </div>
+        <div>
+          <label>Start Node</label>
+          <select name="startNodeId">
+            <option value="">-- Select --</option>
+            <% story.nodes.forEach(n=>{ if(n.type!=="divider"){ %>
+              <option value="<%= n._id %>" <%= story.startNodeId===n._id?"selected":"" %>><%= n._id %></option>
+            <% }}) %>
+          </select>
+        </div>
+      </div>
+
+      <label>Story Author Notes</label>
+      <textarea name="notes" rows="6" placeholder="These notes are private and will not be seen by the readers"><%= story.notes || "" %></textarea>
+
+      <label>Description (public)</label>
+      <textarea name="description" rows="10"><%= story.description %></textarea>
+
+      <button type="submit" class="btn small">Save Story</button>
+    </form>
+
+    <!-- Nodes -->
+    <section class="panel">
+      <div class="section-header">
+        <h2>Nodes</h2>
+        <div>
+          <button type="button" class="btn small collapse-all-nodes">Collapse All</button>
+          <button type="button" class="btn small expand-all-nodes">Expand All</button>
+          <form action="/admin/stories/<%= story._id %>/nodes/add" method="post" class="inline-form">
+            <button type="submit" class="btn small">+ Node</button>
+          </form>
+          <form action="/admin/stories/<%= story._id %>/nodes/add-divider" method="post" class="inline-form">
+            <button type="submit" class="btn small">+ Divider</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="node-search" placeholder="Search nodes...">
+      </div>
+
+      <div id="nodes-list">
+        <% story.nodes.forEach(n => { %>
+
+          <% if (n.type === "divider") { %>
+            <div class="divider-card divider-<%= n.color || 'gray' %>" data-id="<%= n._id %>">
+              <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/update-divider" method="post" class="inline-form" style="display:inline-flex; gap:.5rem; align-items:center;">
+                <input type="text" name="label" value="<%= n.label %>">
+                <select name="color">
+                  <option value="gray"  <%= n.color==="gray" ?"selected":"" %>>Gray</option>
+                  <option value="red"   <%= n.color==="red"  ?"selected":"" %>>Muted Red</option>
+                  <option value="blue"  <%= n.color==="blue" ?"selected":"" %>>Muted Blue</option>
+                  <option value="green" <%= n.color==="green"?"selected":"" %>>Muted Green</option>
+                </select>
+                <button type="submit" class="btn small">Save</button>
+              </form>
+              <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete-divider" method="post" class="inline-form" style="display:inline;">
+                <button type="submit" class="btn small danger">Delete</button>
+              </form>
+            </div>
+
+          <% } else { %>
+            <div class="node-card" data-id="<%= n._id %>">
+              <div class="node-header">
+                <div class="header-left">
+                  <h3><%= n._id %></h3>
+                  <input type="text" class="notes-inline" name="notes" value="<%= n.notes || '' %>" placeholder="Notes..." form="node-form-<%= n._id %>">
+                </div>
+                <div class="header-actions">
+                  <button type="button" class="btn small toggle-node">Collapse</button>
+                  <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete" method="post" class="inline-form">
+                    <button type="submit" class="btn small danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+
+              <div class="node-body">
+                <form id="node-form-<%= n._id %>" action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/update-inline" method="post" class="stack">
+                  <div class="grid two-col">
+                    <div>
+                      <label>ID</label>
+                      <input type="text" name="_id" value="<%= n._id %>" required>
+                    </div>
+                    <div>
+                      <label>Image URL</label>
+                      <input type="text" name="image" value="<%= n.image || '' %>">
+                    </div>
+                  </div>
+                  <label>Story Text</label>
+                  <textarea name="text" class="big-text"><%= n.text %></textarea>
+                  <label>Choice Notes</label>
+                  <textarea name="choiceNotes" rows="3"><%= n.choiceNotes || "" %></textarea>
+                  <button type="submit" class="btn small">Save Node</button>
+                </form>
+
+                <!-- Choices simplified -->
+                <div class="choices-section">
+                  <h4>Choices</h4>
+                  <% n.choices.forEach(c => { %>
+                    <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/<%= c._id %>/update-inline" method="post" class="choice-row">
+                      <input type="text" name="label" value="<%= c.label %>">
+                      <select name="nextNodeId">
+                        <% story.nodes.forEach(n2 => { if(n2.type!=="divider"){ %>
+                          <option value="<%= n2._id %>" <%= c.nextNodeId===n2._id?"selected":"" %>><%= n2._id %></option>
+                        <% }}) %>
+                        <% story.endings.forEach(e2=>{ %>
+                          <option value="<%= e2._id %>" <%= c.nextNodeId===e2._id?"selected":"" %>>Ending: <%= e2._id %></option>
+                        <% }) %>
+                      </select>
+                      <button type="submit" class="btn small">Save</button>
+                    </form>
+                    <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/<%= c._id %>/delete" method="post" class="inline-form">
+                      <button type="submit" class="btn small danger">Delete</button>
+                    </form>
+                  <% }) %>
+
+                  <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/add-inline" method="post" class="choice-row">
+                    <input type="text" name="label" placeholder="New choice label" required>
+                    <select name="nextNodeId" required>
+                      <% story.nodes.forEach(n2=>{ if(n2.type!=="divider"){ %>
+                        <option value="<%= n2._id %>"><%= n2._id %></option>
+                      <% }}) %>
+                      <% story.endings.forEach(e2=>{ %>
+                        <option value="<%= e2._id %>">Ending: <%= e2._id %></option>
+                      <% }) %>
+                    </select>
+                    <button type="submit" class="btn small">Add</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        <% }) %>
+      </div>
+    </section>
+
+    <!-- Endings -->
+    <section class="panel">
+      <div class="section-header">
+        <h2>Endings</h2>
+        <div>
+          <button type="button" class="btn small collapse-all-endings">Collapse All</button>
+          <button type="button" class="btn small expand-all-endings">Expand All</button>
+          <form action="/admin/stories/<%= story._id %>/endings/add" method="post" class="inline-form">
+            <button type="submit" class="btn small">+ Ending</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="ending-search" placeholder="Search endings...">
+      </div>
+
+      <div id="endings-list">
+        <% story.endings.forEach(e => { %>
+          <div class="ending-card" data-id="<%= e._id %>">
+            <div class="ending-header">
+              <div class="header-left">
+                <h3>Ending: <%= e._id %></h3>
+                <input type="text" class="notes-inline" name="notes" value="<%= e.notes || '' %>" placeholder="Notes..." form="ending-form-<%= e._id %>">
+              </div>
+              <div class="header-actions">
+                <button type="button" class="btn small toggle-ending">Collapse</button>
+                <form action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/delete" method="post" class="inline-form">
+                  <button type="submit" class="btn small danger">Delete</button>
+                </form>
+              </div>
+            </div>
+
+            <div class="ending-body">
+              <form id="ending-form-<%= e._id %>" action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/update-inline" method="post" class="stack">
+                <div class="grid two-col">
+                  <div>
+                    <label>ID</label>
+                    <input type="text" name="_id" value="<%= e._id %>">
+                  </div>
+                  <div>
+                    <label>Label</label>
+                    <input type="text" name="label" value="<%= e.label %>">
+                  </div>
+                  <div>
+                    <label>Type</label>
+                    <select name="type">
+                      <option value="true"  <%= e.type==="true" ?"selected":"" %>>True</option>
+                      <option value="death" <%= e.type==="death"?"selected":"" %>>Death</option>
+                      <option value="other" <%= e.type==="other"?"selected":"" %>>Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Image URL</label>
+                    <input type="text" name="image" value="<%= e.image || '' %>">
+                  </div>
+                </div>
+                <label>Story Text</label>
+                <textarea name="text" class="big-text"><%= e.text %></textarea>
+                <button type="submit" class="btn small">Save Ending</button>
+              </form>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Collapsible cards
+    function setupCollapse(cardSelector, bodySelector, toggleSelector, storagePrefix) {
+      document.querySelectorAll(`${cardSelector} ${toggleSelector}`).forEach(btn => {
+        const card = btn.closest(cardSelector);
+        const body = card.querySelector(bodySelector);
+        const id   = card.dataset.id;
+        const collapsed = localStorage.getItem(storagePrefix + id) === "true";
+        if (collapsed) { body.style.display = "none"; btn.textContent = "Expand"; }
+        btn.addEventListener("click", () => {
+          const isHidden = body.style.display === "none";
+          body.style.display = isHidden ? "block" : "none";
+          btn.textContent = isHidden ? "Collapse" : "Expand";
+          localStorage.setItem(storagePrefix + id, (!isHidden).toString());
+        });
+      });
+    }
+    setupCollapse(".node-card", ".node-body", ".toggle-node",   "collapsed-node-");
+    setupCollapse(".ending-card", ".ending-body", ".toggle-ending", "collapsed-ending-");
+
+    // Collapse/Expand all
+    document.querySelector(".collapse-all-nodes").addEventListener("click", () => {
+      document.querySelectorAll(".node-card .node-body").forEach(b => b.style.display = "none");
+      document.querySelectorAll(".node-card .toggle-node").forEach(b => b.textContent = "Expand");
+    });
+    document.querySelector(".expand-all-nodes").addEventListener("click", () => {
+      document.querySelectorAll(".node-card .node-body").forEach(b => b.style.display = "block");
+      document.querySelectorAll(".node-card .toggle-node").forEach(b => b.textContent = "Collapse");
+    });
+    document.querySelector(".collapse-all-endings").addEventListener("click", () => {
+      document.querySelectorAll(".ending-card .ending-body").forEach(b => b.style.display = "none");
+      document.querySelectorAll(".ending-card .toggle-ending").forEach(b => b.textContent = "Expand");
+    });
+    document.querySelector(".expand-all-endings").addEventListener("click", () => {
+      document.querySelectorAll(".ending-card .ending-body").forEach(b => b.style.display = "block");
+      document.querySelectorAll(".ending-card .toggle-ending").forEach(b => b.textContent = "Collapse");
+    });
+
+    // Drag reorder
+    new Sortable(document.getElementById("nodes-list"), {
+      animation: 150,
+      handle: ".node-card,.divider-card",
+      onEnd: function (evt) {
+        const idsInOrder = Array.from(document.querySelectorAll("#nodes-list > div"))
+          .map(el => el.dataset.id);
+        fetch("/admin/stories/<%= story._id %>/nodes/reorder", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idsInOrder })
+        });
+      }
+    });
+    new Sortable(document.getElementById("endings-list"), {
+      animation: 150,
+      handle: ".ending-card",
+      onEnd: function (evt) {
+        const idsInOrder = Array.from(document.querySelectorAll("#endings-list > div"))
+          .map(el => el.dataset.id);
+        fetch("/admin/stories/<%= story._id %>/endings/reorder", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idsInOrder })
+        });
+      }
+    });
+
+    // Search filter
+    function setupSearch(inputId, listSelector, cardSelector){
+      document.getElementById(inputId).addEventListener("input", e => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll(listSelector+" "+cardSelector).forEach(card=>{
+          card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
+        });
+      });
+    }
+
+    (function () {
+    // Keep scroll across reloads for this specific story
+    const KEY = "storyEditorScroll:<%= story._id %>";
+    // Let us control it (so the browser doesn't jump)
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+    // Save position right before leaving this page
+    window.addEventListener("beforeunload", () => {
+      localStorage.setItem(KEY, String(window.scrollY));
+    });
+
+    // Restore it when we come back
+    window.addEventListener("DOMContentLoaded", () => {
+      const y = parseInt(localStorage.getItem(KEY) || "0", 10);
+      if (!Number.isNaN(y)) window.scrollTo(0, y);
+    });
+
+    // If user clicks Back to Stories, clear the saved position
+    document.querySelectorAll('a[href="/admin/stories"]').forEach(a => {
+      a.addEventListener("click", () => localStorage.removeItem(KEY));
+    });
+  })();
+
+    setupSearch("node-search", "#nodes-list", ".node-card,.divider-card");
+    setupSearch("ending-search", "#endings-list", ".ending-card");
+  </script>
+</body>
+</html>

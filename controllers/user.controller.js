@@ -7,7 +7,6 @@ exports.stats = async (req, res) => {
       "progress.story"
     );
     res.render("user/stats", { title: "My Stats", dbUser: user });
-    // note: still passing dbUser if you need progress data
   } catch (err) {
     console.error(err);
     res.status(500).send("Error loading stats");
@@ -16,9 +15,10 @@ exports.stats = async (req, res) => {
 
 exports.library = async (req, res) => {
   try {
-    const stories = await Story.find().select(
-      "title description coverImage endings status"
-    );
+    const stories = await Story.find()
+      .sort({ displayOrder: 1, createdAt: -1 }) // 🔑 Order by saved order first
+      .select("title description coverImage endings status displayOrder");
+
     res.render("user/library", { title: "Library", stories });
   } catch (err) {
     console.error(err);

@@ -2,6 +2,40 @@
 <html lang="en">
   <head>
     <%- include('../partials/head') %>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+      /* override a bit for drag look */
+      .story-card.dragging {
+        opacity: 0.6;
+        transform: rotate(2deg);
+      }
+      .card-grid {
+        margin-top: 2rem;
+      }
+      .story-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      .btn.small {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.85rem;
+        background: #333;
+        color: #eee;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn.small:hover {
+        background: #444;
+      }
+      .btn.small.danger {
+        background: #5a1a1a;
+      }
+      .btn.small.danger:hover {
+        background: #822;
+      }
+    </style>
   </head>
   <body>
     <%- include('../partials/header', { user }) %>
@@ -9,43 +43,69 @@
     <main class="container">
       <h1 class="title">Manage Stories</h1>
 
-      <a href="/admin/stories/add" class="cta-button">+ Add Story</a>
+      <a href="/admin/stories/add" class="btn small">+ Add Story</a>
 
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% stories.forEach(s => { %>
-          <tr>
-            <td><%= s.title %></td>
-            <td><%= s.description.substring(0, 80) %>...</td>
-            <td>
-              <a
-                href="/admin/stories/<%= s._id %>/edit"
-                class="cta-button small"
+      <div id="stories-list" class="card-grid">
+        <% stories.sort((a,b)=>a.displayOrder-b.displayOrder).forEach(s => { %>
+        <div class="story-card" data-id="<%= s._id %>">
+          <% if (s.coverImage) { %>
+          <img src="<%= s.coverImage %>" alt="<%= s.title %> cover" />
+          <% } %>
+          <div class="card-body">
+            <h2><%= s.title %></h2>
+            <p><%= s.description ? s.description.substring(0,100) : "" %></p>
+            <p style="opacity: 0.7; font-size: 0.85rem">
+              Status: <%= s.status %>
+            </p>
+
+            <div class="story-actions">
+              <a href="/admin/stories/<%= s._id %>/edit" class="btn small"
                 >Edit</a
               >
               <form
                 action="/admin/stories/<%= s._id %>/delete"
                 method="post"
-                class="inline-form"
                 onsubmit="return confirm('Delete this story? This cannot be undone.');"
               >
-                <button type="submit" class="cta-button danger small">
-                  Delete
-                </button>
+                <button type="submit" class="btn small danger">Delete</button>
               </form>
-            </td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+
+      <div style="margin-top: 1rem">
+        <button id="saveOrderBtn" class="btn small">💾 Save Order</button>
+      </div>
     </main>
+
+    <script>
+      const list = document.getElementById("stories-list");
+      new Sortable(list, {
+        animation: 150,
+        ghostClass: "dragging",
+      });
+
+      document
+        .getElementById("saveOrderBtn")
+        .addEventListener("click", async () => {
+          const ids = [...document.querySelectorAll(".story-card")].map(
+            (el) => el.dataset.id
+          );
+          const res = await fetch("/admin/stories/order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order: ids }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert("Order saved!");
+          } else {
+            alert("Error saving order");
+          }
+        });
+    </script>
 
     <%- include('../partials/footer') %>
   </body>

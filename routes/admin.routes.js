@@ -1,8 +1,9 @@
 const express = require("express");
-
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const { requireAdmin } = require("../middleware/auth");
+const controller = require("../controllers/admin.controller");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -14,9 +15,7 @@ const storage = multer.diskStorage({
       "stories",
       req.params.id
     );
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: function (req, file, cb) {
@@ -25,81 +24,87 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const { requireAdmin } = require("../middleware/auth");
-const {
-  dashboard,
-  storiesList,
-  storyAddForm,
-  storyAddPost,
-  storyEditForm,
-  storyEditPost,
-  storyDelete,
-  usersList,
-  userAddForm,
-  userAddPost,
-  userDetail,
-  userUpdate,
-  userResetPassword,
-  userDelete,
-  storyNodeAddForm,
-  storyNodeAddPost,
-  storyNodeEditForm,
-  storyNodeEditPost,
-  storyNodeDelete,
-  storyEndingAddForm,
-  storyEndingAddPost,
-  storyEndingEditForm,
-  storyEndingEditPost,
-  storyEndingDelete,
-  nodeChoiceAdd,
-  nodeChoiceDelete,
-} = require("../controllers/admin.controller");
-const { listImages, uploadImage } = require("../controllers/admin.controller");
-
 const router = express.Router();
-router.use(requireAdmin); // all admin routes are protected
+router.use(requireAdmin);
 
-// Dashboard
-router.get("/", dashboard);
+/* ---------------- Dashboard ---------------- */
+router.get("/", controller.dashboard);
 
-// Stories
-router.get("/stories", storiesList);
-router.get("/stories/add", storyAddForm);
-router.post("/stories/add", storyAddPost);
-router.get("/stories/:id/edit", storyEditForm);
-router.post("/stories/:id/edit", storyEditPost);
-router.post("/stories/:id/delete", storyDelete);
+/* ---------------- Stories ---------------- */
+router.get("/stories", controller.storiesList);
+router.get("/stories/add", controller.storyAddForm);
+router.post("/stories/add", controller.storyAddPost);
+router.get("/stories/:id/edit", controller.storyEditForm);
+router.post("/stories/:id/edit", controller.storyEditPost);
+router.post("/stories/:id/delete", controller.storyDelete);
+router.post("/stories/:id/update-inline", controller.storyUpdateInline);
+router.post("/stories/order", controller.updateStoriesOrder);
 
-// Users
-router.get("/users", usersList);
-router.get("/users/add", userAddForm);
-router.post("/users/add", userAddPost);
-router.get("/users/:id", userDetail);
-router.post("/users/:id", userUpdate);
-router.post("/users/:id/reset-password", userResetPassword);
-router.post("/users/:id/delete", userDelete);
+/* ---------------- Users ---------------- */
+router.get("/users", controller.usersList);
+router.get("/users/add", controller.userAddForm);
+router.post("/users/add", controller.userAddPost);
+router.get("/users/:id", controller.userDetail);
+router.post("/users/:id", controller.userUpdate);
+router.post("/users/:id/reset-password", controller.userResetPassword);
+router.post("/users/:id/delete", controller.userDelete);
 
-// Nodes
-router.get("/stories/:id/nodes/add", storyNodeAddForm);
-router.post("/stories/:id/nodes/add", storyNodeAddPost);
-router.get("/stories/:id/nodes/:nodeId/edit", storyNodeEditForm);
-router.post("/stories/:id/nodes/:nodeId/edit", storyNodeEditPost);
-router.post("/stories/:id/nodes/:nodeId/delete", storyNodeDelete);
-router.post("/stories/:id/nodes/:nodeId/choices/add", nodeChoiceAdd);
+/* ---------------- Nodes ---------------- */
+router.post("/stories/:id/nodes/add", controller.storyNodeAddPost);
 router.post(
-  "/stories/:id/nodes/:nodeId/choices/:choiceId/delete",
-  nodeChoiceDelete
+  "/stories/:id/nodes/:nodeId/update-inline",
+  controller.storyNodeUpdateInline
+);
+router.post("/stories/:id/nodes/:nodeId/delete", controller.storyNodeDelete);
+
+/* Dividers */
+router.post("/stories/:id/nodes/add-divider", controller.storyNodeAddDivider);
+router.post(
+  "/stories/:id/nodes/:nodeId/update-divider",
+  controller.storyNodeUpdateDivider
+);
+router.post(
+  "/stories/:id/nodes/:nodeId/delete-divider",
+  controller.storyNodeDeleteDivider
 );
 
-// Endings
-router.get("/stories/:id/endings/add", storyEndingAddForm);
-router.post("/stories/:id/endings/add", storyEndingAddPost);
-router.get("/stories/:id/endings/:endingId/edit", storyEndingEditForm);
-router.post("/stories/:id/endings/:endingId/edit", storyEndingEditPost);
-router.post("/stories/:id/endings/:endingId/delete", storyEndingDelete);
+/* Node Reorder */
+router.post("/stories/:id/nodes/reorder", controller.nodesReorder);
 
-// Image library
-router.get("/stories/:id/images", listImages);
-router.post("/stories/:id/images/upload", upload.single("image"), uploadImage);
+/* ---------------- Choices ---------------- */
+router.post(
+  "/stories/:id/nodes/:nodeId/choices/add-inline",
+  controller.nodeChoiceAddInline
+);
+router.post(
+  "/stories/:id/nodes/:nodeId/choices/:choiceId/update-inline",
+  controller.nodeChoiceUpdateInline
+);
+router.post(
+  "/stories/:id/nodes/:nodeId/choices/:choiceId/delete",
+  controller.nodeChoiceDelete
+);
+
+/* ---------------- Endings ---------------- */
+router.post("/stories/:id/endings/add", controller.storyEndingAddPost);
+router.post(
+  "/stories/:id/endings/:endingId/update-inline",
+  controller.storyEndingUpdateInline
+);
+router.post(
+  "/stories/:id/endings/:endingId/delete",
+  controller.storyEndingDelete
+);
+
+/* Ending Reorder */
+router.post("/stories/:id/endings/reorder", controller.endingsReorder);
+
+/* ---------------- Images ---------------- */
+router.get("/stories/:id/images", controller.listImages);
+router.post(
+  "/stories/:id/images/upload",
+  upload.single("image"),
+  controller.uploadImage
+);
 
 module.exports = router;
