@@ -16,6 +16,36 @@ const sanitizeMongoUri = (uri) => {
   }
 };
 
+const normalizeSrvUriToDirect = (uri) => {
+  if (!uri || !uri.startsWith("mongodb+srv://")) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(uri);
+    const searchParams = new URLSearchParams(parsed.search);
+
+    if (!searchParams.has("directConnection")) {
+      searchParams.set("directConnection", "true");
+    }
+
+    if (!searchParams.has("tls")) {
+      searchParams.set("tls", "true");
+    }
+
+    const credentials = parsed.username
+      ? `${parsed.username}${parsed.password ? `:${parsed.password}` : ""}@`
+      : "";
+
+    const pathname = parsed.pathname && parsed.pathname !== "/" ? parsed.pathname : "";
+
+    return `mongodb://${credentials}${parsed.hostname}${pathname}?${searchParams.toString()}`;
+  } catch (error) {
+    console.error("Failed to derive direct connection URI from SRV string:", error);
+    return null;
+  }
+};
+
 const attemptMongoConnection = async (uri, label) => {
   if (!uri) {
     throw new Error(`MongoDB connection string for ${label} is not defined.`);
@@ -46,6 +76,12 @@ const connectDB = async () => {
 
   if (process.env.MONGO_URI) {
     connectionChain.push({ uri: process.env.MONGO_URI, label: "MONGO_URI" });
+
+    const directUri = normalizeSrvUriToDirect(process.env.MONGO_URI);
+
+    if (directUri) {
+      connectionChain.push({ uri: directUri, label: "derived direct connection" });
+    }
   }
 
   connectionChain.push({ uri: DEFAULT_URI, label: "local fallback" });
