@@ -41,7 +41,12 @@ exports.signupPost = async (req, res) => {
 };
 
 exports.loginGet = (req, res) => {
-  res.render("public/login", { title: "Login" });
+  res.render("public/login", {
+    title: "Login",
+    user: req.user,
+    old: {},
+    remember: false,
+  });
 };
 
 const ONE_DAY_MS = 1000 * 60 * 60 * 24;
