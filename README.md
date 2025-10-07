@@ -1,54 +1,63 @@
-# Shadow Paths — A Choose Your Own Adventure Platform
+# 🌒 Shadow Paths — A Choose Your Own Adventure Platform
 
-Shadow Paths is a web-based storytelling platform inspired by D&D and spooky fantasy vibes.  
-Players create accounts, read interactive branching stories, unlock endings, and track their progress.  
-Admins can manage users and create/edit stories.
+**Shadow Paths** is a web-based interactive storytelling platform inspired by _D&D_, _dark fantasy_, and _spooky adventure tales_.  
+Players can create accounts, explore branching stories, and unlock multiple endings — while their progress, stats, and discoveries are saved automatically.  
+Admins can manage users, upload story images, and build stories with flexible node-based structures.
 
--Check it out here-
-Render.com Link: https://adventurestory.onrender.com/
+🔗 **Live Demo:** [https://adventurestory.onrender.com/](https://adventurestory.onrender.com/)
 
 ---
 
 ## ✨ Features
 
+### 🧍 Player Experience
+
 - **User Accounts**
 
-  - Sign up, log in, log out
-  - Profile stats and awards
-  - Persistent session authentication (Express Session + MongoDB)
+  - Sign up, log in, and log out securely
+  - Session persistence using Express Sessions + MongoDB
+  - Profile stats showing total endings, medals, and story progress
 
 - **Story Library**
 
-  - Browse available stories
-  - Each story shows total endings, endings found by the player
-  - Auto-save progress (coming soon)
-
-- **Player Stats**
-
-  - Tracks total endings found across all stories
-  - Awards medals for milestones (death endings, true endings)
-  - Tracks earned in-game currency
-
-- **Admin Dashboard**
-
-  - Overview of users and stories
-  - Manage user roles (toggle admin)
-  - View seeded stories (create/edit coming soon)
+  - Browse all available stories with cover art and descriptions
+  - Stories display discovered vs total endings
+  - Automatically offers **“Continue where you left off”** if a player hasn’t finished
+  - **“Start from Beginning”** appears only once a story is completed or reset
+  - Stories maintain admin-defined display order
 
 - **Game Progression**
-  - Stories contain multiple endings: true ending, death endings, and others
-  - In-game currency awarded for unlocking endings and medals
-  - Special “epic moments” unlockable with currency (planned)
+  - Stories feature multiple endings (true, death, secret, etc.)
+  - In-game currency awarded for completing endings and earning medals
+  - Tracks total endings, medals, and story completion across all adventures
 
 ---
 
-## 🛠️ Tech Stack
+### ⚙️ Admin Tools
 
-- **Frontend:** EJS templating, HTML, CSS
-- **Backend:** Node.js + Express
-- **Database:** MongoDB + Mongoose
-- **Auth:** express-session + connect-mongo, bcrypt for password hashing
-- **Other Tools:** nodemon for dev, dotenv for config, seeding script
+- **Story Management**
+
+  - Create and edit story entries and branching nodes
+  - Add, reorder, and delete story images
+  - Integrated **Cloudinary** upload system (secure `.env` keys)
+  - Story library reflects admin-defined display order
+
+- **User Management**
+  - View all users and toggle admin status
+  - See user progress and endings completed
+
+---
+
+## 🧩 Tech Stack
+
+| Layer             | Technology                               |
+| ----------------- | ---------------------------------------- |
+| **Frontend**      | EJS templating • HTML • CSS              |
+| **Backend**       | Node.js • Express                        |
+| **Database**      | MongoDB • Mongoose                       |
+| **Auth**          | express-session • connect-mongo • bcrypt |
+| **Cloud Storage** | Cloudinary (image hosting + management)  |
+| **Dev Tools**     | nodemon • dotenv • seed scripts          |
 
 ---
 
@@ -58,11 +67,28 @@ Render.com Link: https://adventurestory.onrender.com/
 
 - Node.js 18+
 - MongoDB (local or Atlas)
+- Cloudinary account (for image hosting)
 
-### Install
+### Installation
 
 ```bash
 git clone https://github.com/yourusername/shadow-paths.git
 cd shadow-paths
 npm install
+
+---
+
+## 🧠 Roadmap
+
+ Player progress reset option
+
+ Visual branching editor for story nodes
+
+ Achievements and collectible badges
+
+ Audio narration and ambient sound system
+
+ Premium story unlocks using earned currency
+
+ API for importing/exporting stories
 ```

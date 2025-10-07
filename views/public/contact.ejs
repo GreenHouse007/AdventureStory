@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container contact">
+      <section class="page-hero">
+        <h1 class="title">Contact</h1>
+        <p class="lead muted">
+          Have feedback, found a bug, or want to say hi? Drop a note below — we
+          read everything.
+        </p>
+      </section>
+
+      <!-- Notices -->
+      <% if (status && status.ok) { %>
+      <div class="notice success" role="status" aria-live="polite">
+        <p><%= status.msg || "Thanks! Your message was sent." %></p>
+      </div>
+      <% } else if (status && status.errors && status.errors.length) { %>
+      <div class="notice error" role="alert" aria-live="assertive">
+        <ul>
+          <% status.errors.forEach(function(err){ %>
+          <li><%= err %></li>
+          <% }) %>
+        </ul>
+      </div>
+      <% } %>
+
+      <!-- Form -->
+      <form
+        class="panel form-section contact-form"
+        action="/contact"
+        method="post"
+        novalidate
+      >
+        <!-- Honeypot field (hidden from real users) -->
+        <input
+          type="text"
+          name="hp"
+          tabindex="-1"
+          autocomplete="off"
+          class="hp-field"
+          aria-hidden="true"
+        />
+
+        <fieldset>
+          <legend>Send a Message</legend>
+
+          <div class="grid">
+            <div class="field">
+              <label for="c-name">Your Name</label>
+              <input
+                id="c-name"
+                name="name"
+                type="text"
+                required
+                value="<%= form.name %>"
+                aria-required="true"
+                aria-invalid="<%= (status && status.errors || []).some(e => /name/i.test(e)) ? 'true' : 'false' %>"
+                placeholder="e.g., Alex"
+              />
+            </div>
+
+            <div class="field">
+              <label for="c-email">Your Email</label>
+              <input
+                id="c-email"
+                name="email"
+                type="email"
+                required
+                value="<%= form.email %>"
+                aria-required="true"
+                aria-invalid="<%= (status && status.errors || []).some(e => /email/i.test(e)) ? 'true' : 'false' %>"
+                placeholder="you@example.com"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="c-subject">Subject</label>
+            <input
+              id="c-subject"
+              name="subject"
+              type="text"
+              required
+              value="<%= form.subject %>"
+              aria-required="true"
+              aria-invalid="<%= (status && status.errors || []).some(e => /subject/i.test(e)) ? 'true' : 'false' %>"
+              placeholder="How can we help?"
+            />
+          </div>
+
+          <div class="field">
+            <label for="c-message">Message</label>
+            <textarea
+              id="c-message"
+              name="message"
+              rows="8"
+              required
+              aria-required="true"
+              aria-invalid="<%= (status && status.errors || []).some(e => /message/i.test(e)) ? 'true' : 'false' %>"
+              maxlength="5000"
+              placeholder="Share details so we can help quickly…"
+            >
+<%= form.message %></textarea
+            >
+            <div class="help-row">
+              <small id="char-count" class="muted">0 / 5000</small>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="cta-button" id="contact-submit" type="submit">
+              Send
+            </button>
+          </div>
+        </fieldset>
+      </form>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <style>
+      .contact .page-hero {
+        margin-bottom: 1rem;
+      }
+      .contact .lead {
+        margin-top: 0.25rem;
+      }
+
+      .notice {
+        margin: 1rem 0;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+      }
+      .notice.success {
+        background: #e8f9ef;
+        border: 1px solid #bfead2;
+        color: #0f5132;
+      }
+      .notice.error {
+        background: #ffe6e6;
+        border: 1px solid #ffc2c2;
+        color: #7f1d1d;
+      }
+
+      .contact-form {
+        max-width: 760px;
+      }
+      .contact-form fieldset {
+        border: none;
+        padding: 0;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+      }
+      .field label {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .field input,
+      .field textarea {
+        background: #111418;
+        color: #e9edf3;
+        border: 1px solid #2a2f36;
+        border-radius: 10px;
+        padding: 10px 12px;
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .field input::placeholder,
+      .field textarea::placeholder {
+        color: #8a93a4;
+      }
+      .field input:focus,
+      .field textarea:focus {
+        border-color: #6aa5ff;
+        box-shadow: 0 0 0 3px rgba(106, 165, 255, 0.2);
+      }
+      .field [aria-invalid="true"] {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+      }
+
+      .help-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 6px;
+      }
+
+      .actions {
+        margin-top: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      .actions .cta-button[disabled] {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .hp-field {
+        position: absolute;
+        left: -9999px;
+        opacity: 0;
+        height: 0;
+        width: 0;
+      }
+    </style>
+
+    <script>
+      (function () {
+        const textarea = document.getElementById("c-message");
+        const counter = document.getElementById("char-count");
+        const btn = document.getElementById("contact-submit");
+
+        function updateCount() {
+          const len = textarea.value.length;
+          counter.textContent = `${len} / 5000`;
+        }
+
+        textarea.addEventListener("input", updateCount);
+        updateCount();
+
+        // Prevent double submissions
+        const form = document.querySelector(".contact-form");
+        form.addEventListener("submit", function () {
+          btn.disabled = true;
+          btn.textContent = "Sending…";
+        });
+      })();
+    </script>
+  </body>
+</html>

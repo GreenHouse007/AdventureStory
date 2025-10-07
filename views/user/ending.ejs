@@ -15,6 +15,14 @@
 
       <p><%= ending.text %></p>
 
+      <% if (typeof rewardedCurrency !== 'undefined' && rewardedCurrency > 0) {
+      %>
+      <div class="reward-note">
+        🎉 You discovered a new ending for the first time!
+        <strong>+<%= rewardedCurrency %></strong> coins added.
+      </div>
+      <% } %>
+
       <div class="actions">
         <a href="/u/story/<%= story._id %>" class="cta-button">Replay Story</a>
         <a href="/u/library" class="cta-button">Back to Library</a>

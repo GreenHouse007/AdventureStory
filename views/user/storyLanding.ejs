@@ -1,3 +1,4 @@
+<!-- views/user/storyLanding.ejs -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,21 +8,31 @@
     <%- include('../partials/header', { user }) %>
 
     <main class="container">
-      <h1><%= story && story.title ? story.title : 'Untitled Story' %></h1>
+      <h1><%= story?.title || 'Untitled Story' %></h1>
       <img
-        src="<%= (story && story.coverImage) ? story.coverImage : '/images/placeholder.jpg' %>"
+        src="<%= story?.coverImage || '/images/placeholder.jpg' %>"
         class="cover"
-        alt="Cover image for <%= story && story.title ? story.title : 'story' %>"
+        alt="Cover image for <%= story?.title || 'story' %>"
       />
-      <p><%= story && story.description ? story.description : '' %></p>
+      <p><%= story?.description || '' %></p>
 
-      <div class="actions">
+      <div class="actions stack">
         <% if (startNodeId) { %>
-        <a href="/u/play/<%= story._id %>/<%= startNodeId %>" class="cta-button"
-          >Start from Beginning</a
+        <a
+          href="/u/play/<%= story._id %>/<%= startNodeId %>"
+          class="cta-button"
         >
+          Start from Beginning
+        </a>
         <% } else { %>
         <p class="muted">This story doesn't have a starting node yet.</p>
+        <% } %> <% if (continueNodeId) { %>
+        <a
+          href="/u/play/<%= story._id %>/<%= continueNodeId %>"
+          class="cta-button ghost"
+        >
+          Continue where you left off
+        </a>
         <% } %>
       </div>
     </main>

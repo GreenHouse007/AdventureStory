@@ -47,8 +47,8 @@ const storySchema = new mongoose.Schema(
     nodes: [nodeSchema],
     endings: [endingSchema],
 
-    // NEW
-    displayOrder: { type: Number, default: 0 }, // for library sorting
+    images: { type: [require("mongoose").Schema.Types.Mixed], default: [] },
+    displayOrder: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

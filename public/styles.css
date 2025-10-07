@@ -127,6 +127,12 @@ footer {
   font-size: 0.9rem;
 }
 
+footer a {
+  color: var(--text-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* about and login */
 .container {
   max-width: 1000px;
@@ -370,4 +376,80 @@ footer {
   cursor: pointer;
   transition: background 0.3s;
   text-align: center;
+}
+
+/*Ending progress in story cards */
+.ending-progress {
+  font-size: 0.9em;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+.cta-button.secondary {
+  background: #555;
+  color: #fff;
+  margin-right: 0.5rem;
+}
+
+.reward-note {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #777;
+  border: 1px solid #555;
+  font-weight: 500;
+}
+
+/* Trophy popup */
+#trophy-popups {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trophy-popup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1d1e22;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transform: translateY(0);
+  opacity: 1;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.trophy-popup.hide {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+
+.trophy-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.trophy-msg .bonus {
+  color: #62ffa5;
+  font-weight: 700;
+  margin-left: 0.25rem;
+}
+
+.trophy-close {
+  margin-left: 8px;
+  border: none;
+  background: transparent;
+  color: #aaa;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
 }

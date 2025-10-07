@@ -2,10 +2,10 @@
 <html lang="en">
   <head>
     <%- include('../partials/head') %>
-    <link rel="stylesheet" href="../../public/admin.css">
+    <link rel="stylesheet" href="/admin.css"><!-- serve from /public -->
   </head>
   <body>
-    <%- include('../partials/header', { user }) %>
+    <%- include('../partials/header', { user: authUser }) %>
 
     <main class="container">
       <div class="back-link">
@@ -41,7 +41,7 @@
           <label>Total Endings Found</label>
           <input type="number" name="totalEndingsFound" value="<%= user.totalEndingsFound || 0 %>">
 
-          <label>Stories Read</label>
+          <label>Stories Completed</label>
           <input type="number" name="storiesRead" value="<%= user.storiesRead || 0 %>">
 
           <label>Death Medal</label>
@@ -66,6 +66,17 @@
         <button type="submit" class="cta-button">Save Changes</button>
       </form>
 
+      <!-- Global Admin Actions -->
+      <form action="/admin/users/<%= user._id %>/recompute" method="post" class="panel form-section">
+        <fieldset>
+          <legend>Global Admin Actions</legend>
+          <p class="muted">
+            Recompute totals, medals, and stories completed based on current progress.
+          </p>
+          <button type="submit" class="cta-button">Recompute Medals & Totals</button>
+        </fieldset>
+      </form>
+
       <!-- Password Reset -->
       <form action="/admin/users/<%= user._id %>/reset-password" method="post" class="panel form-section">
         <fieldset>
@@ -87,21 +98,137 @@
         </fieldset>
       </form>
 
-      <!-- Progress Overview -->
+      <!-- Per-Story Progress & Tools -->
       <section class="panel form-section">
-        <h2>Progress</h2>
-        <% if (user.progress.length === 0) { %>
+        <h2>Per-Story Progress</h2>
+
+        <% if (!user.progress || user.progress.length === 0) { %>
           <p>No stories played yet.</p>
         <% } else { %>
-          <ul>
-            <% user.progress.forEach(p => { %>
-              <li><strong><%= p.story.title %></strong> — <%= p.endingsFound.length %> endings found</li>
+          <div class="story-progress-list">
+            <% user.progress.forEach(function(p, idx) { 
+                 const s = p.story; 
+                 const totalEndings = Array.isArray(s?.endings) ? s.endings.length : 0;
+                 const foundCount = Array.isArray(p.endingsFound) ? p.endingsFound.length : 0;
+                 const isCompleted = totalEndings > 0 && foundCount >= totalEndings;
+
+                 // map found endings to labels/types for display
+                 const endingInfo = (Array.isArray(p.endingsFound) ? p.endingsFound : [])
+                   .map(function(id){
+                      const e = (Array.isArray(s?.endings) ? s.endings : []).find((x)=> x._id === id);
+                      return e ? { id: e._id, label: e.label, type: e.type } : { id, label: id, type: 'unknown' };
+                   });
+            %>
+              <div class="story-progress-card">
+                <div class="story-progress-header">
+                  <h3><%= s?.title || 'Untitled Story' %></h3>
+                  <div class="pill">
+                    <%= foundCount %> / <%= totalEndings %> endings
+                    <% if (isCompleted) { %>
+                      <span class="badge success">Completed</span>
+                    <% } %>
+                  </div>
+                </div>
+
+                <!-- Remove selected endings -->
+                <form action="/admin/users/<%= user._id %>/progress/<%= s?._id %>/remove-endings" method="post" class="inline-form">
+                  <fieldset>
+                    <legend>Found Endings</legend>
+                    <% if (endingInfo.length === 0) { %>
+                      <p class="muted">No endings found in this story.</p>
+                    <% } else { %>
+                      <div class="ending-list">
+                        <% endingInfo.forEach(function(e) { %>
+                          <label class="ending-item">
+                            <input type="checkbox" name="endingIds" value="<%= e.id %>">
+                            <span class="ending-label"><%= e.label %></span>
+                            <span class="ending-type <%= e.type %>"><%= e.type %></span>
+                          </label>
+                        <% }) %>
+                      </div>
+
+                      <div class="controls-row">
+                        <div class="left">
+                          <button type="button" class="cta-button small ghost js-toggle-all" data-idx="<%= idx %>" data-checked="true">Select All</button>
+                          <button type="button" class="cta-button small ghost js-toggle-all" data-idx="<%= idx %>" data-checked="false">Clear</button>
+                        </div>
+                        <div class="right">
+                          <label class="compact">Adjust Currency (±)</label>
+                          <input type="number" step="1" name="adjustCurrency" placeholder="0" class="w-100">
+                          <button type="submit" class="cta-button danger">Remove Selected Endings</button>
+                        </div>
+                      </div>
+                    <% } %>
+                  </fieldset>
+                </form>
+
+                <!-- Clear entire story progress -->
+                <form action="/admin/users/<%= user._id %>/progress/<%= s?._id %>/clear" method="post" class="inline-form">
+                  <fieldset>
+                    <legend>Reset This Story</legend>
+                    <div class="controls-row">
+                      <div class="left">
+                        <p class="muted">Sets endings to empty, clears last node, and resets death/true flags.</p>
+                      </div>
+                      <div class="right">
+                        <label class="compact">Adjust Currency (±)</label>
+                        <input type="number" step="1" name="adjustCurrency" placeholder="0" class="w-100">
+                        <button type="submit" class="cta-button">Clear Story Progress</button>
+                      </div>
+                    </div>
+                  </fieldset>
+                </form>
+              </div>
             <% }) %>
-          </ul>
+          </div>
         <% } %>
       </section>
     </main>
 
     <%- include('../partials/footer') %>
+
+    <style>
+      .story-progress-list { display: grid; gap: 16px; }
+      .story-progress-card {
+        border: 1px solid #ddd; border-radius: 12px; padding: 14px;
+        background: #777;
+      }
+      .story-progress-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+      .pill { font-size: 0.95rem; color: #555; }
+      .badge.success {
+        margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+        background: #e6ffed; color: #1a7f37; border: 1px solid #b7e4c7;
+        font-size: 0.8rem;
+      }
+      .inline-form fieldset { border: 1px solid #eee; border-radius: 10px; padding: 10px; }
+      .ending-list { display: grid; gap: 6px; margin: 8px 0; }
+      .ending-item { display: flex; align-items: center; gap: 8px; }
+      .ending-type { font-size: .8rem; text-transform: uppercase; opacity: .7; }
+      .ending-type.true { color: #3b82f6; }
+      .ending-type.death { color: #ef4444; }
+      .ending-type.other { color: #6b7280; }
+      .controls-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; }
+      .compact { font-size: 0.9rem; }
+      .ghost { background: transparent; border: 1px solid #ccc; color: #333; }
+      .w-100 { width: 120px; }
+    </style>
+
+    <script>  
+    document.querySelectorAll('.js-toggle-all').forEach(btn => {
+    const idx = Number(btn.dataset.idx);
+    const checked = btn.dataset.checked === 'true';
+    btn.addEventListener('click', () => toggleAll(idx, checked));
+    });
+
+  
+    function toggleAll(idx, checked) {
+      const cards = document.querySelectorAll('.story-progress-card');
+      const card = cards[idx];
+      if (!card) return;
+      card.querySelectorAll('input[type="checkbox"][name="endingIds"]').forEach(cb => {
+       cb.checked = checked;
+    });
+  }
+    </script>
   </body>
 </html>

@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
 const { randomUUID } = require("node:crypto"); // built-in UUID
+const { updateUserMedals } = require("../utils/updateMedals");
+const { v2: cloudinary } = require("cloudinary");
 
 /* ------------------ DASHBOARD ------------------ */
 exports.dashboard = async (req, res) => {
@@ -47,7 +49,11 @@ exports.userDetail = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).populate("progress.story");
     if (!user) return res.status(404).send("User not found");
-    res.render("admin/userDetail", { title: "User Detail", user });
+    res.render("admin/userDetail", {
+      title: "User Detail",
+      user,
+      authUser: req.user,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error loading user detail");
@@ -126,6 +132,63 @@ exports.userAddPost = async (req, res) => {
     res.status(500).send("Error creating user");
   }
 };
+
+/*---------helper -----------*/
+async function recomputeUserDerived(user) {
+  // Normalize endingsFound to strings and gather storyIds we need
+  const storyIdSet = new Set();
+  user.progress.forEach((p) => {
+    if (!p) return;
+    if (p.story) storyIdSet.add(String(p.story._id || p.story));
+    p.endingsFound = (p.endingsFound || []).map((v) =>
+      typeof v === "string" ? v : String(v)
+    );
+  });
+
+  const storyIds = Array.from(storyIdSet);
+  const stories = await Story.find({ _id: { $in: storyIds } })
+    .select("_id endings title")
+    .lean();
+  const storyMap = new Map(stories.map((s) => [String(s._id), s]));
+
+  // Recompute per-story tallies
+  user.totalEndingsFound = 0;
+
+  user.progress.forEach((p) => {
+    const s = p.story ? storyMap.get(String(p.story._id || p.story)) : null;
+    const endingsArr = Array.isArray(s?.endings) ? s.endings : [];
+
+    const endingTypeById = new Map(endingsArr.map((e) => [e._id, e.type]));
+
+    // Deduplicate endingsFound just in case
+    const uniqueFound = Array.from(new Set(p.endingsFound || []));
+    p.endingsFound = uniqueFound;
+
+    // Per-story counts
+    p.trueEndingFound = uniqueFound.some(
+      (id) => endingTypeById.get(id) === "true"
+    );
+    p.deathEndingCount = uniqueFound.reduce(
+      (acc, id) => acc + (endingTypeById.get(id) === "death" ? 1 : 0),
+      0
+    );
+
+    user.totalEndingsFound += uniqueFound.length;
+  });
+
+  // Recompute medals
+  updateUserMedals(user);
+
+  // (Optional) If you want "storiesRead" to reflect "stories completed"
+  // calculate it here so Admin UI can also see the up-to-date number.
+  const storiesCompleted = user.progress.reduce((acc, p) => {
+    const s = p.story ? storyMap.get(String(p.story._id || p.story)) : null;
+    const total = Array.isArray(s?.endings) ? s.endings.length : 0;
+    const found = Array.isArray(p.endingsFound) ? p.endingsFound.length : 0;
+    return acc + (total > 0 && found >= total ? 1 : 0);
+  }, 0);
+  user.storiesRead = storiesCompleted; // reusing field as "completed"
+}
 
 /* ------------------ STORIES ------------------ */
 exports.storiesList = async (req, res) => {
@@ -553,23 +616,42 @@ exports.endingsReorder = async (req, res) => {
 };
 
 /* ------------------ IMAGES ------------------ */
+// Helper: derive Cloudinary public_id from a delivery URL (fallback for legacy strings)
+function derivePublicIdFromUrl(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    const parts = u.pathname.split("/"); // ["", "cloud_name", "image", "upload", "v123", "stories", "<id>", "file.ext"]
+    const idx = parts.indexOf("upload");
+    if (idx === -1) return null;
+    const pathParts = parts.slice(idx + 1);
+    if (pathParts[0] && /^v\d+/.test(pathParts[0])) pathParts.shift(); // drop version
+    const last = pathParts.pop();
+    const base = last.replace(/\.[^.]+$/, ""); // remove extension
+    pathParts.push(base);
+    return pathParts.join("/"); // e.g. "stories/656a.../1699999999-filename"
+  } catch {
+    return null;
+  }
+}
+
+// Render images page (now using story.images as [{url, publicId}] or strings)
 exports.listImages = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
     if (!story) return res.status(404).send("Story not found");
 
-    const dir = path.join(
-      __dirname,
-      "..",
-      "public",
-      "uploads",
-      "stories",
-      story._id.toString()
-    );
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const raw = Array.isArray(story.images) ? story.images : [];
+    const images = raw.map((item) => {
+      if (typeof item === "string") {
+        return { url: item, publicId: derivePublicIdFromUrl(item) };
+      }
+      // object form
+      return {
+        url: item.url || item.path || "",
+        publicId: item.publicId || item.filename || null,
+      };
+    });
 
-    const files = fs.readdirSync(dir);
-    const images = files.map((f) => `/uploads/stories/${story._id}/${f}`);
     res.render("admin/storyImages", { title: "Image Library", story, images });
   } catch (err) {
     console.error(err);
@@ -577,13 +659,173 @@ exports.listImages = async (req, res) => {
   }
 };
 
+// After Cloudinary upload, save URL + publicId
 exports.uploadImage = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
     if (!story) return res.status(404).send("Story not found");
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).send("No image uploaded");
+    }
+
+    const url = req.file.path; // secure CDN URL
+    const publicId = req.file.filename || req.file.public_id || null;
+
+    story.images = story.images || [];
+    // Prefer storing as object going forward
+    story.images.unshift({ url, publicId });
+
+    await story.save();
     res.redirect(`/admin/stories/${story._id}/images`);
   } catch (err) {
     console.error(err);
     res.status(500).send("Error uploading image");
+  }
+};
+
+// NEW: Delete image (from Cloudinary + Mongo)
+exports.deleteImage = async (req, res) => {
+  try {
+    const { id: storyId } = req.params;
+    const { publicId, url } = req.body; // either publicId or url (fallback) is fine
+
+    const story = await Story.findById(storyId);
+    if (!story) return res.status(404).send("Story not found");
+
+    let pid = publicId && publicId.trim();
+    if (!pid && url) pid = derivePublicIdFromUrl(url);
+
+    // Try to delete from Cloudinary if we have a publicId
+    if (pid) {
+      try {
+        await cloudinary.uploader.destroy(pid);
+      } catch (e) {
+        // Not fatal if it already disappeared; log and continue
+        console.warn("[Cloudinary destroy] ", e?.message || e);
+      }
+    }
+
+    // Remove from Mongo (supports both object and string entries)
+    const before = story.images.length;
+    story.images = (story.images || []).filter((item) => {
+      if (typeof item === "string") {
+        // legacy string URL
+        return item !== url;
+      }
+      // object with url/publicId
+      const sameByPid = pid && item && item.publicId === pid;
+      const sameByUrl = url && item && item.url === url;
+      return !(sameByPid || sameByUrl);
+    });
+
+    if (story.images.length === before) {
+      console.warn("[Image delete] No entry matched; nothing removed.");
+    }
+
+    await story.save();
+    res.redirect(`/admin/stories/${story._id}/images`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error deleting image");
+  }
+};
+
+// POST /admin/users/:id/progress/:storyId/remove-endings
+exports.userProgressRemoveEndings = async (req, res) => {
+  try {
+    const { id, storyId } = req.params;
+    let { endingIds = [], adjustCurrency } = req.body;
+
+    if (!Array.isArray(endingIds)) endingIds = [endingIds];
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).send("User not found");
+
+    const p = user.progress.find(
+      (pr) =>
+        String(pr.story) === String(storyId) || pr.story?.equals?.(storyId)
+    );
+    if (!p) return res.redirect(`/admin/users/${id}`);
+
+    // Normalize existing endingsFound to strings
+    p.endingsFound = (p.endingsFound || []).map((v) =>
+      typeof v === "string" ? v : String(v)
+    );
+
+    // Remove selected endings
+    const removeSet = new Set(endingIds.map((v) => String(v)));
+    const beforeLen = p.endingsFound.length;
+    p.endingsFound = p.endingsFound.filter(
+      (eid) => !removeSet.has(String(eid))
+    );
+    const removedCount = Math.max(0, beforeLen - p.endingsFound.length);
+
+    // Optional currency adjustment (admin decides amount ±)
+    const delta = Number(adjustCurrency);
+    if (!Number.isNaN(delta) && delta !== 0) {
+      user.currency = (user.currency || 0) + delta;
+    }
+
+    // Recompute from authoritative progress
+    await recomputeUserDerived(user);
+    await user.save();
+
+    res.redirect(`/admin/users/${id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error removing endings");
+  }
+};
+
+// POST /admin/users/:id/progress/:storyId/clear
+exports.userProgressClearStory = async (req, res) => {
+  try {
+    const { id, storyId } = req.params;
+    const { adjustCurrency } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).send("User not found");
+
+    const p = user.progress.find(
+      (pr) =>
+        String(pr.story) === String(storyId) || pr.story?.equals?.(storyId)
+    );
+    if (p) {
+      p.endingsFound = [];
+      p.lastNodeId = null;
+      p.trueEndingFound = false;
+      p.deathEndingCount = 0;
+    }
+
+    const delta = Number(adjustCurrency);
+    if (!Number.isNaN(delta) && delta !== 0) {
+      user.currency = (user.currency || 0) + delta;
+    }
+
+    await recomputeUserDerived(user);
+    await user.save();
+
+    res.redirect(`/admin/users/${id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error clearing story progress");
+  }
+};
+
+// POST /admin/users/:id/recompute
+exports.userRecomputeTotals = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).send("User not found");
+
+    await recomputeUserDerived(user);
+    await user.save();
+
+    res.redirect(`/admin/users/${id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error recomputing user totals");
   }
 };

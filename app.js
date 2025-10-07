@@ -21,7 +21,7 @@ connectDB();
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "super-secret-key", // change in .env
+    secret: process.env.SESSION_SECRET || "super-secret-key",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
@@ -38,6 +38,12 @@ app.use(
 );
 const { attachUser } = require("./middleware/auth");
 app.use(attachUser); // make user available in req.user and EJS
+
+// in app.js (after your auth middleware sets req.user)
+app.use((req, res, next) => {
+  res.locals.currentUser = req.user || null;
+  next();
+});
 
 // mount all routes
 app.use("/", routes);

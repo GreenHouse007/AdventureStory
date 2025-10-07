@@ -31,23 +31,36 @@
         <p>No images uploaded yet.</p>
         <% } else { %>
         <ul class="image-grid">
-          <% images.forEach(img => { %>
+          <% images.forEach(imgObj => { const src = imgObj.url || imgObj; const
+          pid = imgObj.publicId || ''; %>
           <li class="image-item">
-            <img src="<%= img %>" alt="Story image" />
+            <img src="<%= src %>" alt="Story image" />
             <div class="image-actions">
               <input
                 type="text"
-                value="<%= img %>"
+                value="<%= src %>"
                 readonly
                 class="image-url"
               />
-              <button
-                type="button"
-                class="copy-btn"
-                onclick="copyToClipboard('<%= img %>')"
-              >
-                Copy URL
-              </button>
+              <div class="row">
+                <button
+                  type="button"
+                  class="copy-btn"
+                  onclick="copyToClipboard('<%= src %>')"
+                >
+                  Copy URL
+                </button>
+
+                <form
+                  action="/admin/stories/<%= story._id %>/images/delete"
+                  method="post"
+                  onsubmit="return confirm('Delete this image?');"
+                >
+                  <input type="hidden" name="url" value="<%= src %>" />
+                  <input type="hidden" name="publicId" value="<%= pid %>" />
+                  <button type="submit" class="copy-btn danger">Delete</button>
+                </form>
+              </div>
             </div>
           </li>
           <% }) %>
@@ -113,6 +126,19 @@
       }
       .copy-btn:hover {
         background: #555;
+      }
+
+      .image-actions .row {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-top: 0.25rem;
+      }
+      .copy-btn.danger {
+        background: #7a1f1f;
+      }
+      .copy-btn.danger:hover {
+        background: #a12a2a;
       }
     </style>
 

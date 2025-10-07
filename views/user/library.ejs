@@ -28,6 +28,15 @@
           <h3><%= story.title %></h3>
           <p><%= story.description %></p>
 
+          <!-- Endings progress -->
+          <% if (story.totalEndings && story.totalEndings > 0) { %>
+          <p class="ending-progress">
+            <strong><%= story.foundCount %></strong> / <%= story.totalEndings %>
+            endings found
+          </p>
+          <% } %>
+
+          <!-- Play or Coming Soon -->
           <% if (story.status === "public") { %>
           <a href="/u/story/<%= story._id %>" class="cta-button">Play</a>
           <% } else { %>
@@ -37,8 +46,208 @@
         <% }) %>
       </div>
       <% } %>
+
+      <!-- Centered, blocking Trophy Modal -->
+      <% if (Array.isArray(trophyPopups) && trophyPopups.length) { %>
+      <div
+        id="trophy-modal-overlay"
+        class="trophy-modal-overlay"
+        aria-hidden="false"
+      ></div>
+
+      <div
+        id="trophy-modal"
+        class="trophy-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trophy-modal-title"
+        aria-describedby="trophy-modal-message"
+      >
+        <div class="trophy-icon">🏆</div>
+        <h2 id="trophy-modal-title" class="trophy-title">Trophy Unlocked!</h2>
+        <div id="trophy-modal-message" class="trophy-message">
+          <%= trophyPopups[0].message %>
+        </div>
+        <div class="trophy-coins" id="trophy-modal-coins">
+          +<%= trophyPopups[0].amount %> coins
+        </div>
+
+        <div class="trophy-actions">
+          <button
+            id="trophy-modal-btn"
+            class="btn btn-primary"
+            type="button"
+            autofocus
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // Inject as a real JS array to avoid JSON.parse quoting issues
+          const queue = <%- JSON.stringify(trophyPopups || []) %>;
+
+          const overlay = document.getElementById('trophy-modal-overlay');
+          const modal   = document.getElementById('trophy-modal');
+          const message = document.getElementById('trophy-modal-message');
+          const coinsEl = document.getElementById('trophy-modal-coins');
+          const btn     = document.getElementById('trophy-modal-btn');
+
+          if (!Array.isArray(queue) || queue.length === 0 || !overlay || !modal || !message || !coinsEl || !btn) {
+            console.error('[TrophyModal] Missing elements or empty queue.');
+            if (modal) modal.classList.add('hide');
+            if (overlay) overlay.classList.add('hide');
+            document.body.classList.remove('has-modal');
+            return;
+          }
+
+          let index = 0;
+
+          function show(i) {
+            const item = queue[i];
+            if (!item) { return closeModal(); }
+            message.textContent = item.message || 'Achievement unlocked!';
+            coinsEl.textContent = `+${Number(item.amount || 0)} coins`;
+            btn.textContent = (i < queue.length - 1) ? 'Next' : 'Got it';
+            overlay.classList.remove('hide');
+            modal.classList.remove('hide');
+            document.body.classList.add('has-modal'); // block scroll via CSS
+            btn.disabled = false;
+            btn.focus();
+          }
+
+          function closeModal() {
+            btn.disabled = true; // prevent double-clicks
+            modal.classList.add('hide');
+            overlay.classList.add('hide');
+            document.body.classList.remove('has-modal');
+            setTimeout(() => {
+              if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+              if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }, 250);
+          }
+
+          btn.addEventListener('click', function () {
+            index++;
+            if (index < queue.length) {
+              show(index);
+            } else {
+              closeModal();
+            }
+          });
+
+          // Block outside clicks; require the button
+          overlay.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+
+          // Block ESC from closing (explicit acknowledgement required)
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+            }
+          });
+
+          // Init
+          show(0);
+        })();
+      </script>
+      <% } %>
     </main>
 
     <%- include('../partials/footer') %>
+
+    <style>
+      /* Progress pill */
+      .ending-progress {
+        font-size: 0.95rem;
+        color: #7a7a7a;
+        margin: 0.4rem 0 0.8rem;
+      }
+
+      /* Prevent background scroll when modal is open */
+      body.has-modal {
+        overflow: hidden;
+      }
+
+      /* Modal overlay + dialog */
+      .trophy-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        opacity: 1;
+        transition: opacity 0.25s ease;
+      }
+      .trophy-modal-overlay.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .trophy-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        z-index: 1001;
+        width: min(560px, 92vw);
+        max-width: 92vw;
+        background: #121417;
+        color: #fff;
+        border: 1px solid #2a2f36;
+        border-radius: 16px;
+        padding: 28px 22px;
+        box-shadow: 0 24px 72px rgba(0, 0, 0, 0.45);
+        text-align: center;
+        opacity: 1;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      .trophy-modal.hide {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.98);
+        pointer-events: none;
+      }
+
+      .trophy-icon {
+        font-size: 56px;
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+      .trophy-title {
+        margin: 0 0 6px 0;
+        font-size: 1.5rem;
+        letter-spacing: 0.2px;
+      }
+      .trophy-message {
+        font-size: 1.05rem;
+        color: #dbe7ff;
+      }
+      .trophy-coins {
+        margin-top: 6px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        color: #86efac; /* green accent */
+      }
+
+      .trophy-actions {
+        margin-top: 16px;
+      }
+      .btn.btn-primary {
+        background: #4ade80;
+        color: #0b0f14;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .btn.btn-primary:focus {
+        outline: 3px solid #93c5fd;
+        outline-offset: 2px;
+      }
+    </style>
   </body>
 </html>

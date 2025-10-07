@@ -11,9 +11,10 @@ const userSchema = new mongoose.Schema(
     progress: [
       {
         story: { type: mongoose.Schema.Types.ObjectId, ref: "Story" },
-        endingsFound: [{ type: mongoose.Schema.Types.ObjectId }], // references Story endings
+        endingsFound: [{ type: String }],
         trueEndingFound: { type: Boolean, default: false },
         deathEndingCount: { type: Number, default: 0 },
+        lastNodeId: { type: String, default: null },
       },
     ],
 

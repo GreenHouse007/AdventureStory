@@ -1,28 +1,50 @@
+require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const fs = require("fs");
 const path = require("path");
 const { requireAdmin } = require("../middleware/auth");
 const controller = require("../controllers/admin.controller");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = path.join(
-      __dirname,
-      "..",
-      "public",
-      "uploads",
-      "stories",
-      req.params.id
-    );
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+console.log(
+  "[Cloudinary] cloud:",
+  process.env.CLOUDINARY_CLOUD_NAME,
+  "key:",
+  (process.env.CLOUDINARY_API_KEY || "").slice(0, 4) + "…"
+);
+
+// Store files in Cloudinary under stories/<storyId>/...
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => {
+    const storyId = req.params.id; // from /stories/:id/images/upload
+    return {
+      folder: `stories/${storyId}`,
+      public_id: `${Date.now()}-${file.originalname.replace(/\.[^.]+$/, "")}`,
+      resource_type: "image",
+      allowed_formats: ["jpg", "jpeg", "png", "gif", "webp"],
+      transformation: [{ quality: "auto", fetch_format: "auto" }],
+      context: { story_id: String(storyId) },
+    };
   },
 });
-const upload = multer({ storage });
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(png|jpe?g|gif|webp)$/i.test(file.mimetype);
+    cb(ok ? null : new Error("Only image files are allowed"), ok);
+  },
+});
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -48,6 +70,17 @@ router.get("/users/:id", controller.userDetail);
 router.post("/users/:id", controller.userUpdate);
 router.post("/users/:id/reset-password", controller.userResetPassword);
 router.post("/users/:id/delete", controller.userDelete);
+
+// --- Progress Maintenance (NEW) ---
+router.post(
+  "/users/:id/progress/:storyId/remove-endings",
+  controller.userProgressRemoveEndings
+);
+router.post(
+  "/users/:id/progress/:storyId/clear",
+  controller.userProgressClearStory
+);
+router.post("/users/:id/recompute", controller.userRecomputeTotals);
 
 /* ---------------- Nodes ---------------- */
 router.post("/stories/:id/nodes/add", controller.storyNodeAddPost);
@@ -106,5 +139,7 @@ router.post(
   upload.single("image"),
   controller.uploadImage
 );
+// NEW: delete endpoint
+router.post("/stories/:id/images/delete", controller.deleteImage);
 
 module.exports = router;

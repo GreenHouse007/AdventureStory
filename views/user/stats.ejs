@@ -8,52 +8,76 @@
 
     <main class="container">
       <h1 class="title">Player Stats</h1>
-      <p>Welcome, <%= user.username %>!</p>
+      <p>Welcome, <%= dbUser.username %>!</p>
 
+      <!-- Summary Section -->
       <section class="stats-summary">
+        <h2>Overview</h2>
         <p>
           <strong>Total Endings Found:</strong>
-          <%= (user && typeof user.totalEndingsFound !== 'undefined') ?
-          user.totalEndingsFound : 0 %>
+          <%= dbUser.totalEndingsFound || 0 %>
         </p>
         <p>
-          <strong>Stories Read:</strong>
-          <%= (user && typeof user.storiesRead !== 'undefined') ?
-          user.storiesRead : 0 %>
+          <strong>Stories Completed:</strong>
+          <%= typeof storiesCompleted !== "undefined" ? storiesCompleted :
+          (dbUser.storiesRead || 0) %>
         </p>
-        <p>
-          <strong>Currency:</strong>
-          <%= (user && typeof user.currency !== 'undefined') ? user.currency : 0
-          %> 🪙
-        </p>
+        <p><strong>Currency:</strong> <%= dbUser.currency || 0 %> 🪙</p>
       </section>
 
+      <!-- Medals Section -->
       <section class="medals">
         <h2>Medals</h2>
         <p>
-          Death Medal: <%= (user && user.medals && typeof user.medals.death !==
-          'undefined') ? user.medals.death : '—' %>
-        </p>
-        <p>
-          True Ending Medal: <%= (user && user.medals && typeof
-          user.medals.trueEnding !== 'undefined') ? user.medals.trueEnding : '—'
+          <strong>Death Endings Medal:</strong>
+          <%= dbUser.medals?.death ? dbUser.medals.death.toUpperCase() : "None"
           %>
         </p>
+        <p>
+          <strong>True Endings Medal:</strong>
+          <%= dbUser.medals?.trueEnding ? dbUser.medals.trueEnding.toUpperCase()
+          : "None" %>
+        </p>
+
+        <!-- Medal Requirements -->
+        <div class="medal-legend">
+          <h3>Medal Requirements</h3>
+          <div class="medal-group">
+            <h4>💀 Death Endings Medal</h4>
+            <ul>
+              <li>Bronze: 1+ death ending found</li>
+              <li>Silver: 5+ death endings</li>
+              <li>Gold: 10+ death endings</li>
+              <li>Platinum: 20+ death endings</li>
+            </ul>
+          </div>
+
+          <div class="medal-group">
+            <h4>✨ True Endings Medal</h4>
+            <ul>
+              <li>Bronze: 1+ story with a true ending</li>
+              <li>Silver: 3+ stories with true endings</li>
+              <li>Gold: 5+ stories with true endings</li>
+              <li>Platinum: 10+ stories with true endings</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
+      <!-- Story Progress Section -->
       <section class="progress">
         <h2>Stories Progress</h2>
-        <% if (user && Array.isArray(user.progress) && user.progress.length) {
-        %>
+        <% if (dbUser && Array.isArray(dbUser.progress) &&
+        dbUser.progress.length) { %>
         <ul>
-          <% user.progress.forEach(function(p) { %>
+          <% dbUser.progress.forEach(function(p) { %>
           <li>
-            <strong
-              ><%= (p && p.story && p.story.title) ? p.story.title : 'Untitled'
-              %></strong
-            >
-            — <%= (p && Array.isArray(p.endingsFound)) ? p.endingsFound.length :
-            0 %> out of <%= (p && p.story && Array.isArray(p.story.endings)) ?
+            <strong>
+              <%= (p.story && p.story.title) ? p.story.title : "Untitled Story"
+              %>
+            </strong>
+            — <%= (Array.isArray(p.endingsFound)) ? p.endingsFound.length : 0 %>
+            / <%= (p.story && Array.isArray(p.story.endings)) ?
             p.story.endings.length : 0 %> endings found
           </li>
           <% }) %>
@@ -65,5 +89,54 @@
     </main>
 
     <%- include('../partials/footer') %>
+
+    <style>
+      main.container {
+        max-width: 800px;
+      }
+
+      section {
+        margin-bottom: 2rem;
+      }
+
+      h2,
+      h3,
+      h4 {
+        margin-bottom: 0.5rem;
+      }
+
+      .stats-summary p,
+      .medals p,
+      .progress p {
+        font-size: 1rem;
+        margin: 0.3rem 0;
+      }
+
+      .medal-legend {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid #555;
+        border-radius: 10px;
+        background: #777;
+      }
+
+      .medal-group {
+        margin-top: 1rem;
+      }
+
+      .medal-group h4 {
+        margin-bottom: 0.3rem;
+      }
+
+      .medal-group ul {
+        list-style: disc;
+        margin-left: 1.5rem;
+      }
+
+      .muted {
+        color: #777;
+        font-style: italic;
+      }
+    </style>
   </body>
 </html>
