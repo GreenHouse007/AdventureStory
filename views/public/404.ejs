@@ -12,7 +12,8 @@
         <p class="muted">
           That path doesn’t exist. Perhaps the story branched elsewhere.
         </p>
-        <a class="cta-button" href="/">Return home</a>
+        <% const fallbackBackLink = backLink || (user ? '/u/library' : '/'); %>
+        <a class="cta-button" href="<%= fallbackBackLink %>">Go back</a>
       </section>
     </main>
 

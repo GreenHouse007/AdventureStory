@@ -44,14 +44,19 @@ exports.loginGet = (req, res) => {
   res.render("public/login", { title: "Login" });
 };
 
+const ONE_DAY_MS = 1000 * 60 * 60 * 24;
+const THIRTY_DAYS_MS = ONE_DAY_MS * 30;
+
 exports.loginPost = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, remember } = req.body;
   try {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).render("public/login", {
         title: "Login",
         error: "Invalid credentials",
+        old: { email },
+        remember: Boolean(remember),
       });
     }
 
@@ -60,10 +65,15 @@ exports.loginPost = async (req, res) => {
       return res.status(401).render("public/login", {
         title: "Login",
         error: "Invalid credentials",
+        old: { email },
+        remember: Boolean(remember),
       });
     }
 
     req.session.userId = user._id;
+
+    const rememberMe = remember === "1" || remember === "on" || remember === true;
+    req.session.cookie.maxAge = rememberMe ? THIRTY_DAYS_MS : ONE_DAY_MS;
 
     // ✅ Ensure the session is saved before redirect
     req.session.save((err) => {
@@ -72,6 +82,8 @@ exports.loginPost = async (req, res) => {
         return res.status(500).render("public/login", {
           title: "Login",
           error: "Server error",
+          old: { email },
+          remember: Boolean(remember),
         });
       }
       res.redirect("/u/library");
@@ -81,6 +93,8 @@ exports.loginPost = async (req, res) => {
     res.status(500).render("public/login", {
       title: "Login",
       error: "Server error",
+      old: { email },
+      remember: Boolean(remember),
     });
   }
 };
