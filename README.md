@@ -76,19 +76,18 @@ git clone https://github.com/yourusername/shadow-paths.git
 cd shadow-paths
 npm install
 
----
+```
 
 ## 🧠 Roadmap
 
- Player progress reset option
+Player progress reset option
 
- Visual branching editor for story nodes
+Visual branching editor for story nodes
 
- Achievements and collectible badges
+Achievements and collectible badges
 
- Audio narration and ambient sound system
+Audio narration and ambient sound system
 
- Premium story unlocks using earned currency
+Premium story unlocks using earned currency
 
- API for importing/exporting stories
-```
+API for importing/exporting stories
