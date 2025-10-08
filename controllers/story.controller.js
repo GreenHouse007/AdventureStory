@@ -12,6 +12,8 @@ exports.storyLanding = async (req, res) => {
 
   // Figure out if "Continue" should be shown
   let continueNodeId = null;
+  const totalEndings = Array.isArray(story.endings) ? story.endings.length : 0;
+  let foundCount = 0;
   if (req.session?.userId) {
     const user = await User.findById(req.session.userId).select("progress");
     const p = user?.progress?.find(
@@ -21,6 +23,10 @@ exports.storyLanding = async (req, res) => {
       const existsAsNode = story.nodes.some((n) => n._id === p.lastNodeId);
       if (existsAsNode) continueNodeId = p.lastNodeId;
     }
+    if (Array.isArray(p?.endingsFound)) {
+      const uniqueEndings = new Set(p.endingsFound.map((id) => String(id)));
+      foundCount = uniqueEndings.size;
+    }
   }
 
   res.render("user/storyLanding", {
@@ -29,6 +35,10 @@ exports.storyLanding = async (req, res) => {
     startNodeId,
     continueNodeId, // <-- view will hide button if null
     user: req.user,
+    progress: {
+      foundCount,
+      totalEndings,
+    },
   });
 };
 

@@ -16,6 +16,17 @@
       />
       <p><%= story?.description || '' %></p>
 
+      <% if (progress && progress.totalEndings > 0) { %>
+      <div class="ending-progress-card">
+        <div class="ending-progress-card__count">
+          <span class="found"><%= progress.foundCount %></span>
+          <span class="divider">/</span>
+          <span class="total"><%= progress.totalEndings %></span>
+        </div>
+        <span class="ending-progress-card__label">Endings discovered</span>
+      </div>
+      <% } %>
+
       <div class="actions stack">
         <% if (startNodeId) { %>
         <a
@@ -38,5 +49,38 @@
     </main>
 
     <%- include('../partials/footer') %>
+    <style>
+      .ending-progress-card {
+        margin: 1.5rem 0;
+        padding: 1rem 1.4rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #4338ca, #6366f1);
+        color: #fff;
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        box-shadow: 0 16px 32px rgba(79, 70, 229, 0.25);
+      }
+
+      .ending-progress-card__count {
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.35rem;
+      }
+
+      .ending-progress-card__count .divider {
+        opacity: 0.8;
+      }
+
+      .ending-progress-card__label {
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.85;
+      }
+    </style>
   </body>
 </html>

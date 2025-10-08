@@ -1,5 +1,6 @@
 const User = require("../models/user.model");
 const Story = require("../models/story.model");
+const STORY_CATEGORIES = require("../utils/storyCategories");
 
 exports.stats = async (req, res) => {
   try {
@@ -37,7 +38,9 @@ exports.library = async (req, res) => {
     const user = await User.findById(req.session.userId);
     const stories = await Story.find()
       .sort({ displayOrder: 1, createdAt: -1 })
-      .select("title description coverImage endings status displayOrder")
+      .select(
+        "title description coverImage endings status displayOrder categories"
+      )
       .lean();
 
     const storyData = stories.map((story) => {
@@ -54,6 +57,7 @@ exports.library = async (req, res) => {
         title: story.title || "Untitled Story",
         foundCount,
         totalEndings,
+        categories: Array.isArray(story.categories) ? story.categories : [],
       };
     });
 
@@ -72,6 +76,7 @@ exports.library = async (req, res) => {
       title: "Library",
       stories: storyData,
       trophyPopups,
+      categories: STORY_CATEGORIES,
     });
   } catch (err) {
     console.error(err);
@@ -81,6 +86,7 @@ exports.library = async (req, res) => {
         title: "Library",
         stories: [],
         trophyPopups: [],
+        categories: STORY_CATEGORIES,
       });
   }
 };

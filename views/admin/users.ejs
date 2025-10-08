@@ -9,6 +9,10 @@
     <main class="container">
       <h1 class="title">Manage Users</h1>
 
+      <div class="top-actions">
+        <a href="/admin" class="back-link">&larr; Back to Dashboard</a>
+      </div>
+
       <!-- Search bar + Add User -->
       <div class="toolbar">
         <form method="get" action="/admin/users" class="search-bar">
@@ -63,5 +67,28 @@
     </main>
 
     <%- include('../partials/footer') %>
+
+    <style>
+      .top-actions {
+        margin-bottom: 1rem;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid #cfcfcf;
+        color: #333;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .back-link:hover {
+        background: #f2f2f2;
+      }
+    </style>
   </body>
 </html>

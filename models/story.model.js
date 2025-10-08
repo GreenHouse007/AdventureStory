@@ -24,7 +24,11 @@ const nodeSchema = new mongoose.Schema({
 const endingSchema = new mongoose.Schema({
   _id: String, // "ending1"
   label: String,
-  type: { type: String, enum: ["true", "death", "other"], default: "other" },
+  type: {
+    type: String,
+    enum: ["true", "death", "other", "secret"],
+    default: "other",
+  },
   text: String,
   image: String,
   notes: String, // private notes for ending
@@ -48,6 +52,8 @@ const storySchema = new mongoose.Schema(
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     notes: String,
+
+    categories: { type: [String], default: [] },
 
     nodes: [nodeSchema],
     endings: [endingSchema],

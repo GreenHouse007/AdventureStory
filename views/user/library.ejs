@@ -13,20 +13,87 @@
         you find.
       </p>
 
-      <% if (!Array.isArray(stories) || stories.length === 0) { %>
+      <% const hasStories = Array.isArray(stories) && stories.length > 0; %>
+
+      <% if (hasStories) { %>
+      <div class="library-controls">
+        <div class="search-control">
+          <label for="storySearch" class="sr-only">Search stories</label>
+          <input
+            type="text"
+            id="storySearch"
+            class="search-input"
+            placeholder="Search stories by name"
+            autocomplete="off"
+          />
+        </div>
+        <% if (Array.isArray(categories) && categories.length) { %>
+        <button
+          type="button"
+          id="categoryFilterBtn"
+          class="filter-toggle"
+          aria-expanded="false"
+        >
+          Filter Categories
+        </button>
+        <% } %>
+      </div>
+      <% if (Array.isArray(categories) && categories.length) { %>
+      <div id="categoryFilterPanel" class="filter-panel" hidden>
+        <div class="filter-panel__header">
+          <span>Filter by category</span>
+          <button
+            type="button"
+            id="categoryFilterClose"
+            class="filter-close"
+            aria-label="Close category filters"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="filter-panel__options">
+          <% categories.forEach(function(cat) { %>
+          <label class="filter-option">
+            <input type="checkbox" name="categoryFilter" value="<%= cat %>" />
+            <span><%= cat %></span>
+          </label>
+          <% }) %>
+        </div>
+        <div class="filter-panel__actions">
+          <button type="button" id="categoryFilterClear" class="ghost">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+      <% } %>
+      <% } %>
+
+      <% if (!hasStories) { %>
       <div class="empty-state">
         <p>No stories available yet. Check back soon!</p>
       </div>
       <% } else { %>
-      <div class="grid card-grid">
+      <div class="grid card-grid" id="libraryGrid">
         <% stories.forEach(function(story) { %>
-        <div class="story-card">
+        <div
+          class="story-card"
+          data-title="<%= (story.title || 'Untitled Story').toLowerCase() %>"
+          data-categories='<%- JSON.stringify(story.categories || []) %>'
+        >
           <img
             src="<%= story.coverImage || '/images/default-cover.jpg' %>"
             alt="<%= story.title %>"
           />
           <h3><%= story.title %></h3>
           <p><%= story.description %></p>
+
+          <% if (Array.isArray(story.categories) && story.categories.length) { %>
+          <ul class="tag-list">
+            <% story.categories.forEach(function(cat) { %>
+            <li class="tag"><%= cat %></li>
+            <% }) %>
+          </ul>
+          <% } %>
 
           <!-- Endings progress -->
           <% if (story.totalEndings && story.totalEndings > 0) { %>
@@ -44,6 +111,9 @@
           <% } %>
         </div>
         <% }) %>
+      </div>
+      <div id="noLibraryResults" class="empty-state" hidden>
+        <p>No stories match your search or filters.</p>
       </div>
       <% } %>
 
@@ -160,7 +230,243 @@
 
     <%- include('../partials/footer') %>
 
+    <script>
+      (function () {
+        const searchInput = document.getElementById("storySearch");
+        const filterBtn = document.getElementById("categoryFilterBtn");
+        const filterPanel = document.getElementById("categoryFilterPanel");
+        const filterClose = document.getElementById("categoryFilterClose");
+        const filterClear = document.getElementById("categoryFilterClear");
+        const categoryCheckboxes = filterPanel
+          ? Array.from(filterPanel.querySelectorAll('input[name="categoryFilter"]'))
+          : [];
+        const cards = Array.from(
+          document.querySelectorAll("#libraryGrid .story-card")
+        );
+        const noResults = document.getElementById("noLibraryResults");
+
+        const parseCategories = (card) => {
+          try {
+            const raw = card.dataset.categories;
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (err) {
+            console.warn("Failed to parse categories for card", err);
+            return [];
+          }
+        };
+
+        const applyFilters = () => {
+          const searchValue = (searchInput?.value || "").trim().toLowerCase();
+          const selectedCategories = categoryCheckboxes
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => checkbox.value);
+
+          let visibleCount = 0;
+          cards.forEach((card) => {
+            const title = (card.dataset.title || "").toLowerCase();
+            const categories = parseCategories(card);
+            const matchesSearch = !searchValue || title.includes(searchValue);
+            const matchesCategory =
+              selectedCategories.length === 0 ||
+              categories.some((cat) => selectedCategories.includes(cat));
+
+            const isVisible = matchesSearch && matchesCategory;
+            card.classList.toggle("is-hidden", !isVisible);
+            if (isVisible) visibleCount++;
+          });
+
+          if (noResults) {
+            noResults.hidden = visibleCount > 0;
+          }
+        };
+
+        const setPanelVisible = (show) => {
+          if (!filterPanel || !filterBtn) return;
+          filterPanel.hidden = !show;
+          filterBtn.setAttribute("aria-expanded", String(show));
+        };
+
+        searchInput?.addEventListener("input", applyFilters);
+        categoryCheckboxes.forEach((checkbox) => {
+          checkbox.addEventListener("change", applyFilters);
+        });
+
+        filterBtn?.addEventListener("click", () => {
+          if (!filterPanel) return;
+          const willShow = filterPanel.hidden;
+          setPanelVisible(willShow);
+        });
+
+        filterClose?.addEventListener("click", () => setPanelVisible(false));
+
+        filterClear?.addEventListener("click", () => {
+          categoryCheckboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+          });
+          applyFilters();
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!filterPanel || filterPanel.hidden) return;
+          if (
+            filterPanel.contains(event.target) ||
+            filterBtn?.contains(event.target)
+          ) {
+            return;
+          }
+          setPanelVisible(false);
+        });
+
+        applyFilters();
+      })();
+    </script>
+
     <style>
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .library-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        margin: 1.5rem 0 1rem;
+      }
+
+      .search-control {
+        flex: 1;
+        min-width: min(260px, 100%);
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 0.6rem 0.85rem;
+        border: 1px solid #d0d0d0;
+        border-radius: 999px;
+        font-size: 1rem;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+      }
+
+      .filter-toggle {
+        padding: 0.55rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid #4f46e5;
+        background: #4f46e5;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.95rem;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .filter-toggle[aria-expanded="true"] {
+        background: #312e81;
+      }
+
+      .filter-toggle:hover {
+        background: #4338ca;
+      }
+
+      .filter-panel {
+        border: 1px solid #e1e1e1;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        max-width: 520px;
+        background: #fafafa;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+      }
+
+      .filter-panel__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+      }
+
+      .filter-close {
+        background: none;
+        border: none;
+        font-size: 1.4rem;
+        line-height: 1;
+        cursor: pointer;
+        color: #666;
+      }
+
+      .filter-panel__options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .filter-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid #d0d0d0;
+        background: #fff;
+        font-size: 0.88rem;
+      }
+
+      .filter-option input[type="checkbox"] {
+        accent-color: #4f46e5;
+      }
+
+      .filter-panel__actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .filter-panel__actions .ghost {
+        background: transparent;
+        border: none;
+        color: #4f46e5;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+
+      .story-card.is-hidden {
+        display: none;
+      }
+
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0;
+        margin: 0.75rem 0 0.25rem;
+        list-style: none;
+      }
+
+      .tag {
+        background: #f1f0ff;
+        color: #4338ca;
+        border-radius: 999px;
+        padding: 0.25rem 0.65rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
       /* Progress pill */
       .ending-progress {
         font-size: 0.95rem;

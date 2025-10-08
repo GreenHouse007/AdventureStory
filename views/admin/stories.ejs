@@ -29,11 +29,33 @@
       .btn.small:hover {
         background: #444;
       }
+      .btn.small.ghost {
+        background: transparent;
+        color: #333;
+        border: 1px solid #b7b7b7;
+      }
+      .btn.small.ghost:hover {
+        background: #f2f2f2;
+      }
+      .btn.small.primary {
+        background: #4338ca;
+        color: #fff;
+      }
+      .btn.small.primary:hover {
+        background: #3730a3;
+      }
       .btn.small.danger {
         background: #5a1a1a;
       }
       .btn.small.danger:hover {
         background: #822;
+      }
+      .stories-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1.25rem;
       }
     </style>
   </head>
@@ -43,7 +65,10 @@
     <main class="container">
       <h1 class="title">Manage Stories</h1>
 
-      <a href="/admin/stories/add" class="btn small">+ Add Story</a>
+      <div class="stories-toolbar">
+        <a href="/admin" class="btn small ghost">&larr; Back to Dashboard</a>
+        <a href="/admin/stories/add" class="btn small primary">+ Add Story</a>
+      </div>
 
       <div id="stories-list" class="card-grid">
         <% stories.sort((a,b)=>a.displayOrder-b.displayOrder).forEach(s => { %>

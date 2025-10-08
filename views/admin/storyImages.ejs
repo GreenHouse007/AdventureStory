@@ -39,13 +39,6 @@
               <span class="meta-value"><%= title || fallback %></span>
             </div>
             <div class="image-actions">
-              <button
-                type="button"
-                class="copy-btn ghost"
-                onclick="copyToClipboard('<%= src %>')"
-              >
-                Copy URL
-              </button>
               <form
                 action="/admin/stories/<%= story._id %>/images/delete"
                 method="post"
@@ -53,7 +46,9 @@
               >
                 <input type="hidden" name="url" value="<%= src %>" />
                 <input type="hidden" name="publicId" value="<%= pid %>" />
-                <button type="submit" class="copy-btn danger">Delete</button>
+                <button type="submit" class="image-action-btn danger">
+                  Delete
+                </button>
               </form>
             </div>
           </li>
@@ -62,19 +57,6 @@
         <% } %>
       </section>
     </main>
-
-    <script>
-      function copyToClipboard(text) {
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            alert("Copied to clipboard: " + text);
-          })
-          .catch((err) => {
-            console.error("Failed to copy: ", err);
-          });
-      }
-    </script>
 
     <style>
       .image-grid {
@@ -114,18 +96,18 @@
       }
       .meta-value {
         font-family: "JetBrains Mono", monospace;
-        background: #efefef;
+        background: #262626;
         border-radius: 6px;
         padding: 0.35rem 0.45rem;
         word-break: break-all;
+        color: #f3f3f3;
       }
       .image-actions {
         display: flex;
-        gap: 0.5rem;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: center;
       }
-      .copy-btn {
+      .image-action-btn {
         background: #333;
         color: #fff;
         border: none;
@@ -134,21 +116,13 @@
         cursor: pointer;
         font-size: 0.85rem;
       }
-      .copy-btn:hover {
+      .image-action-btn:hover {
         background: #555;
       }
-      .copy-btn.ghost {
-        background: #f0f0f0;
-        color: #333;
-        border: 1px solid #d0d0d0;
-      }
-      .copy-btn.ghost:hover {
-        background: #e2e2e2;
-      }
-      .copy-btn.danger {
+      .image-action-btn.danger {
         background: #7a1f1f;
       }
-      .copy-btn.danger:hover {
+      .image-action-btn.danger:hover {
         background: #a12a2a;
       }
     </style>

@@ -6,6 +6,7 @@ const path = require("path");
 const { randomUUID } = require("node:crypto"); // built-in UUID
 const { updateUserMedals } = require("../utils/updateMedals");
 const { v2: cloudinary } = require("cloudinary");
+const STORY_CATEGORIES = require("../utils/storyCategories");
 
 const wantsJSON = (req) => {
   const acceptHeader = req.headers.accept || "";
@@ -25,6 +26,21 @@ const respondWithStory = (req, res, story, redirectPath) => {
     });
   }
   return res.redirect(redirectPath);
+};
+
+const normalizeCategories = (input) => {
+  if (!input) return [];
+  const rawValues = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+    ? input.split(",")
+    : [];
+  const sanitized = rawValues
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const unique = Array.from(new Set(sanitized));
+  const allowed = new Set(STORY_CATEGORIES);
+  return unique.filter((cat) => allowed.has(cat));
 };
 
 const respondError = (req, res, statusCode, message) => {
@@ -245,16 +261,17 @@ exports.storiesList = async (req, res) => {
 };
 
 exports.storyAddForm = (req, res) =>
-  res.render("admin/storyAdd", { title: "Add Story" });
+  res.render("admin/storyAdd", { title: "Add Story", categories: STORY_CATEGORIES });
 
 exports.storyAddPost = async (req, res) => {
   try {
-    const { title, description, coverImage, status } = req.body;
+    const { title, description, coverImage, status, categories } = req.body;
     await Story.create({
       title,
       description,
       coverImage,
       status,
+      categories: normalizeCategories(categories),
       nodes: [],
       endings: [],
     });
@@ -328,7 +345,11 @@ exports.storyEditForm = async (req, res) => {
 
     if (changed) await story.save();
 
-    res.render("admin/storyEditor", { title: "Story Editor", story });
+    res.render("admin/storyEditor", {
+      title: "Story Editor",
+      story,
+      categories: STORY_CATEGORIES,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error loading story");
@@ -337,13 +358,15 @@ exports.storyEditForm = async (req, res) => {
 
 exports.storyEditPost = async (req, res) => {
   try {
-    const { title, description, coverImage, status, startNodeId } = req.body;
+    const { title, description, coverImage, status, startNodeId, categories } =
+      req.body;
     await Story.findByIdAndUpdate(req.params.id, {
       title,
       description,
       coverImage,
       status: (status || "coming_soon").toLowerCase(),
       startNodeId: startNodeId || null,
+      categories: normalizeCategories(categories),
     });
     res.redirect("/admin/stories");
   } catch (err) {
@@ -364,8 +387,15 @@ exports.storyDelete = async (req, res) => {
 
 exports.storyUpdateInline = async (req, res) => {
   try {
-    const { title, description, coverImage, status, startNodeId, notes } =
-      req.body;
+    const {
+      title,
+      description,
+      coverImage,
+      status,
+      startNodeId,
+      notes,
+      categories,
+    } = req.body;
     const story = await Story.findByIdAndUpdate(
       req.params.id,
       {
@@ -375,6 +405,7 @@ exports.storyUpdateInline = async (req, res) => {
         status: (status || "coming_soon").toLowerCase(),
         startNodeId: startNodeId || null,
         notes: notes || "",
+        categories: normalizeCategories(categories),
       },
       { new: true }
     );
