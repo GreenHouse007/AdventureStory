@@ -89,16 +89,9 @@ router.post(
   controller.storyNodeUpdateInline
 );
 router.post("/stories/:id/nodes/:nodeId/delete", controller.storyNodeDelete);
-
-/* Dividers */
-router.post("/stories/:id/nodes/add-divider", controller.storyNodeAddDivider);
 router.post(
-  "/stories/:id/nodes/:nodeId/update-divider",
-  controller.storyNodeUpdateDivider
-);
-router.post(
-  "/stories/:id/nodes/:nodeId/delete-divider",
-  controller.storyNodeDeleteDivider
+  "/stories/:id/nodes/:nodeId/position",
+  controller.storyNodeUpdatePosition
 );
 
 /* Node Reorder */
@@ -127,6 +120,10 @@ router.post(
 router.post(
   "/stories/:id/endings/:endingId/delete",
   controller.storyEndingDelete
+);
+router.post(
+  "/stories/:id/endings/:endingId/position",
+  controller.storyEndingUpdatePosition
 );
 
 /* Ending Reorder */

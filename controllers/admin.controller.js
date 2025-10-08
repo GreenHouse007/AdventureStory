@@ -7,6 +7,45 @@ const { randomUUID } = require("node:crypto"); // built-in UUID
 const { updateUserMedals } = require("../utils/updateMedals");
 const { v2: cloudinary } = require("cloudinary");
 
+const wantsJSON = (req) => {
+  const acceptHeader = req.headers.accept || "";
+  const contentType = req.headers["content-type"] || "";
+  return (
+    acceptHeader.includes("application/json") ||
+    contentType.includes("application/json") ||
+    req.xhr === true
+  );
+};
+
+const respondWithStory = (req, res, story, redirectPath) => {
+  if (wantsJSON(req)) {
+    return res.json({
+      success: true,
+      story: story ? story.toObject({ depopulate: true }) : null,
+    });
+  }
+  return res.redirect(redirectPath);
+};
+
+const respondError = (req, res, statusCode, message) => {
+  if (wantsJSON(req)) {
+    return res.status(statusCode).json({ success: false, error: message });
+  }
+  return res.status(statusCode).send(message);
+};
+
+const parsePosition = (position, fallback = { x: 0, y: 0 }) => {
+  if (!position) return { ...fallback };
+  const rawX = position.x ?? position.left ?? position["x"] ?? position["left"];
+  const rawY = position.y ?? position.top ?? position["y"] ?? position["top"];
+  const x = Number(rawX);
+  const y = Number(rawY);
+  return {
+    x: Number.isFinite(x) ? x : fallback.x,
+    y: Number.isFinite(y) ? y : fallback.y,
+  };
+};
+
 /* ------------------ DASHBOARD ------------------ */
 exports.dashboard = async (req, res) => {
   try {
@@ -231,13 +270,20 @@ exports.storyEditForm = async (req, res) => {
     const story = await Story.findById(req.params.id);
     if (!story) return res.status(404).send("Story not found");
 
-    // Ensure existing stories have IDs for nodes/endings
+    // Ensure existing stories have IDs and positions for nodes/endings
     let changed = false;
+    const beforeCount = story.nodes.length;
+    story.nodes = story.nodes.filter((n) => n.type !== "divider");
+    if (story.nodes.length !== beforeCount) {
+      changed = true;
+    }
     story.nodes.forEach((n) => {
       if (!n._id || n._id.trim() === "") {
-        n._id =
-          (n.type === "divider" ? "divider_" : "node_") +
-          randomUUID().slice(0, 8);
+        n._id = "node_" + randomUUID().slice(0, 8);
+        changed = true;
+      }
+      if (!n.color) {
+        n.color = "twilight";
         changed = true;
       }
     });
@@ -247,6 +293,39 @@ exports.storyEditForm = async (req, res) => {
         changed = true;
       }
     });
+
+    const spacingX = 240;
+    const spacingY = 200;
+    story.nodes.forEach((n, idx) => {
+      if (
+        !n.position ||
+        typeof n.position.x !== "number" ||
+        typeof n.position.y !== "number"
+      ) {
+        n.position = {
+          x: 160 + (idx % 5) * spacingX,
+          y: 160 + Math.floor(idx / 5) * spacingY,
+        };
+        changed = true;
+      }
+    });
+
+    const nodeRows = Math.max(1, Math.ceil(story.nodes.length / 5));
+    const endingsBaseY = 160 + nodeRows * spacingY + spacingY;
+    story.endings.forEach((e, idx) => {
+      if (
+        !e.position ||
+        typeof e.position.x !== "number" ||
+        typeof e.position.y !== "number"
+      ) {
+        e.position = {
+          x: 160 + (idx % 4) * spacingX,
+          y: endingsBaseY + Math.floor(idx / 4) * spacingY,
+        };
+        changed = true;
+      }
+    });
+
     if (changed) await story.save();
 
     res.render("admin/storyEditor", { title: "Story Editor", story });
@@ -287,18 +366,29 @@ exports.storyUpdateInline = async (req, res) => {
   try {
     const { title, description, coverImage, status, startNodeId, notes } =
       req.body;
-    await Story.findByIdAndUpdate(req.params.id, {
-      title,
-      description,
-      coverImage,
-      status: (status || "coming_soon").toLowerCase(),
-      startNodeId: startNodeId || null,
-      notes: notes || "",
-    });
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
+    const story = await Story.findByIdAndUpdate(
+      req.params.id,
+      {
+        title,
+        description,
+        coverImage,
+        status: (status || "coming_soon").toLowerCase(),
+        startNodeId: startNodeId || null,
+        notes: notes || "",
+      },
+      { new: true }
+    );
+    if (!story)
+      return respondError(req, res, 404, "Story not found for update");
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error updating story info");
+    return respondError(req, res, 500, "Error updating story info");
   }
 };
 
@@ -321,43 +411,51 @@ exports.updateStoriesOrder = async (req, res) => {
 exports.storyNodeAddPost = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
     const id = req.body._id || "node_" + randomUUID().slice(0, 8);
+    const position = parsePosition(req.body.position, {
+      x: 200,
+      y: 200,
+    });
     // unshift to place at the top
     story.nodes.unshift({
       _id: id,
-      type: "node",
       text: req.body.text || "",
       image: req.body.image || "",
-      notes: "",
-      choiceNotes: "",
+      color: req.body.color || "twilight",
+      position,
       choices: [],
     });
 
     await story.save();
-    res.redirect(`/admin/stories/${story._id}/edit`);
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${story._id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error adding node");
+    return respondError(req, res, 500, "Error adding node");
   }
 };
 
 exports.storyNodeUpdateInline = async (req, res) => {
   try {
-    const { _id: newId, text, image, notes, choiceNotes } = req.body;
+    const { _id: newId, text, image, color } = req.body;
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
     const node = story.nodes.find((n) => n._id === req.params.nodeId);
-    if (!node) return res.status(404).send("Node not found");
+    if (!node) return respondError(req, res, 404, "Node not found");
 
     const oldId = node._id;
     node._id = newId;
     node.text = text;
     node.image = image;
-    node.notes = notes;
-    node.choiceNotes = choiceNotes;
+    const allowedColors = ["twilight", "ember", "moss", "dusk", "rose", "slate"];
+    node.color = allowedColors.includes(color) ? color : node.color || "twilight";
 
     // Cascade: fix all choices pointing to the old node id
     story.nodes.forEach((n) =>
@@ -368,17 +466,22 @@ exports.storyNodeUpdateInline = async (req, res) => {
     if (story.startNodeId === oldId) story.startNodeId = newId;
 
     await story.save();
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error updating node");
+    return respondError(req, res, 500, "Error updating node");
   }
 };
 
 exports.storyNodeDelete = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
     const targetId = req.params.nodeId;
     story.nodes = story.nodes.filter((n) => n._id !== targetId);
@@ -390,10 +493,38 @@ exports.storyNodeDelete = async (req, res) => {
     if (story.startNodeId === targetId) story.startNodeId = null;
 
     await story.save();
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error deleting node");
+    return respondError(req, res, 500, "Error deleting node");
+  }
+};
+
+exports.storyNodeUpdatePosition = async (req, res) => {
+  try {
+    const story = await Story.findById(req.params.id);
+    if (!story) return respondError(req, res, 404, "Story not found");
+
+    const node = story.nodes.find((n) => n._id === req.params.nodeId);
+    if (!node) return respondError(req, res, 404, "Node not found");
+
+    node.position = parsePosition(req.body, node.position || { x: 0, y: 0 });
+
+    await story.save();
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
+  } catch (err) {
+    console.error(err);
+    return respondError(req, res, 500, "Error updating node position");
   }
 };
 
@@ -401,34 +532,45 @@ exports.storyNodeDelete = async (req, res) => {
 exports.storyEndingAddPost = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
     const id = req.body._id || "ending_" + randomUUID().slice(0, 8);
+    const position = parsePosition(req.body.position, {
+      x: 400,
+      y: 400,
+    });
     story.endings.unshift({
       _id: id,
-      label: req.body.label || "New Ending",
+      label: req.body.label || "",
       type: req.body.type || "other",
       text: req.body.text || "",
       image: req.body.image || "",
-      notes: "",
+      position,
     });
 
     await story.save();
-    res.redirect(`/admin/stories/${story._id}/edit`);
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${story._id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error adding ending");
+    return respondError(req, res, 500, "Error adding ending");
   }
 };
 
 exports.storyEndingUpdateInline = async (req, res) => {
   try {
-    const { _id: newId, label, type, text, image, notes } = req.body;
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
     const ending = story.endings.find((e) => e._id === req.params.endingId);
-    if (!ending) return res.status(404).send("Ending not found");
+    if (!ending) return respondError(req, res, 404, "Ending not found");
+
+    const { _id: newId, type, text, image } = req.body;
+    const label = req.body.label ?? ending.label;
 
     const oldId = ending._id;
     ending._id = newId;
@@ -436,7 +578,6 @@ exports.storyEndingUpdateInline = async (req, res) => {
     ending.type = type;
     ending.text = text;
     ending.image = image;
-    ending.notes = notes;
 
     // Cascade: fix choices pointing to this ending
     story.nodes.forEach((n) =>
@@ -446,17 +587,22 @@ exports.storyEndingUpdateInline = async (req, res) => {
     );
 
     await story.save();
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error updating ending");
+    return respondError(req, res, 500, "Error updating ending");
   }
 };
 
 exports.storyEndingDelete = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
     const targetId = req.params.endingId;
     story.endings = story.endings.filter((e) => e._id !== targetId);
@@ -467,10 +613,38 @@ exports.storyEndingDelete = async (req, res) => {
     });
 
     await story.save();
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error deleting ending");
+    return respondError(req, res, 500, "Error deleting ending");
+  }
+};
+
+exports.storyEndingUpdatePosition = async (req, res) => {
+  try {
+    const story = await Story.findById(req.params.id);
+    if (!story) return respondError(req, res, 404, "Story not found");
+
+    const ending = story.endings.find((e) => e._id === req.params.endingId);
+    if (!ending) return respondError(req, res, 404, "Ending not found");
+
+    ending.position = parsePosition(req.body, ending.position || { x: 0, y: 0 });
+
+    await story.save();
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
+    );
+  } catch (err) {
+    console.error(err);
+    return respondError(req, res, 500, "Error updating ending position");
   }
 };
 
@@ -478,104 +652,74 @@ exports.storyEndingDelete = async (req, res) => {
 exports.nodeChoiceAddInline = async (req, res) => {
   try {
     const { label, nextNodeId } = req.body;
-    await Story.updateOne(
-      { _id: req.params.id, "nodes._id": req.params.nodeId },
-      { $push: { "nodes.$.choices": { label, nextNodeId } } }
+    const story = await Story.findById(req.params.id);
+    if (!story) return respondError(req, res, 404, "Story not found");
+
+    const node = story.nodes.find((n) => n._id === req.params.nodeId);
+    if (!node) return respondError(req, res, 404, "Node not found");
+
+    node.choices.push({ label, nextNodeId });
+    await story.save();
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
     );
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error adding choice");
+    return respondError(req, res, 500, "Error adding choice");
   }
 };
 
 exports.nodeChoiceUpdateInline = async (req, res) => {
   try {
     const { label, nextNodeId } = req.body;
-    await Story.updateOne(
-      {
-        _id: req.params.id,
-        "nodes._id": req.params.nodeId,
-        "nodes.choices._id": req.params.choiceId,
-      },
-      {
-        $set: {
-          "nodes.$[node].choices.$[choice].label": label,
-          "nodes.$[node].choices.$[choice].nextNodeId": nextNodeId,
-        },
-      },
-      {
-        arrayFilters: [
-          { "node._id": req.params.nodeId },
-          { "choice._id": req.params.choiceId },
-        ],
-      }
+    const story = await Story.findById(req.params.id);
+    if (!story) return respondError(req, res, 404, "Story not found");
+
+    const node = story.nodes.find((n) => n._id === req.params.nodeId);
+    if (!node) return respondError(req, res, 404, "Node not found");
+
+    const choice = node.choices.id(req.params.choiceId);
+    if (!choice) return respondError(req, res, 404, "Choice not found");
+
+    choice.label = label;
+    choice.nextNodeId = nextNodeId;
+
+    await story.save();
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
     );
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error updating choice");
+    return respondError(req, res, 500, "Error updating choice");
   }
 };
 
 exports.nodeChoiceDelete = async (req, res) => {
   try {
-    await Story.updateOne(
-      { _id: req.params.id, "nodes._id": req.params.nodeId },
-      { $pull: { "nodes.$.choices": { _id: req.params.choiceId } } }
-    );
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error deleting choice");
-  }
-};
-
-/* ------------------ DIVIDERS ------------------ */
-exports.storyNodeAddDivider = async (req, res) => {
-  try {
     const story = await Story.findById(req.params.id);
-    if (!story) return res.status(404).send("Story not found");
+    if (!story) return respondError(req, res, 404, "Story not found");
 
-    const id = "divider_" + randomUUID().slice(0, 8);
-    story.nodes.unshift({
-      _id: id,
-      type: "divider",
-      label: "Divider",
-      color: "gray",
-    });
+    const node = story.nodes.find((n) => n._id === req.params.nodeId);
+    if (!node) return respondError(req, res, 404, "Node not found");
+
+    node.choices = node.choices.filter((c) => String(c._id) !== req.params.choiceId);
 
     await story.save();
-    res.redirect(`/admin/stories/${story._id}/edit`);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error adding divider");
-  }
-};
-
-exports.storyNodeUpdateDivider = async (req, res) => {
-  try {
-    const { label, color } = req.body;
-    await Story.updateOne(
-      { _id: req.params.id, "nodes._id": req.params.nodeId },
-      { $set: { "nodes.$.label": label, "nodes.$.color": color } }
+    return respondWithStory(
+      req,
+      res,
+      story,
+      `/admin/stories/${req.params.id}/edit`
     );
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error updating divider");
-  }
-};
-
-exports.storyNodeDeleteDivider = async (req, res) => {
-  try {
-    await Story.findByIdAndUpdate(req.params.id, {
-      $pull: { nodes: { _id: req.params.nodeId, type: "divider" } },
-    });
-    res.redirect(`/admin/stories/${req.params.id}/edit`);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error deleting divider");
+    return respondError(req, res, 500, "Error deleting choice");
   }
 };
 
@@ -634,6 +778,17 @@ function derivePublicIdFromUrl(urlStr) {
   }
 }
 
+function deriveFilenameFromUrl(urlStr) {
+  if (!urlStr) return "";
+  try {
+    const u = new URL(urlStr);
+    const path = u.pathname.split("/").pop() || "";
+    return path.split("?")[0];
+  } catch {
+    return urlStr.split("/").pop() || urlStr;
+  }
+}
+
 // Render images page (now using story.images as [{url, publicId}] or strings)
 exports.listImages = async (req, res) => {
   try {
@@ -643,12 +798,25 @@ exports.listImages = async (req, res) => {
     const raw = Array.isArray(story.images) ? story.images : [];
     const images = raw.map((item) => {
       if (typeof item === "string") {
-        return { url: item, publicId: derivePublicIdFromUrl(item) };
+        const url = item;
+        return {
+          url,
+          publicId: derivePublicIdFromUrl(url),
+          title: deriveFilenameFromUrl(url),
+        };
       }
-      // object form
+      const url = item.url || item.path || "";
+      const publicId = item.publicId || item.filename || derivePublicIdFromUrl(url);
+      const title =
+        item.title ||
+        item.displayName ||
+        deriveFilenameFromUrl(url) ||
+        publicId ||
+        "";
       return {
-        url: item.url || item.path || "",
-        publicId: item.publicId || item.filename || null,
+        url,
+        publicId,
+        title,
       };
     });
 
@@ -674,7 +842,11 @@ exports.uploadImage = async (req, res) => {
 
     story.images = story.images || [];
     // Prefer storing as object going forward
-    story.images.unshift({ url, publicId });
+    story.images.unshift({
+      url,
+      publicId,
+      title: deriveFilenameFromUrl(url),
+    });
 
     await story.save();
     res.redirect(`/admin/stories/${story._id}/images`);

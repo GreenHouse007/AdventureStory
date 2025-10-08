@@ -38,7 +38,7 @@ exports.playNode = async (req, res) => {
   if (!story) return res.status(404).send("Story not found");
 
   const node = story.nodes.find((n) => n._id === req.params.nodeId);
-  if (!node || node.type !== "node")
+  if (!node || node.type === "divider")
     return res.status(404).send("Node not found");
 
   // Save progress.lastNodeId so "Continue" works
@@ -108,7 +108,7 @@ exports.playEnding = async (req, res) => {
   }
 
   res.render("user/ending", {
-    title: ending.label,
+    title: ending.label || ending._id,
     story,
     ending,
     user: req.user,
