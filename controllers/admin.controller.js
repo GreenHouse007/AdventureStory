@@ -9,6 +9,7 @@ const { v2: cloudinary } = require("cloudinary");
 const STORY_CATEGORIES = require("../utils/storyCategories");
 
 const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
+const ALLOWED_STORY_STATUSES = new Set(["public", "coming_soon", "invisible"]);
 
 const STORY_SEED_EXAMPLE = JSON.stringify(
   {
@@ -191,13 +192,24 @@ const buildStorySeedFromText = (rawText) => {
       title,
       description,
       coverImage: null,
-      status: "coming_soon",
+      status: "invisible",
       startNodeId,
       categories: [],
       nodes,
       endings,
     },
   };
+};
+
+const normalizeStatus = (value, fallback = "invisible") => {
+  if (!value || typeof value !== "string") {
+    return fallback ?? null;
+  }
+  const lowered = value.trim().toLowerCase();
+  if (ALLOWED_STORY_STATUSES.has(lowered)) {
+    return lowered;
+  }
+  return fallback ?? null;
 };
 
 const wantsJSON = (req) => {
@@ -462,7 +474,7 @@ exports.storyQuickCreate = async (req, res) => {
       title,
       description: "",
       coverImage: null,
-      status: "coming_soon",
+      status: "invisible",
       categories: [],
       nodes: [],
       endings: [],
@@ -608,14 +620,20 @@ exports.storyEditPost = async (req, res) => {
   try {
     const { title, description, coverImage, status, startNodeId, categories } =
       req.body;
-    await Story.findByIdAndUpdate(req.params.id, {
+    const update = {
       title,
       description,
       coverImage,
-      status: (status || "coming_soon").toLowerCase(),
       startNodeId: startNodeId || null,
       categories: normalizeCategories(categories),
-    });
+    };
+
+    const normalizedStatus = normalizeStatus(status, null);
+    if (normalizedStatus) {
+      update.status = normalizedStatus;
+    }
+
+    await Story.findByIdAndUpdate(req.params.id, update);
     res.redirect("/admin/stories");
   } catch (err) {
     console.error(err);
@@ -644,19 +662,23 @@ exports.storyUpdateInline = async (req, res) => {
       notes,
       categories,
     } = req.body;
-    const story = await Story.findByIdAndUpdate(
-      req.params.id,
-      {
-        title,
-        description,
-        coverImage,
-        status: (status || "coming_soon").toLowerCase(),
-        startNodeId: startNodeId || null,
-        notes: notes || "",
-        categories: normalizeCategories(categories),
-      },
-      { new: true }
-    );
+    const update = {
+      title,
+      description,
+      coverImage,
+      startNodeId: startNodeId || null,
+      notes: notes || "",
+      categories: normalizeCategories(categories),
+    };
+
+    const normalizedStatus = normalizeStatus(status, null);
+    if (normalizedStatus) {
+      update.status = normalizedStatus;
+    }
+
+    const story = await Story.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+    });
     if (!story)
       return respondError(req, res, 404, "Story not found for update");
     return respondWithStory(

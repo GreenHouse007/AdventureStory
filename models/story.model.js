@@ -45,8 +45,8 @@ const storySchema = new mongoose.Schema(
     coverImage: String,
     status: {
       type: String,
-      enum: ["public", "coming_soon"],
-      default: "coming_soon",
+      enum: ["public", "coming_soon", "invisible"],
+      default: "invisible",
     },
     startNodeId: { type: String, default: null },
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

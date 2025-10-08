@@ -108,6 +108,13 @@
         border-color: rgba(59, 130, 246, 0.35);
         color: #bfdbfe;
       }
+
+      .admin-status.status-invisible {
+        background: rgba(148, 163, 184, 0.08);
+        border-color: rgba(100, 116, 139, 0.35);
+        color: #cbd5f5;
+        font-style: italic;
+      }
     </style>
   </head>
   <body>
@@ -140,7 +147,12 @@
 
             <div class="story-card__meta">
               <span class="admin-status status-<%= s.status %>">
-                Status: <%= s.status.replace('_', ' ') %>
+                Status:
+                <%= s.status === 'public'
+                  ? 'Public'
+                  : s.status === 'coming_soon'
+                  ? 'Coming Soon'
+                  : 'Invisible' %>
               </span>
             </div>
 

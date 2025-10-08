@@ -632,6 +632,7 @@
           <select name="status" id="story-status">
             <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
             <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
+            <option value="invisible" <%= story.status === 'invisible' ? 'selected' : '' %>>Invisible</option>
           </select>
         </label>
         <label class="field">
@@ -983,7 +984,7 @@
 
       const refreshStoryForm = () => {
         storyForm.elements.title.value = storyData.title || "";
-        storyForm.elements.status.value = storyData.status || "coming_soon";
+        storyForm.elements.status.value = storyData.status || "invisible";
         populateImageSelect(coverImageSelect, storyData.coverImage || "");
         storyForm.elements.description.value = storyData.description || "";
 

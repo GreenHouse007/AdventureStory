@@ -36,7 +36,7 @@ exports.stats = async (req, res) => {
 exports.library = async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
-    const stories = await Story.find()
+    const stories = await Story.find({ status: { $ne: "invisible" } })
       .sort({ displayOrder: 1, createdAt: -1 })
       .select(
         "title description coverImage endings status displayOrder categories"
