@@ -94,17 +94,6 @@ router.post(
   controller.storyNodeUpdatePosition
 );
 
-/* Dividers */
-router.post("/stories/:id/nodes/add-divider", controller.storyNodeAddDivider);
-router.post(
-  "/stories/:id/nodes/:nodeId/update-divider",
-  controller.storyNodeUpdateDivider
-);
-router.post(
-  "/stories/:id/nodes/:nodeId/delete-divider",
-  controller.storyNodeDeleteDivider
-);
-
 /* Node Reorder */
 router.post("/stories/:id/nodes/reorder", controller.nodesReorder);
 

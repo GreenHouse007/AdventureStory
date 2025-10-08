@@ -9,19 +9,16 @@ const choiceSchema = new mongoose.Schema(
 );
 
 const nodeSchema = new mongoose.Schema({
-  _id: String, // unique ID ("start", "forest1", "divider_xxx")
-  type: { type: String, enum: ["node", "divider"], default: "node" },
-  label: String, // used for dividers
-  text: String, // story text (nodes only)
+  _id: String, // unique ID ("start", "forest1")
+  text: String,
   image: String,
   notes: String, // private notes for each node
-  choiceNotes: String, // shared notes for the choices section
-  color: { type: String, default: "gray" }, // divider color
+  color: { type: String, default: "twilight" }, // border accent color
   position: {
     x: { type: Number, default: 0 },
     y: { type: Number, default: 0 },
   },
-  choices: [choiceSchema], // choices only apply if type === "node"
+  choices: [choiceSchema],
 });
 
 const endingSchema = new mongoose.Schema({

@@ -272,11 +272,18 @@ exports.storyEditForm = async (req, res) => {
 
     // Ensure existing stories have IDs and positions for nodes/endings
     let changed = false;
+    const beforeCount = story.nodes.length;
+    story.nodes = story.nodes.filter((n) => n.type !== "divider");
+    if (story.nodes.length !== beforeCount) {
+      changed = true;
+    }
     story.nodes.forEach((n) => {
       if (!n._id || n._id.trim() === "") {
-        n._id =
-          (n.type === "divider" ? "divider_" : "node_") +
-          randomUUID().slice(0, 8);
+        n._id = "node_" + randomUUID().slice(0, 8);
+        changed = true;
+      }
+      if (!n.color) {
+        n.color = "twilight";
         changed = true;
       }
     });
@@ -414,11 +421,10 @@ exports.storyNodeAddPost = async (req, res) => {
     // unshift to place at the top
     story.nodes.unshift({
       _id: id,
-      type: "node",
       text: req.body.text || "",
       image: req.body.image || "",
       notes: "",
-      choiceNotes: "",
+      color: req.body.color || "twilight",
       position,
       choices: [],
     });
@@ -438,7 +444,7 @@ exports.storyNodeAddPost = async (req, res) => {
 
 exports.storyNodeUpdateInline = async (req, res) => {
   try {
-    const { _id: newId, text, image, notes, choiceNotes } = req.body;
+    const { _id: newId, text, image, notes, color } = req.body;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
@@ -450,7 +456,7 @@ exports.storyNodeUpdateInline = async (req, res) => {
     node.text = text;
     node.image = image;
     node.notes = notes;
-    node.choiceNotes = choiceNotes;
+    node.color = color || node.color || "twilight";
 
     // Cascade: fix all choices pointing to the old node id
     story.nodes.forEach((n) =>
@@ -536,7 +542,7 @@ exports.storyEndingAddPost = async (req, res) => {
     });
     story.endings.unshift({
       _id: id,
-      label: req.body.label || "New Ending",
+      label: req.body.label || "",
       type: req.body.type || "other",
       text: req.body.text || "",
       image: req.body.image || "",
@@ -559,12 +565,15 @@ exports.storyEndingAddPost = async (req, res) => {
 
 exports.storyEndingUpdateInline = async (req, res) => {
   try {
-    const { _id: newId, label, type, text, image, notes } = req.body;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
     const ending = story.endings.find((e) => e._id === req.params.endingId);
     if (!ending) return respondError(req, res, 404, "Ending not found");
+
+    const { _id: newId, type, text, image } = req.body;
+    const label = req.body.label ?? ending.label;
+    const notes = req.body.notes ?? ending.notes;
 
     const oldId = ending._id;
     ending._id = newId;
@@ -715,83 +724,6 @@ exports.nodeChoiceDelete = async (req, res) => {
   } catch (err) {
     console.error(err);
     return respondError(req, res, 500, "Error deleting choice");
-  }
-};
-
-/* ------------------ DIVIDERS ------------------ */
-exports.storyNodeAddDivider = async (req, res) => {
-  try {
-    const story = await Story.findById(req.params.id);
-    if (!story) return respondError(req, res, 404, "Story not found");
-
-    const id = "divider_" + randomUUID().slice(0, 8);
-    story.nodes.unshift({
-      _id: id,
-      type: "divider",
-      label: "Divider",
-      color: "gray",
-      position: parsePosition(req.body.position, { x: 120, y: 120 }),
-    });
-
-    await story.save();
-    return respondWithStory(
-      req,
-      res,
-      story,
-      `/admin/stories/${story._id}/edit`
-    );
-  } catch (err) {
-    console.error(err);
-    return respondError(req, res, 500, "Error adding divider");
-  }
-};
-
-exports.storyNodeUpdateDivider = async (req, res) => {
-  try {
-    const { label, color } = req.body;
-    const story = await Story.findById(req.params.id);
-    if (!story) return respondError(req, res, 404, "Story not found");
-
-    const node = story.nodes.find(
-      (n) => n._id === req.params.nodeId && n.type === "divider"
-    );
-    if (!node) return respondError(req, res, 404, "Divider not found");
-
-    node.label = label;
-    node.color = color;
-
-    await story.save();
-    return respondWithStory(
-      req,
-      res,
-      story,
-      `/admin/stories/${req.params.id}/edit`
-    );
-  } catch (err) {
-    console.error(err);
-    return respondError(req, res, 500, "Error updating divider");
-  }
-};
-
-exports.storyNodeDeleteDivider = async (req, res) => {
-  try {
-    const story = await Story.findById(req.params.id);
-    if (!story) return respondError(req, res, 404, "Story not found");
-
-    story.nodes = story.nodes.filter(
-      (n) => !(n._id === req.params.nodeId && n.type === "divider")
-    );
-
-    await story.save();
-    return respondWithStory(
-      req,
-      res,
-      story,
-      `/admin/stories/${req.params.id}/edit`
-    );
-  } catch (err) {
-    console.error(err);
-    return respondError(req, res, 500, "Error deleting divider");
   }
 };
 

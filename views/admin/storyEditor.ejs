@@ -6,73 +6,145 @@
   <style>
     :root {
       --panel-bg: #111;
-      --panel-border: #202020;
-      --panel-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+      --panel-border: #232323;
+      --panel-shadow: 0 24px 55px rgba(0, 0, 0, 0.45);
       --accent: #6c5ce7;
       --accent-2: #45aaf2;
-      --accent-danger: #ff6b6b;
+      --danger: #ff6b6b;
+      --map-grid: rgba(255, 255, 255, 0.06);
     }
 
     body {
-      background-color: #080808;
-      color: #f1f1f1;
+      background: #080808;
+      color: #f5f5f5;
+      font-family: "Inter", "Segoe UI", sans-serif;
     }
 
     .story-editor-shell {
       width: 100%;
-      max-width: none;
-      padding: 1.5rem 2rem 2rem;
+      padding: 1.5rem 2rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
       min-height: calc(100vh - 70px);
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
     }
 
-    .editor-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      background: var(--panel-bg);
-      border: 1px solid var(--panel-border);
-      border-radius: 14px;
-      padding: 1rem 1.5rem;
-      box-shadow: var(--panel-shadow);
-    }
-
-    .editor-toolbar h1 {
-      font-size: 1.4rem;
-      margin: 0;
-    }
-
-    .toolbar-left,
-    .toolbar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .toolbar-right {
-      justify-content: flex-end;
-    }
-
-    .editor-body {
-      flex: 1;
-      display: flex;
-      gap: 1.5rem;
-      min-height: 0;
-    }
-
-    .map-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+    .panel {
       background: var(--panel-bg);
       border: 1px solid var(--panel-border);
       border-radius: 18px;
       box-shadow: var(--panel-shadow);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .editor-toolbar h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .story-details-panel form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem 1.25rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+    }
+
+    .field > span {
+      color: #b9b9b9;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: inherit;
+      border-radius: 10px;
+      padding: 0.55rem 0.7rem;
+      font: inherit;
+      resize: vertical;
+    }
+
+    .field textarea {
+      min-height: 120px;
+    }
+
+    .story-details-panel .actions {
+      display: flex;
+      justify-content: flex-end;
+      grid-column: 1 / -1;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 0.45rem 1.05rem;
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .btn.small {
+      padding: 0.35rem 0.85rem;
+      font-size: 0.82rem;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .btn.danger {
+      background: rgba(255, 107, 107, 0.12);
+      border-color: rgba(255, 107, 107, 0.6);
+      color: #ffb3b3;
+    }
+
+    .btn.danger:hover {
+      background: rgba(255, 107, 107, 0.24);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .map-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      box-shadow: var(--panel-shadow);
       overflow: hidden;
+      min-height: 540px;
     }
 
     .map-controls {
@@ -81,12 +153,14 @@
       align-items: center;
       padding: 1rem 1.5rem;
       border-bottom: 1px solid var(--panel-border);
-      gap: 1rem;
+      flex-wrap: wrap;
+      gap: 0.85rem;
     }
 
-    .map-controls-left {
-      font-size: 0.95rem;
-      color: #b5b5b5;
+    .map-controls p {
+      margin: 0;
+      color: #b3b3b3;
+      font-size: 0.92rem;
     }
 
     .map-controls-right {
@@ -96,230 +170,302 @@
     }
 
     .map-viewport {
-      flex: 1;
       position: relative;
+      flex: 1;
       overflow: auto;
-      background: #050505;
-      background-image: linear-gradient(transparent 49px, rgba(255, 255, 255, 0.05) 50px),
-        linear-gradient(90deg, transparent 49px, rgba(255, 255, 255, 0.05) 50px);
+      background: #040404;
+      background-image: linear-gradient(transparent 49px, var(--map-grid) 50px),
+        linear-gradient(90deg, transparent 49px, var(--map-grid) 50px);
       background-size: 50px 50px;
     }
 
     .map-viewport::-webkit-scrollbar {
-      height: 12px;
       width: 12px;
+      height: 12px;
     }
 
     .map-viewport::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
     }
 
     .map-viewport::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .map-links,
-    .map-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    .map-links {
-      z-index: 0;
-      pointer-events: none;
+      background: rgba(255, 255, 255, 0.06);
     }
 
     .map-canvas {
       position: relative;
-      z-index: 1;
+      min-width: 1600px;
+      min-height: 1000px;
+    }
+
+    .map-links {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
     .map-node {
       position: absolute;
-      width: 220px;
+      width: 230px;
       min-height: 110px;
-      padding: 0.9rem 1rem;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(20, 20, 20, 0.95);
-      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+      padding: 0.95rem 1.1rem 1.1rem;
+      border-radius: 14px;
+      border: 1.5px solid rgba(255, 255, 255, 0.08);
+      background: rgba(18, 18, 18, 0.96);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
       cursor: grab;
-      transition: box-shadow 0.15s ease, border-color 0.15s ease;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.45rem;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+      --accent-color: rgba(108, 92, 231, 1);
+      --accent-border: rgba(108, 92, 231, 0.55);
+      --accent-shadow: rgba(108, 92, 231, 0.35);
     }
 
     .map-node:active {
       cursor: grabbing;
     }
 
-    .map-node .node-title {
-      font-weight: 600;
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
+    .map-node.selected {
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 0 0 2px rgba(255, 255, 255, 0.2);
     }
 
-    .map-node .node-title span {
+    .map-node.color-twilight {
+      --accent-color: #7c6cff;
+      --accent-border: rgba(124, 108, 255, 0.65);
+      --accent-shadow: rgba(124, 108, 255, 0.38);
+    }
+
+    .map-node.color-ember {
+      --accent-color: #ff8b5c;
+      --accent-border: rgba(255, 139, 92, 0.68);
+      --accent-shadow: rgba(255, 139, 92, 0.38);
+    }
+
+    .map-node.color-moss {
+      --accent-color: #55efc4;
+      --accent-border: rgba(85, 239, 196, 0.55);
+      --accent-shadow: rgba(85, 239, 196, 0.32);
+    }
+
+    .map-node.color-dusk {
+      --accent-color: #45aaf2;
+      --accent-border: rgba(69, 170, 242, 0.62);
+      --accent-shadow: rgba(69, 170, 242, 0.34);
+    }
+
+    .map-node.color-rose {
+      --accent-color: #ff6bcb;
+      --accent-border: rgba(255, 107, 203, 0.62);
+      --accent-shadow: rgba(255, 107, 203, 0.38);
+    }
+
+    .map-node.color-slate {
+      --accent-color: #b2bec3;
+      --accent-border: rgba(178, 190, 195, 0.5);
+      --accent-shadow: rgba(178, 190, 195, 0.28);
+    }
+
+    .map-node:not(.ending) {
+      border-color: var(--accent-border);
+    }
+
+    .map-node.start-node {
+      border-color: var(--accent-color);
+      box-shadow: 0 20px 42px rgba(0, 0, 0, 0.5), 0 0 0 3px var(--accent-shadow);
+    }
+
+    .map-node .node-title {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .node-title .node-id {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .map-node .node-meta {
-      font-size: 0.8rem;
-      color: #b5b5b5;
-      display: flex;
-      justify-content: space-between;
-      gap: 0.5rem;
+    .node-title .image-flag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.7rem;
     }
 
-    .map-node .node-snippet {
-      font-size: 0.8rem;
-      color: #d1d1d1;
-      line-height: 1.3;
-      max-height: 3.9em;
+    .node-snippet {
+      font-size: 0.82rem;
+      line-height: 1.35;
+      color: #d6d6d6;
+      max-height: 70px;
       overflow: hidden;
     }
 
-    .map-node.node {
-      border-color: rgba(108, 92, 231, 0.45);
-    }
-
-    .map-node.node.start-node {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.4), 0 18px 32px rgba(108, 92, 231, 0.2);
+    .node-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #a2a2a2;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     .map-node.ending {
-      background: rgba(30, 25, 40, 0.95);
-      border-color: rgba(69, 170, 242, 0.45);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.16);
     }
 
-    .map-node.divider {
-      background: rgba(35, 35, 35, 0.95);
-      border-style: dashed;
-      border-color: rgba(200, 200, 200, 0.3);
+    .map-node.ending .node-title {
+      font-size: 0.92rem;
     }
 
-    .map-node.selected {
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 18px 30px rgba(0, 0, 0, 0.45);
+    .ending-type {
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.7);
     }
 
-    .map-node .badge {
-      font-size: 0.7rem;
-      padding: 0.1rem 0.45rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .map-links path {
+    .link {
       fill: none;
-      stroke: rgba(96, 86, 222, 0.55);
-      stroke-width: 2;
-      stroke-linecap: round;
+      stroke: rgba(108, 92, 231, 0.6);
+      stroke-width: 2.2;
+      transition: stroke 0.2s ease;
     }
 
-    .map-links path.to-ending {
-      stroke: rgba(69, 170, 242, 0.7);
+    .link.to-ending {
+      stroke: rgba(255, 139, 92, 0.7);
     }
 
-    .inspector {
-      width: 360px;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    .panel {
+    .entity-editor {
+      position: fixed;
+      right: 2rem;
+      bottom: 2rem;
+      width: min(480px, calc(100vw - 2.5rem));
+      max-height: calc(100vh - 4rem);
       background: var(--panel-bg);
       border: 1px solid var(--panel-border);
-      border-radius: 16px;
-      padding: 1.25rem;
+      border-radius: 18px;
       box-shadow: var(--panel-shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 60;
+    }
+
+    .entity-editor.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(18px);
+    }
+
+    .entity-editor__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem 1.2rem 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .entity-editor__header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .entity-editor__subtitle {
+      margin: 0.2rem 0 0;
+      font-size: 0.78rem;
+      color: #b0b0b0;
+      letter-spacing: 0.05em;
+    }
+
+    .entity-editor__actions {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .entity-editor__body {
+      padding: 1rem 1.2rem 1.4rem;
+      overflow-y: auto;
+      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 1rem;
     }
 
-    .panel h2,
-    .panel h3 {
-      margin: 0;
+    .entity-editor.collapsed .entity-editor__body {
+      display: none;
     }
 
-    .story-panel {
-      flex-shrink: 0;
-    }
-
-    .inspector-panel {
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
-    }
-
-    .panel-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .color-choices {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 0.5rem;
     }
 
-    .panel-heading.compact {
-      margin-top: 0.5rem;
-    }
-
-    .panel p {
-      margin: 0;
-      color: #c2c2c2;
-      line-height: 1.5;
-      font-size: 0.9rem;
-    }
-
-    .stack {
+    .color-choices label {
+      position: relative;
       display: flex;
-      flex-direction: column;
-      gap: 0.85rem;
-    }
-
-    label.field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
+      align-items: center;
+      gap: 0.55rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 0.45rem 0.65rem;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
       font-size: 0.85rem;
-      letter-spacing: 0.02em;
-      color: #d7d7d7;
     }
 
-    .story-editor-shell input,
-    .story-editor-shell select,
-    .story-editor-shell textarea {
-      width: 100%;
-      background: #141414;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      color: #f0f0f0;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.95rem;
-      transition: border 0.15s ease, box-shadow 0.15s ease;
+    .color-choices input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
     }
 
-    .story-editor-shell textarea {
-      resize: vertical;
-      min-height: 120px;
+    .color-chip {
+      width: 16px;
+      height: 16px;
+      border-radius: 6px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
     }
 
-    .story-editor-shell input:focus,
-    .story-editor-shell select:focus,
-    .story-editor-shell textarea:focus {
-      outline: none;
-      border-color: rgba(108, 92, 231, 0.7);
-      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.25);
+    .color-choices input:checked + .color-chip {
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.45);
     }
+
+    .color-choices label:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .color-chip.twilight { background: #7c6cff; }
+    .color-chip.ember { background: #ff8b5c; }
+    .color-chip.moss { background: #55efc4; }
+    .color-chip.dusk { background: #45aaf2; }
+    .color-chip.rose { background: #ff6bcb; }
+    .color-chip.slate { background: #b2bec3; }
 
     .choices-block {
       display: flex;
@@ -329,55 +475,86 @@
 
     .choice-item {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1.2fr 1fr auto;
       gap: 0.5rem;
-      padding: 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 10px;
-      background: rgba(18, 18, 18, 0.85);
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0.55rem 0.65rem;
+    }
+
+    .choice-item input,
+    .choice-item select {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 0.4rem 0.5rem;
+      color: inherit;
+      font: inherit;
     }
 
     .choice-actions {
       display: flex;
+      gap: 0.35rem;
       justify-content: flex-end;
-      gap: 0.5rem;
     }
 
     .choice-form {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1.2fr 1fr auto;
       gap: 0.5rem;
-      padding: 0.75rem;
-      border: 1px dashed rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
-      background: rgba(12, 12, 12, 0.6);
+      align-items: center;
     }
 
-    .btn.small.danger {
-      background: rgba(255, 107, 107, 0.15);
-      color: #ffb4b4;
-      border: 1px solid rgba(255, 107, 107, 0.4);
+    .choice-form input,
+    .choice-form select {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.4rem 0.5rem;
+      color: inherit;
+      font: inherit;
     }
 
-    .btn.small.danger:hover {
-      background: rgba(255, 107, 107, 0.25);
+    .empty-state {
+      font-size: 0.85rem;
+      color: #9c9c9c;
+    }
+
+    .monospace {
+      font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", monospace;
     }
 
     .hidden {
       display: none !important;
     }
 
-    .monospace {
-      font-family: "Fira Code", "JetBrains Mono", "SFMono-Regular", monospace;
+    @media (max-width: 1100px) {
+      .story-editor-shell {
+        padding: 1.25rem 1.2rem 2.5rem;
+      }
+
+      .entity-editor {
+        right: 1rem;
+        bottom: 1rem;
+        width: min(520px, calc(100vw - 2rem));
+      }
     }
 
-    @media (max-width: 1200px) {
-      .editor-body {
-        flex-direction: column;
+    @media (max-width: 800px) {
+      .story-details-panel form {
+        grid-template-columns: 1fr;
       }
-      .inspector {
-        width: 100%;
-        flex-direction: column;
+
+      .map-panel {
+        border-radius: 18px;
+      }
+
+      .entity-editor {
+        left: 1rem;
+        right: 1rem;
+        width: auto;
       }
     }
   </style>
@@ -387,185 +564,177 @@
 
   <main class="story-editor-shell">
     <div class="editor-toolbar">
-      <div class="toolbar-left">
+      <div class="toolbar-group">
         <a href="/admin/stories" class="btn small">&larr; Back</a>
-        <h1><%= story.title %></h1>
+        <h1 id="editorStoryTitle"><%= story.title %></h1>
       </div>
-      <div class="toolbar-right">
+      <div class="toolbar-group">
         <a href="/admin/stories/<%= story._id %>/images" class="btn small">Manage Images</a>
-        <button type="button" class="btn small" id="center-selection-btn">Center Selection</button>
       </div>
     </div>
 
-    <div class="editor-body">
-      <section class="map-panel">
-        <div class="map-controls">
-          <div class="map-controls-left">
-            Drag passages into place. Connections update automatically as you move nodes.
-          </div>
-          <div class="map-controls-right">
-            <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
-            <button type="button" class="btn small" id="add-divider-btn">+ Divider</button>
-            <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
-          </div>
+    <section class="panel story-details-panel">
+      <form id="story-form">
+        <label class="field">
+          <span>Title</span>
+          <input type="text" name="title" value="<%= story.title %>" required>
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select name="status" id="story-status">
+            <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
+            <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Start Passage</span>
+          <select name="startNodeId" id="story-start-node">
+            <option value="">-- Select --</option>
+            <% (story.nodes || []).filter(n => n.type !== 'divider').forEach(n => { %>
+              <option value="<%= n._id %>" <%= story.startNodeId === n._id ? 'selected' : '' %>><%= n._id %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span>Cover Image URL</span>
+          <input type="text" name="coverImage" value="<%= story.coverImage || '' %>">
+        </label>
+        <label class="field">
+          <span>Author Notes (private)</span>
+          <textarea name="notes" rows="3"><%= story.notes || '' %></textarea>
+        </label>
+        <label class="field">
+          <span>Description (public)</span>
+          <textarea name="description" rows="4"><%= story.description || '' %></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn small">Save Story</button>
         </div>
-        <div class="map-viewport" id="mapViewport">
-          <svg class="map-links" id="linkLayer"></svg>
-          <div class="map-canvas" id="mapCanvas"></div>
+      </form>
+    </section>
+
+    <section class="map-panel">
+      <div class="map-controls">
+        <p>Drag passages into place. Connections redraw automatically with arrows indicating their direction.</p>
+        <div class="map-controls-right">
+          <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
+          <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
+          <button type="button" class="btn small ghost" id="center-selection-btn">Center Selection</button>
         </div>
-      </section>
-
-      <aside class="inspector">
-        <section class="panel story-panel">
-          <h2>Story Details</h2>
-          <form id="story-form" class="stack">
-            <label class="field">
-              <span>Title</span>
-              <input type="text" name="title" value="<%= story.title %>" required>
-            </label>
-            <label class="field">
-              <span>Status</span>
-              <select name="status" id="story-status">
-                <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
-                <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Start Node</span>
-              <select name="startNodeId" id="story-start-node">
-                <option value="">-- Select --</option>
-                <% story.nodes.filter(n => n.type !== 'divider').forEach(n => { %>
-                  <option value="<%= n._id %>" <%= story.startNodeId === n._id ? 'selected' : '' %>><%= n._id %></option>
-                <% }) %>
-              </select>
-            </label>
-            <label class="field">
-              <span>Cover Image URL</span>
-              <input type="text" name="coverImage" value="<%= story.coverImage || '' %>">
-            </label>
-            <label class="field">
-              <span>Author Notes (private)</span>
-              <textarea name="notes" rows="3"><%= story.notes || '' %></textarea>
-            </label>
-            <label class="field">
-              <span>Description (public)</span>
-              <textarea name="description" rows="5"><%= story.description || '' %></textarea>
-            </label>
-            <button type="submit" class="btn small">Save Story</button>
-          </form>
-        </section>
-
-        <section class="panel inspector-panel" data-panel="empty">
-          <p>Select a passage, divider, or ending from the map to edit its details.</p>
-        </section>
-
-        <section class="panel inspector-panel hidden" data-panel="node">
-          <div class="panel-heading">
-            <h2>Passage</h2>
-            <button type="button" class="btn small danger" id="node-delete">Delete</button>
-          </div>
-          <form id="node-form" class="stack">
-            <label class="field">
-              <span>Passage ID</span>
-              <input type="text" name="_id" required>
-            </label>
-            <label class="field">
-              <span>Image URL</span>
-              <input type="text" name="image">
-            </label>
-            <label class="field">
-              <span>Notes</span>
-              <textarea name="notes" rows="2"></textarea>
-            </label>
-            <label class="field">
-              <span>Choice Notes</span>
-              <textarea name="choiceNotes" rows="2"></textarea>
-            </label>
-            <label class="field">
-              <span>Story Text</span>
-              <textarea name="text" rows="10" class="monospace"></textarea>
-            </label>
-            <button type="submit" class="btn small">Save Passage</button>
-          </form>
-
-          <div class="choices-block">
-            <div class="panel-heading compact">
-              <h3>Choices</h3>
-            </div>
-            <div id="choice-list"></div>
-            <form id="choice-add-form" class="choice-form">
-              <input type="text" name="label" placeholder="Choice label" required>
-              <select name="nextNodeId" required></select>
-              <div class="choice-actions">
-                <button type="submit" class="btn small">Add Choice</button>
-              </div>
-            </form>
-          </div>
-        </section>
-
-        <section class="panel inspector-panel hidden" data-panel="ending">
-          <div class="panel-heading">
-            <h2>Ending</h2>
-            <button type="button" class="btn small danger" id="ending-delete">Delete</button>
-          </div>
-          <form id="ending-form" class="stack">
-            <label class="field">
-              <span>Ending ID</span>
-              <input type="text" name="_id" required>
-            </label>
-            <label class="field">
-              <span>Label</span>
-              <input type="text" name="label">
-            </label>
-            <label class="field">
-              <span>Type</span>
-              <select name="type">
-                <option value="true">True</option>
-                <option value="death">Death</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Image URL</span>
-              <input type="text" name="image">
-            </label>
-            <label class="field">
-              <span>Notes</span>
-              <textarea name="notes" rows="2"></textarea>
-            </label>
-            <label class="field">
-              <span>Story Text</span>
-              <textarea name="text" rows="10" class="monospace"></textarea>
-            </label>
-            <button type="submit" class="btn small">Save Ending</button>
-          </form>
-        </section>
-
-        <section class="panel inspector-panel hidden" data-panel="divider">
-          <div class="panel-heading">
-            <h2>Divider</h2>
-            <button type="button" class="btn small danger" id="divider-delete">Delete</button>
-          </div>
-          <form id="divider-form" class="stack">
-            <label class="field">
-              <span>Label</span>
-              <input type="text" name="label" required>
-            </label>
-            <label class="field">
-              <span>Color</span>
-              <select name="color">
-                <option value="gray">Muted Gray</option>
-                <option value="red">Muted Red</option>
-                <option value="blue">Muted Blue</option>
-                <option value="green">Muted Green</option>
-              </select>
-            </label>
-            <button type="submit" class="btn small">Save Divider</button>
-          </form>
-        </section>
-      </aside>
-    </div>
+      </div>
+      <div class="map-viewport" id="mapViewport">
+        <svg class="map-links" id="linkLayer"></svg>
+        <div class="map-canvas" id="mapCanvas"></div>
+      </div>
+    </section>
   </main>
+
+  <div class="entity-editor hidden collapsed" id="entityEditor">
+    <div class="entity-editor__header">
+      <div>
+        <h2 id="entityEditorTitle">Passage</h2>
+        <p class="entity-editor__subtitle" id="entityEditorSubtitle"></p>
+      </div>
+      <div class="entity-editor__actions">
+        <button type="button" class="btn small ghost" id="editorCollapseBtn" aria-expanded="false">Expand</button>
+        <button type="button" class="btn small danger hidden" id="node-delete">Delete Passage</button>
+        <button type="button" class="btn small danger hidden" id="ending-delete">Delete Ending</button>
+      </div>
+    </div>
+    <div class="entity-editor__body">
+      <form id="node-form" class="stack hidden" data-editor="node">
+        <label class="field">
+          <span>Passage ID</span>
+          <input type="text" name="_id" required>
+        </label>
+        <div class="field">
+          <span>Border Color</span>
+          <div class="color-choices">
+            <label>
+              <input type="radio" name="color" value="twilight">
+              <span class="color-chip twilight"></span>
+              Twilight Violet
+            </label>
+            <label>
+              <input type="radio" name="color" value="ember">
+              <span class="color-chip ember"></span>
+              Ember Orange
+            </label>
+            <label>
+              <input type="radio" name="color" value="moss">
+              <span class="color-chip moss"></span>
+              Moss Green
+            </label>
+            <label>
+              <input type="radio" name="color" value="dusk">
+              <span class="color-chip dusk"></span>
+              Dusk Blue
+            </label>
+            <label>
+              <input type="radio" name="color" value="rose">
+              <span class="color-chip rose"></span>
+              Rose Magenta
+            </label>
+            <label>
+              <input type="radio" name="color" value="slate">
+              <span class="color-chip slate"></span>
+              Slate Gray
+            </label>
+          </div>
+        </div>
+        <label class="field">
+          <span>Image</span>
+          <select name="image"></select>
+        </label>
+        <label class="field">
+          <span>Notes</span>
+          <textarea name="notes" rows="2"></textarea>
+        </label>
+        <label class="field">
+          <span>Story Text</span>
+          <textarea name="text" rows="10" class="monospace"></textarea>
+        </label>
+        <button type="submit" class="btn small">Save Passage</button>
+      </form>
+
+      <div class="choices-block hidden" data-editor="node">
+        <div class="empty-state" id="choicesEmptyState">No choices yet.</div>
+        <div id="choice-list"></div>
+        <form id="choice-add-form" class="choice-form">
+          <input type="text" name="label" placeholder="Choice label" required>
+          <select name="nextNodeId" required></select>
+          <div class="choice-actions">
+            <button type="submit" class="btn small">Add Choice</button>
+          </div>
+        </form>
+      </div>
+
+      <form id="ending-form" class="stack hidden" data-editor="ending">
+        <label class="field">
+          <span>Ending ID</span>
+          <input type="text" name="_id" required>
+        </label>
+        <label class="field">
+          <span>Ending Type</span>
+          <select name="type">
+            <option value="true">True</option>
+            <option value="death">Death</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Image</span>
+          <select name="image"></select>
+        </label>
+        <label class="field">
+          <span>Story Text</span>
+          <textarea name="text" rows="10" class="monospace"></textarea>
+        </label>
+        <button type="submit" class="btn small">Save Ending</button>
+      </form>
+    </div>
+  </div>
+
 
   <script id="story-data" type="application/json"><%- JSON.stringify(story) %></script>
   <script>
@@ -574,30 +743,124 @@
       const storyScript = document.getElementById("story-data");
       let storyData = JSON.parse(storyScript.textContent || "{}");
 
+      const COLOR_OPTIONS = ["twilight", "ember", "moss", "dusk", "rose", "slate"];
+
       const mapViewport = document.getElementById("mapViewport");
       const mapCanvas = document.getElementById("mapCanvas");
       const linkLayer = document.getElementById("linkLayer");
-      const elementIndex = new Map();
-      let selected = null;
-      let dragInitialized = false;
-      let drawFrame = null;
-
       const storyForm = document.getElementById("story-form");
       const startNodeSelect = document.getElementById("story-start-node");
-      const nodeForm = document.getElementById("node-form");
-      const endingForm = document.getElementById("ending-form");
-      const dividerForm = document.getElementById("divider-form");
-      const choiceList = document.getElementById("choice-list");
-      const choiceAddForm = document.getElementById("choice-add-form");
+      const storyTitleHeading = document.getElementById("editorStoryTitle");
+      const addNodeBtn = document.getElementById("add-node-btn");
+      const addEndingBtn = document.getElementById("add-ending-btn");
+      const centerSelectionBtn = document.getElementById("center-selection-btn");
+
+      const entityEditor = document.getElementById("entityEditor");
+      const editorTitle = document.getElementById("entityEditorTitle");
+      const editorSubtitle = document.getElementById("entityEditorSubtitle");
+      const collapseBtn = document.getElementById("editorCollapseBtn");
       const nodeDeleteBtn = document.getElementById("node-delete");
       const endingDeleteBtn = document.getElementById("ending-delete");
-      const dividerDeleteBtn = document.getElementById("divider-delete");
+      const nodeForm = document.getElementById("node-form");
+      const endingForm = document.getElementById("ending-form");
+      const choiceList = document.getElementById("choice-list");
+      const choiceAddForm = document.getElementById("choice-add-form");
+      const choicesEmptyState = document.getElementById("choicesEmptyState");
 
-      const inspectorPanels = {
-        empty: document.querySelector('[data-panel="empty"]'),
-        node: document.querySelector('[data-panel="node"]'),
-        ending: document.querySelector('[data-panel="ending"]'),
-        divider: document.querySelector('[data-panel="divider"]'),
+      const nodeEditorBlocks = entityEditor.querySelectorAll('[data-editor="node"]');
+      const endingEditorBlocks = entityEditor.querySelectorAll('[data-editor="ending"]');
+      const nodeColorInputs = Array.from(nodeForm.querySelectorAll('input[name="color"]'));
+
+      const elementIndex = new Map();
+      let selected = null;
+      let drawFrame = null;
+      let dragInitialized = false;
+
+      const normalizeCollections = (story) => {
+        story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
+        story.nodes = story.nodes.filter((node) => node.type !== "divider");
+        story.endings = Array.isArray(story.endings) ? story.endings : [];
+        story.images = Array.isArray(story.images) ? story.images : [];
+      };
+
+      const ensurePositions = (story) => {
+        normalizeCollections(story);
+        const spacingX = 240;
+        const spacingY = 200;
+        story.nodes.forEach((node, idx) => {
+          if (!node.position || typeof node.position.x !== "number" || typeof node.position.y !== "number") {
+            node.position = {
+              x: 160 + (idx % 5) * spacingX,
+              y: 160 + Math.floor(idx / 5) * spacingY,
+            };
+          }
+          if (!node.color || !COLOR_OPTIONS.includes(node.color)) {
+            node.color = "twilight";
+          }
+        });
+        const nodeRows = Math.max(1, Math.ceil(story.nodes.length / 5));
+        story.endings.forEach((ending, idx) => {
+          if (!ending.position || typeof ending.position.x !== "number" || typeof ending.position.y !== "number") {
+            ending.position = {
+              x: 160 + (idx % 4) * spacingX,
+              y: 160 + (nodeRows + 1 + Math.floor(idx / 4)) * spacingY,
+            };
+          }
+        });
+      };
+
+      const deriveImageMeta = (item) => {
+        if (!item) return { url: "", label: "" };
+        if (typeof item === "string") {
+          return { url: item, label: item.split("/").pop() || item };
+        }
+        const url = item.url || item.path || "";
+        const label =
+          item.title ||
+          item.publicId ||
+          item.public_id ||
+          (url ? url.split("/").pop() : "");
+        return { url, label: label || url };
+      };
+
+      const getImageOptions = () => {
+        const raw = Array.isArray(storyData.images) ? storyData.images : [];
+        const seen = new Set();
+        return raw
+          .map(deriveImageMeta)
+          .filter((meta) => {
+            if (!meta.url || seen.has(meta.url)) return false;
+            seen.add(meta.url);
+            return true;
+          });
+      };
+
+      const populateImageSelect = (selectEl, currentValue) => {
+        if (!selectEl) return;
+        const options = getImageOptions();
+        selectEl.innerHTML = "";
+        const noneOption = document.createElement("option");
+        noneOption.value = "";
+        noneOption.textContent = "No image";
+        selectEl.appendChild(noneOption);
+        let hasMatch = false;
+        options.forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt.url;
+          option.textContent = opt.label || opt.url;
+          if (currentValue && currentValue === opt.url) {
+            option.selected = true;
+            hasMatch = true;
+          }
+          selectEl.appendChild(option);
+        });
+        if (currentValue && !hasMatch) {
+          const legacy = document.createElement("option");
+          legacy.value = currentValue;
+          legacy.selected = true;
+          legacy.textContent = `Current: ${currentValue}`;
+          selectEl.appendChild(legacy);
+        }
       };
 
       const postJSON = async (url, payload = {}) => {
@@ -632,234 +895,15 @@
         alert(err.message || "Something went wrong. Please try again.");
       };
 
-      const ensurePositions = (story) => {
-        story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
-        story.endings = Array.isArray(story.endings) ? story.endings : [];
-        const spacingX = 240;
-        const spacingY = 200;
-        story.nodes.forEach((node, idx) => {
-          if (!node.position || typeof node.position.x !== "number" || typeof node.position.y !== "number") {
-            node.position = {
-              x: 160 + (idx % 5) * spacingX,
-              y: 160 + Math.floor(idx / 5) * spacingY,
-            };
-          }
-        });
-        const nodeRows = Math.max(1, Math.ceil(story.nodes.length / 5));
-        story.endings.forEach((ending, idx) => {
-          if (!ending.position || typeof ending.position.x !== "number" || typeof ending.position.y !== "number") {
-            ending.position = {
-              x: 160 + (idx % 4) * spacingX,
-              y: 160 + (nodeRows + 1 + Math.floor(idx / 4)) * spacingY,
-            };
-          }
-        });
-      };
-
       const getNodeById = (id) => storyData.nodes.find((n) => n._id === id);
       const getEndingById = (id) => storyData.endings.find((e) => e._id === id);
       const getEntity = (type, id) => {
-        if (!id) return null;
-        if (type === "node" || type === "divider") {
-          return storyData.nodes.find((n) => n._id === id);
-        }
-        if (type === "ending") {
-          return getEndingById(id);
-        }
-        return null;
+        if (type === "ending") return getEndingById(id);
+        return getNodeById(id);
       };
 
-      const showPanel = (type) => {
-        Object.entries(inspectorPanels).forEach(([panelType, el]) => {
-          el.classList.toggle("hidden", panelType !== type);
-        });
-      };
-
-      const scheduleDrawLinks = () => {
-        if (drawFrame) return;
-        drawFrame = requestAnimationFrame(() => {
-          drawFrame = null;
-          drawLinks();
-        });
-      };
-
-      const drawLinks = () => {
-        const width = parseFloat(mapCanvas.style.width) || 2400;
-        const height = parseFloat(mapCanvas.style.height) || 1600;
-        linkLayer.setAttribute("width", width);
-        linkLayer.setAttribute("height", height);
-        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
-        linkLayer.innerHTML = "";
-
-        const frag = document.createDocumentFragment();
-        storyData.nodes.forEach((node) => {
-          if (node.type !== "node") return;
-          const fromEntry = elementIndex.get(node._id);
-          if (!fromEntry) return;
-
-          node.choices.forEach((choice) => {
-            const targetEntry = elementIndex.get(choice.nextNodeId);
-            if (!targetEntry) return;
-            const fromEl = fromEntry.element;
-            const toEl = targetEntry.element;
-            const fx = fromEl.offsetLeft + fromEl.offsetWidth / 2;
-            const fy = fromEl.offsetTop + fromEl.offsetHeight / 2;
-            const tx = toEl.offsetLeft + toEl.offsetWidth / 2;
-            const ty = toEl.offsetTop + toEl.offsetHeight / 2;
-            const midX = (fx + tx) / 2;
-            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            path.setAttribute("d", `M${fx},${fy} C${midX},${fy} ${midX},${ty} ${tx},${ty}`);
-            path.classList.add("link");
-            if (targetEntry.type === "ending") {
-              path.classList.add("to-ending");
-            }
-            frag.appendChild(path);
-          });
-        });
-        linkLayer.appendChild(frag);
-      };
-
-      const renderMap = () => {
-        elementIndex.clear();
-        mapCanvas.innerHTML = "";
-
-        const entities = [...storyData.nodes, ...storyData.endings];
-        let maxX = 800;
-        let maxY = 600;
-        entities.forEach((entity) => {
-          if (!entity.position) return;
-          maxX = Math.max(maxX, entity.position.x + 320);
-          maxY = Math.max(maxY, entity.position.y + 260);
-        });
-        const width = Math.max(1800, maxX + 120);
-        const height = Math.max(1200, maxY + 120);
-        mapCanvas.style.width = `${width}px`;
-        mapCanvas.style.height = `${height}px`;
-        linkLayer.setAttribute("width", width);
-        linkLayer.setAttribute("height", height);
-        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
-
-        const createNodeElement = (entity, type) => {
-          const el = document.createElement("div");
-          el.className = `map-node ${type}`;
-          el.dataset.id = entity._id;
-          el.dataset.entityType = type;
-          el.dataset.x = entity.position?.x ?? 0;
-          el.dataset.y = entity.position?.y ?? 0;
-          el.style.left = `${entity.position?.x ?? 0}px`;
-          el.style.top = `${entity.position?.y ?? 0}px`;
-
-          const title = document.createElement("div");
-          title.className = "node-title";
-          const titleText = document.createElement("span");
-          if (type === "divider") {
-            titleText.textContent = entity.label || entity._id;
-          } else if (type === "ending") {
-            titleText.textContent = entity.label ? `${entity._id} — ${entity.label}` : entity._id;
-          } else {
-            titleText.textContent = entity._id;
-          }
-          title.appendChild(titleText);
-
-          if (type === "ending") {
-            const badge = document.createElement("span");
-            badge.className = "badge";
-            badge.textContent = entity.type || "ending";
-            title.appendChild(badge);
-          }
-
-          el.appendChild(title);
-
-          if (type === "node") {
-            const snippet = document.createElement("div");
-            snippet.className = "node-snippet";
-            snippet.textContent = (entity.text || "").replace(/\s+/g, " ").trim().slice(0, 140);
-            el.appendChild(snippet);
-
-            const meta = document.createElement("div");
-            meta.className = "node-meta";
-            const choiceCount = document.createElement("span");
-            choiceCount.textContent = `${entity.choices.length} choice${entity.choices.length === 1 ? "" : "s"}`;
-            meta.appendChild(choiceCount);
-            if (entity.image) {
-              const imageBadge = document.createElement("span");
-              imageBadge.className = "badge";
-              imageBadge.textContent = "Image";
-              meta.appendChild(imageBadge);
-            }
-            el.appendChild(meta);
-          }
-
-          if (type === "divider") {
-            const badge = document.createElement("span");
-            badge.className = "badge";
-            badge.textContent = entity.color || "divider";
-            el.appendChild(badge);
-          }
-
-          el.addEventListener("click", (event) => {
-            event.stopPropagation();
-            if (type === "divider") {
-              selectEntity("divider", entity._id, { center: false });
-            } else if (type === "ending") {
-              selectEntity("ending", entity._id, { center: false });
-            } else {
-              selectEntity("node", entity._id, { center: false });
-            }
-          });
-
-          elementIndex.set(entity._id, { element: el, type });
-          mapCanvas.appendChild(el);
-          return el;
-        };
-
-        storyData.nodes.forEach((node) => {
-          const type = node.type === "divider" ? "divider" : "node";
-          const el = createNodeElement(node, type);
-          if (storyData.startNodeId && storyData.startNodeId === node._id) {
-            el.classList.add("start-node");
-          }
-          if (type === "divider") {
-            el.classList.remove("draggable");
-            el.classList.add("draggable");
-          } else {
-            el.classList.add("draggable");
-          }
-        });
-
-        storyData.endings.forEach((ending) => {
-          const el = createNodeElement(ending, "ending");
-          el.classList.add("draggable");
-        });
-
-        highlightSelection();
-        drawLinks();
-        initDrag();
-      };
-
-      const highlightSelection = () => {
-        mapCanvas.querySelectorAll(".map-node").forEach((el) => {
-          el.classList.remove("selected");
-        });
-        if (!selected) return;
-        const entry = elementIndex.get(selected.id);
-        if (entry) {
-          entry.element.classList.add("selected");
-        }
-      };
-
-      const centerOnSelected = () => {
-        if (!selected) return;
-        const entry = elementIndex.get(selected.id);
-        if (!entry) return;
-        const el = entry.element;
-        const x = el.offsetLeft + el.offsetWidth / 2 - mapViewport.clientWidth / 2;
-        const y = el.offsetTop + el.offsetHeight / 2 - mapViewport.clientHeight / 2;
-        mapViewport.scrollTo({
-          left: Math.max(x, 0),
-          top: Math.max(y, 0),
-          behavior: "smooth",
-        });
+      const updateStoryTitle = () => {
+        storyTitleHeading.textContent = storyData.title || "Untitled Story";
       };
 
       const refreshStoryForm = () => {
@@ -874,46 +918,44 @@
         placeholder.value = "";
         placeholder.textContent = "-- Select --";
         startNodeSelect.appendChild(placeholder);
-        storyData.nodes
-          .filter((n) => n.type !== "divider")
-          .forEach((node) => {
-            const option = document.createElement("option");
-            option.value = node._id;
-            option.textContent = node._id;
-            if (storyData.startNodeId === node._id) {
-              option.selected = true;
-            }
-            startNodeSelect.appendChild(option);
-          });
+        storyData.nodes.forEach((node) => {
+          const option = document.createElement("option");
+          option.value = node._id;
+          option.textContent = node._id;
+          if (storyData.startNodeId === node._id) {
+            option.selected = true;
+          }
+          startNodeSelect.appendChild(option);
+        });
       };
 
       const populateDestinationSelect = (selectEl, selectedValue) => {
         selectEl.innerHTML = "";
-        storyData.nodes
-          .filter((n) => n.type !== "divider")
-          .forEach((node) => {
-            const opt = document.createElement("option");
-            opt.value = node._id;
-            opt.textContent = node._id;
-            if (node._id === selectedValue) opt.selected = true;
-            selectEl.appendChild(opt);
-          });
+        storyData.nodes.forEach((node) => {
+          const option = document.createElement("option");
+          option.value = node._id;
+          option.textContent = node._id;
+          if (node._id === selectedValue) option.selected = true;
+          selectEl.appendChild(option);
+        });
         storyData.endings.forEach((ending) => {
-          const opt = document.createElement("option");
-          opt.value = ending._id;
-          opt.textContent = ending.label
-            ? `Ending: ${ending._id} — ${ending.label}`
-            : `Ending: ${ending._id}`;
-          if (ending._id === selectedValue) opt.selected = true;
-          selectEl.appendChild(opt);
+          const option = document.createElement("option");
+          option.value = ending._id;
+          const typeLabel = ending.type ? ending.type.toUpperCase() : "ENDING";
+          option.textContent = `Ending: ${ending._id} (${typeLabel})`;
+          if (ending._id === selectedValue) option.selected = true;
+          selectEl.appendChild(option);
         });
       };
 
       const renderChoices = (node) => {
         choiceList.innerHTML = "";
-        if (!node) return;
-        const choices = Array.isArray(node.choices) ? node.choices : [];
-        choices.forEach((choice) => {
+        if (!node || !Array.isArray(node.choices) || node.choices.length === 0) {
+          choicesEmptyState.classList.remove("hidden");
+          return;
+        }
+        choicesEmptyState.classList.add("hidden");
+        node.choices.forEach((choice) => {
           const form = document.createElement("form");
           form.className = "choice-item";
 
@@ -944,7 +986,6 @@
           actions.appendChild(deleteBtn);
 
           form.appendChild(actions);
-          choiceList.appendChild(form);
 
           form.addEventListener("submit", (event) => {
             event.preventDefault();
@@ -953,9 +994,7 @@
               nextNodeId: select.value,
             };
             postJSON(
-              `/admin/stories/${storyId}/nodes/${encodeURIComponent(
-                node._id
-              )}/choices/${encodeURIComponent(choice._id)}/update-inline`,
+              `/admin/stories/${storyId}/nodes/${encodeURIComponent(node._id)}/choices/${encodeURIComponent(choice._id)}/update-inline`,
               payload
             )
               .then((data) => {
@@ -968,9 +1007,7 @@
           deleteBtn.addEventListener("click", () => {
             if (!confirm("Delete this choice?")) return;
             postJSON(
-              `/admin/stories/${storyId}/nodes/${encodeURIComponent(
-                node._id
-              )}/choices/${encodeURIComponent(choice._id)}/delete`
+              `/admin/stories/${storyId}/nodes/${encodeURIComponent(node._id)}/choices/${encodeURIComponent(choice._id)}/delete`
             )
               .then((data) => {
                 selected = { type: "node", id: node._id };
@@ -978,82 +1015,286 @@
               })
               .catch(handleError);
           });
-        });
 
-        choiceAddForm.dataset.nodeId = node._id;
-        choiceAddForm.reset();
-        populateDestinationSelect(choiceAddForm.elements.nextNodeId, null);
+          choiceList.appendChild(form);
+        });
       };
 
       const fillNodeForm = (node) => {
         if (!node) return;
         nodeForm.dataset.originalId = node._id;
-        nodeForm.elements._id.value = node._id;
-        nodeForm.elements.image.value = node.image || "";
+        nodeForm.elements._id.value = node._id || "";
+        const color = node.color && COLOR_OPTIONS.includes(node.color) ? node.color : "twilight";
+        nodeColorInputs.forEach((input) => {
+          input.checked = input.value === color;
+        });
+        populateImageSelect(nodeForm.elements.image, node.image || "");
         nodeForm.elements.notes.value = node.notes || "";
-        nodeForm.elements.choiceNotes.value = node.choiceNotes || "";
         nodeForm.elements.text.value = node.text || "";
-        renderChoices(node);
-        showPanel("node");
+        choiceAddForm.dataset.nodeId = node._id;
+        populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
       };
 
       const fillEndingForm = (ending) => {
         if (!ending) return;
         endingForm.dataset.originalId = ending._id;
-        endingForm.elements._id.value = ending._id;
-        endingForm.elements.label.value = ending.label || "";
+        endingForm.elements._id.value = ending._id || "";
         endingForm.elements.type.value = ending.type || "other";
-        endingForm.elements.image.value = ending.image || "";
-        endingForm.elements.notes.value = ending.notes || "";
+        populateImageSelect(endingForm.elements.image, ending.image || "");
         endingForm.elements.text.value = ending.text || "";
-        showPanel("ending");
       };
 
-      const fillDividerForm = (divider) => {
-        if (!divider) return;
-        dividerForm.dataset.originalId = divider._id;
-        dividerForm.elements.label.value = divider.label || "";
-        dividerForm.elements.color.value = divider.color || "gray";
-        showPanel("divider");
+      const showEditorFor = (type, entity) => {
+        entityEditor.classList.remove("hidden");
+        entityEditor.classList.remove("collapsed");
+        collapseBtn.textContent = "Collapse";
+        collapseBtn.setAttribute("aria-expanded", "true");
+        if (type === "node") {
+          editorTitle.textContent = "Passage";
+          editorSubtitle.textContent = entity._id || "";
+          nodeDeleteBtn.classList.remove("hidden");
+          endingDeleteBtn.classList.add("hidden");
+          nodeEditorBlocks.forEach((el) => el.classList.remove("hidden"));
+          endingEditorBlocks.forEach((el) => el.classList.add("hidden"));
+          fillNodeForm(entity);
+          renderChoices(entity);
+        } else if (type === "ending") {
+          editorTitle.textContent = "Ending";
+          const typeLabel = entity.type ? entity.type.toUpperCase() : "ENDING";
+          editorSubtitle.textContent = `${entity._id} • ${typeLabel}`;
+          nodeDeleteBtn.classList.add("hidden");
+          endingDeleteBtn.classList.remove("hidden");
+          nodeEditorBlocks.forEach((el) => el.classList.add("hidden"));
+          endingEditorBlocks.forEach((el) => el.classList.remove("hidden"));
+          fillEndingForm(entity);
+        }
+      };
+
+      const hideEditor = () => {
+        entityEditor.classList.add("hidden");
+        collapseBtn.textContent = "Expand";
+        collapseBtn.setAttribute("aria-expanded", "false");
+      };
+
+      const highlightSelection = () => {
+        mapCanvas.querySelectorAll(".map-node").forEach((el) => el.classList.remove("selected"));
+        if (!selected) return;
+        const entry = elementIndex.get(selected.id);
+        if (entry) {
+          entry.element.classList.add("selected");
+        }
       };
 
       const refreshSelection = () => {
         if (!selected) {
-          showPanel("empty");
+          hideEditor();
           highlightSelection();
           return;
         }
         const entity = getEntity(selected.type, selected.id);
         if (!entity) {
           selected = null;
-          showPanel("empty");
+          hideEditor();
           highlightSelection();
           return;
         }
-        if (selected.type === "node") {
-          fillNodeForm(entity);
-        } else if (selected.type === "divider") {
-          fillDividerForm(entity);
-        } else if (selected.type === "ending") {
-          fillEndingForm(entity);
-        }
+        showEditorFor(selected.type, entity);
         highlightSelection();
+      };
+
+      const centerOnSelected = () => {
+        if (!selected) return;
+        const entry = elementIndex.get(selected.id);
+        if (!entry) return;
+        const el = entry.element;
+        const x = el.offsetLeft + el.offsetWidth / 2 - mapViewport.clientWidth / 2;
+        const y = el.offsetTop + el.offsetHeight / 2 - mapViewport.clientHeight / 2;
+        mapViewport.scrollTo({
+          left: Math.max(x, 0),
+          top: Math.max(y, 0),
+          behavior: "smooth",
+        });
+      };
+
+      const scheduleDrawLinks = () => {
+        if (drawFrame) return;
+        drawFrame = requestAnimationFrame(() => {
+          drawFrame = null;
+          drawLinks();
+        });
+      };
+
+      const drawLinks = () => {
+        const width = parseFloat(mapCanvas.style.width) || mapCanvas.scrollWidth || 2400;
+        const height = parseFloat(mapCanvas.style.height) || mapCanvas.scrollHeight || 1600;
+        linkLayer.setAttribute("width", width);
+        linkLayer.setAttribute("height", height);
+        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        linkLayer.innerHTML = "";
+
+        const ns = "http://www.w3.org/2000/svg";
+        const defs = document.createElementNS(ns, "defs");
+        const createMarker = (id, color) => {
+          const marker = document.createElementNS(ns, "marker");
+          marker.setAttribute("id", id);
+          marker.setAttribute("markerWidth", "10");
+          marker.setAttribute("markerHeight", "10");
+          marker.setAttribute("refX", "8");
+          marker.setAttribute("refY", "5");
+          marker.setAttribute("orient", "auto");
+          marker.setAttribute("markerUnits", "strokeWidth");
+          const path = document.createElementNS(ns, "path");
+          path.setAttribute("d", "M0,0 L10,5 L0,10 z");
+          path.setAttribute("fill", color);
+          marker.appendChild(path);
+          return marker;
+        };
+        defs.appendChild(createMarker("link-arrow", "rgba(108, 92, 231, 0.75)"));
+        defs.appendChild(createMarker("link-arrow-ending", "rgba(255, 139, 92, 0.85)"));
+        linkLayer.appendChild(defs);
+
+        const frag = document.createDocumentFragment();
+        storyData.nodes.forEach((node) => {
+          const fromEntry = elementIndex.get(node._id);
+          if (!fromEntry) return;
+          (Array.isArray(node.choices) ? node.choices : []).forEach((choice) => {
+            const targetEntry = elementIndex.get(choice.nextNodeId);
+            if (!targetEntry) return;
+            const fromEl = fromEntry.element;
+            const toEl = targetEntry.element;
+            const fx = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+            const fy = fromEl.offsetTop + fromEl.offsetHeight / 2;
+            const tx = toEl.offsetLeft + toEl.offsetWidth / 2;
+            const ty = toEl.offsetTop + toEl.offsetHeight / 2;
+            const midX = (fx + tx) / 2;
+            const path = document.createElementNS(ns, "path");
+            path.setAttribute("d", `M${fx},${fy} C${midX},${fy} ${midX},${ty} ${tx},${ty}`);
+            path.classList.add("link");
+            if (targetEntry.type === "ending") {
+              path.classList.add("to-ending");
+              path.setAttribute("marker-end", "url(#link-arrow-ending)");
+            } else {
+              path.setAttribute("marker-end", "url(#link-arrow)");
+            }
+            frag.appendChild(path);
+          });
+        });
+        linkLayer.appendChild(frag);
+      };
+
+      const renderMap = () => {
+        elementIndex.clear();
+        mapCanvas.innerHTML = "";
+
+        const entities = [...storyData.nodes, ...storyData.endings];
+        let maxX = 800;
+        let maxY = 600;
+        entities.forEach((entity) => {
+          if (!entity.position) return;
+          maxX = Math.max(maxX, entity.position.x + 320);
+          maxY = Math.max(maxY, entity.position.y + 260);
+        });
+        const width = Math.max(1800, maxX + 120);
+        const height = Math.max(1200, maxY + 120);
+        mapCanvas.style.width = `${width}px`;
+        mapCanvas.style.height = `${height}px`;
+        linkLayer.setAttribute("width", width);
+        linkLayer.setAttribute("height", height);
+        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+        const createElement = (entity, type) => {
+          const el = document.createElement("div");
+          el.className = `map-node ${type}`;
+          el.dataset.id = entity._id;
+          el.dataset.entityType = type;
+          const x = entity.position?.x ?? 0;
+          const y = entity.position?.y ?? 0;
+          el.dataset.x = x;
+          el.dataset.y = y;
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+
+          if (type === "node") {
+            const color = entity.color && COLOR_OPTIONS.includes(entity.color) ? entity.color : "twilight";
+            el.classList.add(`color-${color}`);
+          }
+
+          const title = document.createElement("div");
+          title.className = "node-title";
+
+          if (entity.image) {
+            const flag = document.createElement("span");
+            flag.className = "image-flag";
+            flag.title = "Image attached";
+            flag.textContent = "🖼";
+            title.appendChild(flag);
+          }
+
+          const titleText = document.createElement("span");
+          titleText.className = "node-id";
+          titleText.textContent = entity._id;
+          title.appendChild(titleText);
+          el.appendChild(title);
+
+          if (type === "node") {
+            const snippet = document.createElement("div");
+            snippet.className = "node-snippet";
+            snippet.textContent = (entity.text || "").replace(/\s+/g, " " ).trim().slice(0, 160);
+            el.appendChild(snippet);
+
+            const meta = document.createElement("div");
+            meta.className = "node-meta";
+            const choiceCount = document.createElement("span");
+            const count = Array.isArray(entity.choices) ? entity.choices.length : 0;
+            choiceCount.textContent = `${count} choice${count === 1 ? "" : "s"}`;
+            meta.appendChild(choiceCount);
+            el.appendChild(meta);
+          } else if (type === "ending") {
+            const endingType = document.createElement("div");
+            endingType.className = "ending-type";
+            endingType.textContent = entity.type ? entity.type.toUpperCase() : "ENDING";
+            el.appendChild(endingType);
+
+            const snippet = document.createElement("div");
+            snippet.className = "node-snippet";
+            snippet.textContent = (entity.text || "").replace(/\s+/g, " " ).trim().slice(0, 160);
+            el.appendChild(snippet);
+          }
+
+          el.addEventListener("click", (event) => {
+            event.stopPropagation();
+            selectEntity(type, entity._id, { center: false });
+          });
+
+          el.classList.add("draggable");
+          elementIndex.set(entity._id, { element: el, type });
+          mapCanvas.appendChild(el);
+          return el;
+        };
+
+        storyData.nodes.forEach((node) => {
+          const el = createElement(node, "node");
+          if (storyData.startNodeId && storyData.startNodeId === node._id) {
+            el.classList.add("start-node");
+          }
+        });
+
+        storyData.endings.forEach((ending) => {
+          createElement(ending, "ending");
+        });
+
+        highlightSelection();
+        drawLinks();
+        initDrag();
       };
 
       const setStoryData = (newStory) => {
         storyData = newStory;
         ensurePositions(storyData);
+        updateStoryTitle();
         renderMap();
         refreshStoryForm();
         refreshSelection();
-      };
-
-      const selectEntity = (type, id, { center = false } = {}) => {
-        selected = { type, id };
-        refreshSelection();
-        if (center) {
-          centerOnSelected();
-        }
       };
 
       const initDrag = () => {
@@ -1084,7 +1325,7 @@
                   : `/admin/stories/${storyId}/nodes/${encodeURIComponent(id)}/position`;
               postJSON(url, { x, y })
                 .then((data) => {
-                  selected = { type: type === "ending" ? "ending" : type === "divider" ? "divider" : "node", id };
+                  selected = { type, id };
                   setStoryData(data.story);
                 })
                 .catch(handleError);
@@ -1093,6 +1334,23 @@
           inertia: false,
         });
       };
+
+      const selectEntity = (type, id, { center = false } = {}) => {
+        selected = { type, id };
+        refreshSelection();
+        if (center) centerOnSelected();
+      };
+
+      mapViewport.addEventListener("click", () => {
+        selected = null;
+        refreshSelection();
+      });
+
+      collapseBtn.addEventListener("click", () => {
+        const isCollapsed = entityEditor.classList.toggle("collapsed");
+        collapseBtn.textContent = isCollapsed ? "Expand" : "Collapse";
+        collapseBtn.setAttribute("aria-expanded", String(!isCollapsed));
+      });
 
       storyForm.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -1111,16 +1369,57 @@
           .catch(handleError);
       });
 
+      addNodeBtn.addEventListener("click", () => {
+        const position = {
+          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+          y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+        };
+        postJSON(`/admin/stories/${storyId}/nodes/add`, { position })
+          .then((data) => {
+            const newNode = data.story.nodes && data.story.nodes[0];
+            setStoryData(data.story);
+            if (newNode) {
+              selected = { type: "node", id: newNode._id };
+              refreshSelection();
+              centerOnSelected();
+            }
+          })
+          .catch(handleError);
+      });
+
+      addEndingBtn.addEventListener("click", () => {
+        const position = {
+          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+          y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+        };
+        postJSON(`/admin/stories/${storyId}/endings/add`, { position })
+          .then((data) => {
+            const newEnding = data.story.endings && data.story.endings[0];
+            setStoryData(data.story);
+            if (newEnding) {
+              selected = { type: "ending", id: newEnding._id };
+              refreshSelection();
+              centerOnSelected();
+            }
+          })
+          .catch(handleError);
+      });
+
+      centerSelectionBtn.addEventListener("click", () => {
+        centerOnSelected();
+      });
+
       nodeForm.addEventListener("submit", (event) => {
         event.preventDefault();
         const originalId = nodeForm.dataset.originalId;
         if (!originalId) return;
+        const colorInput = nodeColorInputs.find((input) => input.checked);
         const payload = {
           _id: nodeForm.elements._id.value,
           image: nodeForm.elements.image.value,
           notes: nodeForm.elements.notes.value,
-          choiceNotes: nodeForm.elements.choiceNotes.value,
           text: nodeForm.elements.text.value,
+          color: colorInput ? colorInput.value : "twilight",
         };
         postJSON(
           `/admin/stories/${storyId}/nodes/${encodeURIComponent(originalId)}/update-inline`,
@@ -1139,10 +1438,8 @@
         if (!originalId) return;
         const payload = {
           _id: endingForm.elements._id.value,
-          label: endingForm.elements.label.value,
           type: endingForm.elements.type.value,
           image: endingForm.elements.image.value,
-          notes: endingForm.elements.notes.value,
           text: endingForm.elements.text.value,
         };
         postJSON(
@@ -1151,25 +1448,6 @@
         )
           .then((data) => {
             selected = { type: "ending", id: payload._id };
-            setStoryData(data.story);
-          })
-          .catch(handleError);
-      });
-
-      dividerForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const originalId = dividerForm.dataset.originalId;
-        if (!originalId) return;
-        const payload = {
-          label: dividerForm.elements.label.value,
-          color: dividerForm.elements.color.value,
-        };
-        postJSON(
-          `/admin/stories/${storyId}/nodes/${encodeURIComponent(originalId)}/update-divider`,
-          payload
-        )
-          .then((data) => {
-            selected = { type: "divider", id: originalId };
             setStoryData(data.story);
           })
           .catch(handleError);
@@ -1188,8 +1466,9 @@
           payload
         )
           .then((data) => {
-            choiceAddForm.reset();
             selected = { type: "node", id: nodeId };
+            choiceAddForm.reset();
+            populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
             setStoryData(data.story);
           })
           .catch(handleError);
@@ -1221,79 +1500,10 @@
           .catch(handleError);
       });
 
-      dividerDeleteBtn.addEventListener("click", () => {
-        if (!selected || selected.type !== "divider") return;
-        if (!confirm("Delete this divider?")) return;
-        postJSON(
-          `/admin/stories/${storyId}/nodes/${encodeURIComponent(selected.id)}/delete-divider`
-        )
-          .then((data) => {
-            selected = null;
-            setStoryData(data.story);
-          })
-          .catch(handleError);
-      });
-
-      document.getElementById("add-node-btn").addEventListener("click", () => {
-        const position = {
-          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-          y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
-        };
-        postJSON(`/admin/stories/${storyId}/nodes/add`, { position })
-          .then((data) => {
-            const newNode = data.story.nodes && data.story.nodes[0];
-            if (newNode) {
-              selected = { type: newNode.type === "divider" ? "divider" : "node", id: newNode._id };
-            }
-            setStoryData(data.story);
-            if (newNode) centerOnSelected();
-          })
-          .catch(handleError);
-      });
-
-      document.getElementById("add-divider-btn").addEventListener("click", () => {
-        const position = {
-          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-          y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
-        };
-        postJSON(`/admin/stories/${storyId}/nodes/add-divider`, { position })
-          .then((data) => {
-            const newDivider = data.story.nodes && data.story.nodes[0];
-            if (newDivider) {
-              selected = { type: "divider", id: newDivider._id };
-            }
-            setStoryData(data.story);
-            if (newDivider) centerOnSelected();
-          })
-          .catch(handleError);
-      });
-
-      document.getElementById("add-ending-btn").addEventListener("click", () => {
-        const position = {
-          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-          y: mapViewport.scrollTop + mapViewport.clientHeight / 2,
-        };
-        postJSON(`/admin/stories/${storyId}/endings/add`, { position })
-          .then((data) => {
-            const newEnding = data.story.endings && data.story.endings[0];
-            if (newEnding) {
-              selected = { type: "ending", id: newEnding._id };
-            }
-            setStoryData(data.story);
-            if (newEnding) centerOnSelected();
-          })
-          .catch(handleError);
-      });
-
-      document.getElementById("center-selection-btn").addEventListener("click", centerOnSelected);
-
-      mapViewport.addEventListener("click", () => {
-        selected = null;
-        refreshSelection();
-      });
-
       ensurePositions(storyData);
-      setStoryData(storyData);
+      updateStoryTitle();
+      renderMap();
+      refreshStoryForm();
     })();
   </script>
 </body>
