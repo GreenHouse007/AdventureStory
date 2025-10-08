@@ -452,22 +452,24 @@ exports.storiesList = async (req, res) => {
   }
 };
 
-exports.storyAddForm = (req, res) =>
-  res.render("admin/storyAdd", { title: "Add Story", categories: STORY_CATEGORIES });
-
-exports.storyAddPost = async (req, res) => {
+exports.storyQuickCreate = async (req, res) => {
   try {
-    const { title, description, coverImage, status, categories } = req.body;
-    await Story.create({
+    const displayOrder = await Story.countDocuments();
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const title = `New Story ${randomSuffix}`;
+
+    const story = await Story.create({
       title,
-      description,
-      coverImage,
-      status,
-      categories: normalizeCategories(categories),
+      description: "",
+      coverImage: null,
+      status: "coming_soon",
+      categories: [],
       nodes: [],
       endings: [],
+      displayOrder,
     });
-    res.redirect("/admin/stories");
+
+    res.redirect(`/admin/stories/${story._id}/edit`);
   } catch (err) {
     console.error(err);
     res.status(500).send("Error creating story");
