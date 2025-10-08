@@ -136,6 +136,7 @@ router.post(
   upload.single("image"),
   controller.uploadImage
 );
+router.post("/stories/:id/images/update", controller.updateImageMeta);
 // NEW: delete endpoint
 router.post("/stories/:id/images/delete", controller.deleteImage);
 

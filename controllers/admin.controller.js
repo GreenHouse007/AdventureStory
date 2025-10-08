@@ -456,7 +456,8 @@ exports.storyNodeUpdateInline = async (req, res) => {
     node.text = text;
     node.image = image;
     node.notes = notes;
-    node.color = color || node.color || "twilight";
+    const allowedColors = ["twilight", "ember", "moss", "dusk", "rose", "slate"];
+    node.color = allowedColors.includes(color) ? color : node.color || "twilight";
 
     // Cascade: fix all choices pointing to the old node id
     story.nodes.forEach((n) =>
@@ -782,6 +783,17 @@ function derivePublicIdFromUrl(urlStr) {
   }
 }
 
+function deriveFilenameFromUrl(urlStr) {
+  if (!urlStr) return "";
+  try {
+    const u = new URL(urlStr);
+    const path = u.pathname.split("/").pop() || "";
+    return path.split("?")[0];
+  } catch {
+    return urlStr.split("/").pop() || urlStr;
+  }
+}
+
 // Render images page (now using story.images as [{url, publicId}] or strings)
 exports.listImages = async (req, res) => {
   try {
@@ -791,12 +803,25 @@ exports.listImages = async (req, res) => {
     const raw = Array.isArray(story.images) ? story.images : [];
     const images = raw.map((item) => {
       if (typeof item === "string") {
-        return { url: item, publicId: derivePublicIdFromUrl(item) };
+        const url = item;
+        return {
+          url,
+          publicId: derivePublicIdFromUrl(url),
+          title: deriveFilenameFromUrl(url),
+        };
       }
-      // object form
+      const url = item.url || item.path || "";
+      const publicId = item.publicId || item.filename || derivePublicIdFromUrl(url);
+      const title =
+        item.title ||
+        item.displayName ||
+        deriveFilenameFromUrl(url) ||
+        publicId ||
+        "";
       return {
-        url: item.url || item.path || "",
-        publicId: item.publicId || item.filename || null,
+        url,
+        publicId,
+        title,
       };
     });
 
@@ -822,7 +847,11 @@ exports.uploadImage = async (req, res) => {
 
     story.images = story.images || [];
     // Prefer storing as object going forward
-    story.images.unshift({ url, publicId });
+    story.images.unshift({
+      url,
+      publicId,
+      title: deriveFilenameFromUrl(url),
+    });
 
     await story.save();
     res.redirect(`/admin/stories/${story._id}/images`);
@@ -876,6 +905,87 @@ exports.deleteImage = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Error deleting image");
+  }
+};
+
+exports.updateImageMeta = async (req, res) => {
+  try {
+    const { id: storyId } = req.params;
+    const { publicId, url, title } = req.body;
+    const story = await Story.findById(storyId);
+    if (!story) return respondError(req, res, 404, "Story not found");
+
+    const trimmedTitle = (title || "").trim();
+    const applyTitle = trimmedTitle || null;
+    let updated = false;
+
+    const normalizeObject = (itemUrl, itemPublicId, existing = {}) => ({
+      ...existing,
+      url: itemUrl,
+      publicId: itemPublicId,
+      title: applyTitle || existing.title || deriveFilenameFromUrl(itemUrl),
+    });
+
+    story.images = (story.images || []).map((item) => {
+      if (typeof item === "string") {
+        const itemUrl = item;
+        const itemPublicId = derivePublicIdFromUrl(itemUrl);
+        const matches =
+          (url && itemUrl === url) || (publicId && itemPublicId && itemPublicId === publicId);
+        if (matches) {
+          updated = true;
+          return normalizeObject(itemUrl, itemPublicId);
+        }
+        return item;
+      }
+
+      if (!item || typeof item !== "object") return item;
+
+      const itemUrl = item.url || item.path || "";
+      const itemPublicId = item.publicId || item.filename || derivePublicIdFromUrl(itemUrl);
+      const matches =
+        (url && itemUrl === url) || (publicId && itemPublicId && itemPublicId === publicId);
+
+      if (!matches) return item;
+
+      updated = true;
+      const next = { ...item };
+      next.url = itemUrl;
+      if (itemPublicId) next.publicId = itemPublicId;
+      next.title = applyTitle || next.title || deriveFilenameFromUrl(itemUrl);
+      return next;
+    });
+
+    if (!updated) {
+      return respondError(req, res, 404, "Image not found");
+    }
+
+    await story.save();
+
+    if (wantsJSON(req)) {
+      const normalized = (story.images || []).map((item) => {
+        if (typeof item === "string") {
+          const itemUrl = item;
+          return {
+            url: itemUrl,
+            publicId: derivePublicIdFromUrl(itemUrl),
+            title: deriveFilenameFromUrl(itemUrl),
+          };
+        }
+        const itemUrl = item.url || item.path || "";
+        return {
+          url: itemUrl,
+          publicId: item.publicId || item.filename || derivePublicIdFromUrl(itemUrl),
+          title: item.title || deriveFilenameFromUrl(itemUrl),
+        };
+      });
+      return res.json({ success: true, images: normalized });
+    }
+
+    return res.redirect(`/admin/stories/${story._id}/images`);
+  } catch (err) {
+    console.error(err);
+    return respondError(req, res, 500, "Error updating image");
   }
 };
 
