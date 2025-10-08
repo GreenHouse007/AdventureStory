@@ -10,11 +10,22 @@
     <main class="container">
       <h1><%= story?.title || 'Untitled Story' %></h1>
       <img
-        src="<%= story?.coverImage || '/images/placeholder.jpg' %>"
+        src="<%= story?.coverImage || '/images/default-cover.svg' %>"
         class="cover"
         alt="Cover image for <%= story?.title || 'story' %>"
       />
       <p><%= story?.description || '' %></p>
+
+      <% if (Array.isArray(story?.categories) && story.categories.length) { %>
+      <section class="story-categories">
+        <h2 class="story-categories__heading">Categories</h2>
+        <ul class="tag-list">
+          <% story.categories.forEach(function (cat) { %>
+          <li class="tag"><%= cat %></li>
+          <% }) %>
+        </ul>
+      </section>
+      <% } %>
 
       <% if (progress && progress.totalEndings > 0) { %>
       <div class="ending-progress-card">
@@ -80,6 +91,21 @@
         letter-spacing: 0.08em;
         text-transform: uppercase;
         opacity: 0.85;
+      }
+
+      .story-categories {
+        margin: 1.5rem 0 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .story-categories__heading {
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin: 0;
       }
     </style>
   </body>

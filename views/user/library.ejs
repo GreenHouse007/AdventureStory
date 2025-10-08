@@ -80,35 +80,47 @@
           data-title="<%= (story.title || 'Untitled Story').toLowerCase() %>"
           data-categories='<%- JSON.stringify(story.categories || []) %>'
         >
-          <img
-            src="<%= story.coverImage || '/images/default-cover.jpg' %>"
-            alt="<%= story.title %>"
-          />
-          <h3><%= story.title %></h3>
-          <p><%= story.description %></p>
+          <div class="story-card__media">
+            <img
+              src="<%= story.coverImage || '/images/default-cover.svg' %>"
+              alt="<%= story.title %>"
+            />
+          </div>
+          <div class="story-card__body">
+            <div class="story-card__content">
+              <h3><%= story.title %></h3>
+              <p><%= story.description %></p>
+            </div>
 
-          <% if (Array.isArray(story.categories) && story.categories.length) { %>
-          <ul class="tag-list">
-            <% story.categories.forEach(function(cat) { %>
-            <li class="tag"><%= cat %></li>
-            <% }) %>
-          </ul>
-          <% } %>
+            <% const hasCategories = Array.isArray(story.categories) && story.categories.length > 0; %>
+            <% const showProgress = Number(story.totalEndings) > 0; %>
+            <% if (hasCategories || showProgress) { %>
+            <div class="story-card__meta">
+              <% if (hasCategories) { %>
+              <ul class="tag-list">
+                <% story.categories.forEach(function(cat) { %>
+                <li class="tag"><%= cat %></li>
+                <% }) %>
+              </ul>
+              <% } %>
 
-          <!-- Endings progress -->
-          <% if (story.totalEndings && story.totalEndings > 0) { %>
-          <p class="ending-progress">
-            <strong><%= story.foundCount %></strong> / <%= story.totalEndings %>
-            endings found
-          </p>
-          <% } %>
+              <% if (showProgress) { %>
+              <p class="ending-progress">
+                <strong><%= story.foundCount %></strong> /
+                <%= story.totalEndings %> endings found
+              </p>
+              <% } %>
+            </div>
+            <% } %>
 
-          <!-- Play or Coming Soon -->
-          <% if (story.status === "public") { %>
-          <a href="/u/story/<%= story._id %>" class="cta-button">Play</a>
-          <% } else { %>
-          <span class="coming-soon">Coming Soon</span>
-          <% } %>
+            <div class="story-card__actions">
+              <% if (story.status === "public") { %>
+              <a href="/u/story/<%= story._id %>" class="cta-button">Play</a>
+              <% } else { %>
+              <span class="coming-soon">Coming Soon</span>
+              <% } %>
+            </div>
+          </div>
         </div>
         <% }) %>
       </div>
@@ -339,14 +351,15 @@
       .library-controls {
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.85rem;
         align-items: center;
         margin: 1.5rem 0 1rem;
       }
 
       .search-control {
-        flex: 1;
-        min-width: min(260px, 100%);
+        flex: 1 1 220px;
+        max-width: 320px;
+        width: min(320px, 100%);
       }
 
       .search-input {
@@ -383,13 +396,14 @@
       }
 
       .filter-panel {
-        border: 1px solid #e1e1e1;
+        border: 1px solid #374151;
         border-radius: 12px;
         padding: 1rem;
         margin-bottom: 1.5rem;
         max-width: 520px;
-        background: #fafafa;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        background: #1f2937;
+        color: #f9fafb;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
       }
 
       .filter-panel__header {
@@ -398,6 +412,7 @@
         align-items: center;
         margin-bottom: 0.75rem;
         font-weight: 600;
+        color: #e5e7eb;
       }
 
       .filter-close {
@@ -406,7 +421,7 @@
         font-size: 1.4rem;
         line-height: 1;
         cursor: pointer;
-        color: #666;
+        color: #d1d5db;
       }
 
       .filter-panel__options {
@@ -422,9 +437,14 @@
         gap: 0.35rem;
         padding: 0.35rem 0.65rem;
         border-radius: 999px;
-        border: 1px solid #d0d0d0;
-        background: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.08);
         font-size: 0.88rem;
+        color: #f3f4f6;
+      }
+
+      .filter-option span {
+        color: inherit;
       }
 
       .filter-option input[type="checkbox"] {
@@ -439,39 +459,13 @@
       .filter-panel__actions .ghost {
         background: transparent;
         border: none;
-        color: #4f46e5;
+        color: #c7d2fe;
         cursor: pointer;
         font-size: 0.9rem;
       }
 
       .story-card.is-hidden {
         display: none;
-      }
-
-      .tag-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        padding: 0;
-        margin: 0.75rem 0 0.25rem;
-        list-style: none;
-      }
-
-      .tag {
-        background: #f1f0ff;
-        color: #4338ca;
-        border-radius: 999px;
-        padding: 0.25rem 0.65rem;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
-
-      /* Progress pill */
-      .ending-progress {
-        font-size: 0.95rem;
-        color: #7a7a7a;
-        margin: 0.4rem 0 0.8rem;
       }
 
       /* Prevent background scroll when modal is open */

@@ -54,6 +54,8 @@ router.get("/", controller.dashboard);
 
 /* ---------------- Stories ---------------- */
 router.get("/stories", controller.storiesList);
+router.get("/stories/seeds", controller.storySeedForm);
+router.post("/stories/seeds", controller.storySeedCreate);
 router.get("/stories/add", controller.storyAddForm);
 router.post("/stories/add", controller.storyAddPost);
 router.get("/stories/:id/edit", controller.storyEditForm);

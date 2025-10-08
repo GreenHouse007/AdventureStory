@@ -8,6 +8,198 @@ const { updateUserMedals } = require("../utils/updateMedals");
 const { v2: cloudinary } = require("cloudinary");
 const STORY_CATEGORIES = require("../utils/storyCategories");
 
+const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
+
+const STORY_SEED_EXAMPLE = JSON.stringify(
+  {
+    title: "The Lantern Path",
+    description: "A short mystery that guides readers through an enchanted forest.",
+    startNodeId: "start",
+    nodes: [
+      {
+        id: "start",
+        text: "You arrive at the forest edge where pale lanterns hover above the moss.",
+        choices: [
+          { label: "Follow the lanterns", next: "clearing" },
+          { label: "Turn back", next: "ending_lost" },
+        ],
+      },
+      {
+        id: "clearing",
+        text: "A moonlit clearing opens up, revealing an ancient stone altar.",
+        choices: [{ label: "Light the final lantern", next: "ending_true" }],
+      },
+    ],
+    endings: [
+      {
+        id: "ending_true",
+        label: "Guided Home",
+        type: "true",
+        text: "The spirits guide you safely back with newfound wisdom.",
+      },
+      {
+        id: "ending_lost",
+        label: "Lost to the Dark",
+        type: "death",
+        text: "You disappear into the fog, never to be seen again.",
+      },
+    ],
+  },
+  null,
+  2
+);
+
+const buildStorySeedFromText = (rawText) => {
+  if (typeof rawText !== "string" || !rawText.trim()) {
+    return { error: "Enter the story seed using the required JSON format." };
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(rawText);
+  } catch (err) {
+    return {
+      error: "The story seed must be valid JSON. Copy the example format and adjust it for your story.",
+    };
+  }
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { error: "The story seed must be a JSON object." };
+  }
+
+  const title = typeof payload.title === "string" ? payload.title.trim() : "";
+  if (!title) {
+    return { error: 'Include a non-empty "title" string.' };
+  }
+
+  const description =
+    typeof payload.description === "string" ? payload.description.trim() : "";
+
+  const nodesInput = Array.isArray(payload.nodes) ? payload.nodes : [];
+  if (nodesInput.length === 0) {
+    return { error: 'Provide at least one node in the "nodes" array.' };
+  }
+
+  const nodeIds = new Set();
+  const nodes = [];
+  for (let idx = 0; idx < nodesInput.length; idx++) {
+    const node = nodesInput[idx];
+    if (!node || typeof node !== "object" || Array.isArray(node)) {
+      return { error: `Node #${idx + 1} must be an object.` };
+    }
+
+    const id = typeof node.id === "string" ? node.id.trim() : "";
+    if (!id) {
+      return { error: `Node #${idx + 1} is missing an "id".` };
+    }
+    if (nodeIds.has(id)) {
+      return { error: `Duplicate node id "${id}" found.` };
+    }
+    nodeIds.add(id);
+
+    const text = typeof node.text === "string" ? node.text.trim() : "";
+    if (!text) {
+      return { error: `Node "${id}" requires a "text" value.` };
+    }
+
+    const choicesInput = Array.isArray(node.choices) ? node.choices : [];
+    const choices = [];
+    for (let cIdx = 0; cIdx < choicesInput.length; cIdx++) {
+      const choice = choicesInput[cIdx];
+      if (!choice || typeof choice !== "object" || Array.isArray(choice)) {
+        return { error: `Choice #${cIdx + 1} on node "${id}" must be an object.` };
+      }
+
+      const label =
+        typeof choice.label === "string" ? choice.label.trim() : "";
+      const next = typeof choice.next === "string" ? choice.next.trim() : "";
+      if (!label) {
+        return { error: `Choice #${cIdx + 1} on node "${id}" needs a "label".` };
+      }
+      if (!next) {
+        return { error: `Choice "${label}" on node "${id}" needs a "next" id.` };
+      }
+
+      choices.push({ label, nextNodeId: next });
+    }
+
+    nodes.push({
+      _id: id,
+      text,
+      choices,
+    });
+  }
+
+  const endingsInput = Array.isArray(payload.endings) ? payload.endings : [];
+  if (endingsInput.length === 0) {
+    return { error: 'Provide at least one ending in the "endings" array.' };
+  }
+
+  const endingIds = new Set();
+  const endings = [];
+  for (let idx = 0; idx < endingsInput.length; idx++) {
+    const ending = endingsInput[idx];
+    if (!ending || typeof ending !== "object" || Array.isArray(ending)) {
+      return { error: `Ending #${idx + 1} must be an object.` };
+    }
+
+    const id = typeof ending.id === "string" ? ending.id.trim() : "";
+    if (!id) {
+      return { error: `Ending #${idx + 1} requires an "id".` };
+    }
+    if (endingIds.has(id)) {
+      return { error: `Duplicate ending id "${id}" found.` };
+    }
+    endingIds.add(id);
+
+    const label = typeof ending.label === "string" ? ending.label.trim() : "";
+    if (!label) {
+      return { error: `Ending "${id}" requires a "label".` };
+    }
+
+    const typeRaw =
+      typeof ending.type === "string" ? ending.type.trim().toLowerCase() : "other";
+    if (!ALLOWED_ENDING_TYPES.has(typeRaw)) {
+      return {
+        error: `Ending "${id}" has an invalid type. Use one of: ${Array.from(
+          ALLOWED_ENDING_TYPES
+        ).join(", ")}.`,
+      };
+    }
+
+    const text = typeof ending.text === "string" ? ending.text.trim() : "";
+
+    endings.push({
+      _id: id,
+      label,
+      type: typeRaw,
+      text,
+    });
+  }
+
+  const requestedStart =
+    typeof payload.startNodeId === "string" ? payload.startNodeId.trim() : "";
+  const startNodeId = requestedStart || (nodes.length ? nodes[0]._id : null);
+  if (!startNodeId || !nodeIds.has(startNodeId)) {
+    return {
+      error: 'The "startNodeId" must match one of the node ids.',
+    };
+  }
+
+  return {
+    storyDoc: {
+      title,
+      description,
+      coverImage: null,
+      status: "coming_soon",
+      startNodeId,
+      categories: [],
+      nodes,
+      endings,
+    },
+  };
+};
+
 const wantsJSON = (req) => {
   const acceptHeader = req.headers.accept || "";
   const contentType = req.headers["content-type"] || "";
@@ -279,6 +471,60 @@ exports.storyAddPost = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Error creating story");
+  }
+};
+
+exports.storySeedForm = (req, res) => {
+  res.render("admin/storySeed", {
+    title: "Story Seeds",
+    user: req.user,
+    seedExample: STORY_SEED_EXAMPLE,
+    formValue: "",
+    error: null,
+    success: null,
+  });
+};
+
+exports.storySeedCreate = async (req, res) => {
+  const seedText = req.body?.seedText || "";
+  const { storyDoc, error } = buildStorySeedFromText(seedText);
+
+  if (error) {
+    return res.status(400).render("admin/storySeed", {
+      title: "Story Seeds",
+      user: req.user,
+      seedExample: STORY_SEED_EXAMPLE,
+      formValue: seedText,
+      error,
+      success: null,
+    });
+  }
+
+  try {
+    const displayOrder = await Story.countDocuments();
+    const story = await Story.create({
+      ...storyDoc,
+      displayOrder,
+    });
+
+    return res.render("admin/storySeed", {
+      title: "Story Seeds",
+      user: req.user,
+      seedExample: STORY_SEED_EXAMPLE,
+      formValue: "",
+      error: null,
+      success: `Seed story "${story.title}" added successfully.`,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).render("admin/storySeed", {
+      title: "Story Seeds",
+      user: req.user,
+      seedExample: STORY_SEED_EXAMPLE,
+      formValue: seedText,
+      error: "We couldn't save that story. Please try again.",
+      success: null,
+    });
   }
 };
 
