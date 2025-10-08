@@ -18,6 +18,7 @@
       background: #080808;
       color: #f5f5f5;
       font-family: "Inter", "Segoe UI", sans-serif;
+      overflow-x: hidden;
     }
 
     .story-editor-shell {
@@ -27,7 +28,7 @@
       flex-direction: column;
       gap: 1.5rem;
       min-height: calc(100vh - 70px);
-      max-width: 1380px;
+      max-width: 1280px;
       margin: 0 auto;
       box-sizing: border-box;
     }
@@ -66,6 +67,7 @@
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem 1.25rem;
       align-items: flex-start;
+      width: 100%;
     }
 
     .field {
@@ -85,17 +87,18 @@
     .field select,
     .field textarea {
       width: 100%;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(30, 30, 30, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: inherit;
       border-radius: 10px;
       padding: 0.55rem 0.7rem;
       font: inherit;
       resize: vertical;
+      box-sizing: border-box;
     }
 
     .field textarea {
-      min-height: 120px;
+      min-height: 110px;
     }
 
     .field.field--wide {
@@ -103,7 +106,25 @@
     }
 
     .field.field--wide textarea {
-      min-height: 170px;
+      min-height: 90px;
+    }
+
+    .field.field--multiline textarea {
+      background: rgba(24, 24, 24, 0.95);
+    }
+
+    .field select option,
+    .choice-field select option {
+      background: #1f1f1f;
+      color: #f5f5f5;
+    }
+
+    textarea[name="notes"] {
+      min-height: 80px;
+    }
+
+    textarea[name="description"] {
+      min-height: 140px;
     }
 
     .story-details-panel .actions {
@@ -158,6 +179,7 @@
       overflow: hidden;
       min-height: 540px;
       max-width: 100%;
+      width: 100%;
     }
 
     .map-controls {
@@ -230,7 +252,7 @@
       padding: 0.95rem 1.1rem 1.1rem;
       border-radius: 14px;
       border: 2.5px solid rgba(255, 255, 255, 0.12);
-      background: rgba(18, 18, 18, 0.96);
+      background: rgba(18, 18, 18, 0.8);
       box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
       cursor: grab;
       display: flex;
@@ -327,7 +349,7 @@
     .node-snippet {
       font-size: 0.82rem;
       line-height: 1.35;
-      color: #d6d6d6;
+      color: #e0e0e0;
       max-height: 70px;
       overflow: hidden;
     }
@@ -344,7 +366,7 @@
     }
 
     .map-node.ending {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.08);
       border: 2px solid rgba(255, 255, 255, 0.18);
       box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
     }
@@ -354,12 +376,16 @@
     }
 
     .ending-type {
-      font-size: 0.72rem;
-      letter-spacing: 0.18em;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.7);
-      margin-top: 0.35rem;
+      color: rgba(255, 255, 255, 0.78);
+      margin-top: 0.25rem;
       margin-bottom: 0.25rem;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      align-self: flex-start;
     }
 
     .link {
@@ -447,24 +473,49 @@
     }
 
     .choice-item {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr auto;
-      gap: 0.5rem;
-      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
+      padding: 0.6rem 0.75rem 0.65rem;
+    }
+
+    .choice-fields {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+      background: rgba(17, 17, 17, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
       padding: 0.55rem 0.65rem;
     }
 
-    .choice-item input,
-    .choice-item select {
-      background: transparent;
+    .choice-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      font-size: 0.82rem;
+      color: #cfd2ff;
+    }
+
+    .choice-field span {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      color: #c7c7c7;
+    }
+
+    .choice-field input,
+    .choice-field select {
+      background: rgba(36, 36, 36, 0.95);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
-      padding: 0.4rem 0.5rem;
+      padding: 0.4rem 0.55rem;
       color: inherit;
       font: inherit;
+      width: 100%;
     }
 
     .choice-actions {
@@ -474,20 +525,13 @@
     }
 
     .choice-form {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr auto;
-      gap: 0.5rem;
-      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
     }
 
-    .choice-form input,
-    .choice-form select {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 0.4rem 0.5rem;
-      color: inherit;
-      font: inherit;
+    .choice-form .choice-fields {
+      background: rgba(17, 17, 17, 0.7);
     }
 
     .empty-state {
@@ -572,11 +616,11 @@
           <span>Cover Image</span>
           <select name="coverImage" id="story-cover-image"></select>
         </label>
-        <label class="field field--wide">
+        <label class="field field--wide field--multiline">
           <span>Author Notes (private)</span>
           <textarea name="notes" rows="4"><%= story.notes || '' %></textarea>
         </label>
-        <label class="field field--wide">
+        <label class="field field--wide field--multiline">
           <span>Description (public)</span>
           <textarea name="description" rows="5"><%= story.description || '' %></textarea>
         </label>
@@ -637,10 +681,6 @@
           <select name="image"></select>
         </label>
         <label class="field">
-          <span>Notes</span>
-          <textarea name="notes" rows="2"></textarea>
-        </label>
-        <label class="field">
           <span>Story Text</span>
           <textarea name="text" rows="10" class="monospace"></textarea>
         </label>
@@ -651,8 +691,16 @@
         <div class="empty-state" id="choicesEmptyState">No choices yet.</div>
         <div id="choice-list"></div>
         <form id="choice-add-form" class="choice-form">
-          <input type="text" name="label" placeholder="Choice label" required>
-          <select name="nextNodeId" required></select>
+          <div class="choice-fields">
+            <label class="choice-field">
+              <span>Label</span>
+              <input type="text" name="label" placeholder="Choice label" required>
+            </label>
+            <label class="choice-field">
+              <span>Next</span>
+              <select name="nextNodeId" required></select>
+            </label>
+          </div>
           <div class="choice-actions">
             <button type="submit" class="btn small">Add Choice</button>
           </div>
@@ -724,6 +772,7 @@
 
       const elementIndex = new Map();
       let selected = null;
+      let inspectorVisible = false;
       let drawFrame = null;
       let dragInitialized = false;
       let nodeFormPopulating = false;
@@ -765,10 +814,22 @@
         });
       };
 
+      const filenameFromUrl = (url) => {
+        if (!url) return "";
+        try {
+          const parsed = new URL(url);
+          const segment = parsed.pathname.split("/").pop() || "";
+          return decodeURIComponent(segment.split("?")[0]);
+        } catch {
+          const parts = url.split("/");
+          return decodeURIComponent(parts.pop() || url);
+        }
+      };
+
       const deriveImageMeta = (item) => {
         if (!item) return { url: "", label: "" };
         if (typeof item === "string") {
-          return { url: item, label: item.split("/").pop() || item };
+          return { url: item, label: filenameFromUrl(item) || item };
         }
         const url = item.url || item.path || "";
         const label =
@@ -778,8 +839,8 @@
           item.publicId ||
           item.public_id ||
           item.filename ||
-          (url ? url.split("/").pop() : "");
-        return { url, label: label || url };
+          filenameFromUrl(url);
+        return { url, label: label || filenameFromUrl(url) || url };
       };
 
       const getImageOptions = () => {
@@ -918,16 +979,33 @@
           const form = document.createElement("form");
           form.className = "choice-item";
 
+          const fields = document.createElement("div");
+          fields.className = "choice-fields";
+
+          const labelField = document.createElement("label");
+          labelField.className = "choice-field";
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = "Label";
           const labelInput = document.createElement("input");
           labelInput.type = "text";
           labelInput.name = "label";
           labelInput.value = choice.label || "";
-          form.appendChild(labelInput);
+          labelField.appendChild(labelSpan);
+          labelField.appendChild(labelInput);
 
+          const selectField = document.createElement("label");
+          selectField.className = "choice-field";
+          const selectSpan = document.createElement("span");
+          selectSpan.textContent = "Next";
           const select = document.createElement("select");
           select.name = "nextNodeId";
           populateDestinationSelect(select, choice.nextNodeId);
-          form.appendChild(select);
+          selectField.appendChild(selectSpan);
+          selectField.appendChild(select);
+
+          fields.appendChild(labelField);
+          fields.appendChild(selectField);
+          form.appendChild(fields);
 
           const actions = document.createElement("div");
           actions.className = "choice-actions";
@@ -989,7 +1067,6 @@
           nodeColorSelect.value = color;
         }
         populateImageSelect(nodeForm.elements.image, node.image || "");
-        nodeForm.elements.notes.value = node.notes || "";
         nodeForm.elements.text.value = node.text || "";
         choiceAddForm.dataset.nodeId = node._id;
         populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
@@ -1026,7 +1103,6 @@
       const getNodeFormPayload = () => ({
         _id: nodeForm.elements._id.value,
         image: nodeForm.elements.image.value,
-        notes: nodeForm.elements.notes.value,
         text: nodeForm.elements.text.value,
         color: nodeColorSelect ? nodeColorSelect.value : "twilight",
       });
@@ -1080,6 +1156,7 @@
       };
 
       const showEditorFor = (type, entity) => {
+        inspectorVisible = true;
         entityEditor.classList.remove("hidden");
         entityEditor.classList.remove("collapsed");
         collapseBtn.textContent = "Collapse";
@@ -1106,6 +1183,7 @@
       };
 
       const hideEditor = () => {
+        inspectorVisible = false;
         entityEditor.classList.add("hidden");
         collapseBtn.textContent = "Expand";
         collapseBtn.setAttribute("aria-expanded", "false");
@@ -1121,9 +1199,9 @@
       };
 
       const refreshSelection = () => {
+        highlightSelection();
         if (!selected) {
           hideEditor();
-          highlightSelection();
           return;
         }
         const entity = getEntity(selected.type, selected.id);
@@ -1133,18 +1211,37 @@
           highlightSelection();
           return;
         }
+        if (!inspectorVisible) {
+          hideEditor();
+          return;
+        }
         showEditorFor(selected.type, entity);
-        highlightSelection();
       };
 
-      const applySelection = async (type, id, { center = false } = {}) => {
+      const applySelection = async (type, id, options = {}) => {
+        const { center = false, open, preserveVisibility = false } = options;
         const previous = selected ? { ...selected } : null;
         await flushPendingChanges(previous);
+        const hasOpen = Object.prototype.hasOwnProperty.call(options, "open");
+
         if (type && id) {
           selected = { type, id };
+          if (hasOpen) {
+            if (open) {
+              inspectorVisible = true;
+            } else if (!preserveVisibility) {
+              inspectorVisible = false;
+            }
+          } else if (!inspectorVisible) {
+            inspectorVisible = true;
+          }
         } else {
           selected = null;
+          if (!preserveVisibility) {
+            inspectorVisible = hasOpen ? Boolean(open) : false;
+          }
         }
+
         refreshSelection();
         if (center && selected) {
           centerOnSelected();
@@ -1335,7 +1432,22 @@
 
           el.addEventListener("click", (event) => {
             event.stopPropagation();
-            selectEntity(type, entity._id, { center: false });
+            const keepVisible =
+              inspectorVisible &&
+              selected &&
+              selected.id === entity._id &&
+              selected.type === type;
+            selectEntity(type, entity._id, {
+              center: false,
+              open: keepVisible,
+              preserveVisibility: keepVisible,
+            });
+          });
+
+          el.addEventListener("dblclick", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            selectEntity(type, entity._id, { center: false, open: true });
           });
 
           el.classList.add("draggable");
@@ -1410,7 +1522,7 @@
       };
 
       mapViewport.addEventListener("click", () => {
-        selectEntity(null, null);
+        selectEntity(null, null, { open: false });
       });
 
       collapseBtn.addEventListener("click", () => {
@@ -1448,6 +1560,7 @@
           setStoryData(data.story);
           if (newNode) {
             selected = { type: "node", id: newNode._id };
+            inspectorVisible = true;
             refreshSelection();
             centerOnSelected();
           }
@@ -1466,6 +1579,7 @@
           setStoryData(data.story);
           if (newEnding) {
             selected = { type: "ending", id: newEnding._id };
+            inspectorVisible = true;
             refreshSelection();
             centerOnSelected();
           }

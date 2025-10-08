@@ -423,7 +423,6 @@ exports.storyNodeAddPost = async (req, res) => {
       _id: id,
       text: req.body.text || "",
       image: req.body.image || "",
-      notes: "",
       color: req.body.color || "twilight",
       position,
       choices: [],
@@ -444,7 +443,7 @@ exports.storyNodeAddPost = async (req, res) => {
 
 exports.storyNodeUpdateInline = async (req, res) => {
   try {
-    const { _id: newId, text, image, notes, color } = req.body;
+    const { _id: newId, text, image, color } = req.body;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
@@ -455,7 +454,6 @@ exports.storyNodeUpdateInline = async (req, res) => {
     node._id = newId;
     node.text = text;
     node.image = image;
-    node.notes = notes;
     const allowedColors = ["twilight", "ember", "moss", "dusk", "rose", "slate"];
     node.color = allowedColors.includes(color) ? color : node.color || "twilight";
 
@@ -547,7 +545,6 @@ exports.storyEndingAddPost = async (req, res) => {
       type: req.body.type || "other",
       text: req.body.text || "",
       image: req.body.image || "",
-      notes: "",
       position,
     });
 
@@ -574,7 +571,6 @@ exports.storyEndingUpdateInline = async (req, res) => {
 
     const { _id: newId, type, text, image } = req.body;
     const label = req.body.label ?? ending.label;
-    const notes = req.body.notes ?? ending.notes;
 
     const oldId = ending._id;
     ending._id = newId;
@@ -582,7 +578,6 @@ exports.storyEndingUpdateInline = async (req, res) => {
     ending.type = type;
     ending.text = text;
     ending.image = image;
-    ending.notes = notes;
 
     // Cascade: fix choices pointing to this ending
     story.nodes.forEach((n) =>
@@ -905,87 +900,6 @@ exports.deleteImage = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Error deleting image");
-  }
-};
-
-exports.updateImageMeta = async (req, res) => {
-  try {
-    const { id: storyId } = req.params;
-    const { publicId, url, title } = req.body;
-    const story = await Story.findById(storyId);
-    if (!story) return respondError(req, res, 404, "Story not found");
-
-    const trimmedTitle = (title || "").trim();
-    const applyTitle = trimmedTitle || null;
-    let updated = false;
-
-    const normalizeObject = (itemUrl, itemPublicId, existing = {}) => ({
-      ...existing,
-      url: itemUrl,
-      publicId: itemPublicId,
-      title: applyTitle || existing.title || deriveFilenameFromUrl(itemUrl),
-    });
-
-    story.images = (story.images || []).map((item) => {
-      if (typeof item === "string") {
-        const itemUrl = item;
-        const itemPublicId = derivePublicIdFromUrl(itemUrl);
-        const matches =
-          (url && itemUrl === url) || (publicId && itemPublicId && itemPublicId === publicId);
-        if (matches) {
-          updated = true;
-          return normalizeObject(itemUrl, itemPublicId);
-        }
-        return item;
-      }
-
-      if (!item || typeof item !== "object") return item;
-
-      const itemUrl = item.url || item.path || "";
-      const itemPublicId = item.publicId || item.filename || derivePublicIdFromUrl(itemUrl);
-      const matches =
-        (url && itemUrl === url) || (publicId && itemPublicId && itemPublicId === publicId);
-
-      if (!matches) return item;
-
-      updated = true;
-      const next = { ...item };
-      next.url = itemUrl;
-      if (itemPublicId) next.publicId = itemPublicId;
-      next.title = applyTitle || next.title || deriveFilenameFromUrl(itemUrl);
-      return next;
-    });
-
-    if (!updated) {
-      return respondError(req, res, 404, "Image not found");
-    }
-
-    await story.save();
-
-    if (wantsJSON(req)) {
-      const normalized = (story.images || []).map((item) => {
-        if (typeof item === "string") {
-          const itemUrl = item;
-          return {
-            url: itemUrl,
-            publicId: derivePublicIdFromUrl(itemUrl),
-            title: deriveFilenameFromUrl(itemUrl),
-          };
-        }
-        const itemUrl = item.url || item.path || "";
-        return {
-          url: itemUrl,
-          publicId: item.publicId || item.filename || derivePublicIdFromUrl(itemUrl),
-          title: item.title || deriveFilenameFromUrl(itemUrl),
-        };
-      });
-      return res.json({ success: true, images: normalized });
-    }
-
-    return res.redirect(`/admin/stories/${story._id}/images`);
-  } catch (err) {
-    console.error(err);
-    return respondError(req, res, 500, "Error updating image");
   }
 };
 
