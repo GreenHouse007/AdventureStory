@@ -2,412 +2,1684 @@
 <html lang="en">
 <head>
   <%- include('../partials/head') %>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
   <style>
-    main.container { max-width: 1200px; }
+    :root {
+      --panel-bg: #111;
+      --panel-border: #232323;
+      --panel-shadow: 0 24px 55px rgba(0, 0, 0, 0.45);
+      --accent: #6c5ce7;
+      --accent-2: #45aaf2;
+      --danger: #ff6b6b;
+      --map-grid: rgba(255, 255, 255, 0.06);
+    }
+
+    body {
+      background: #080808;
+      color: #f5f5f5;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+
+    .story-editor-shell {
+      width: 100%;
+      padding: 1.5rem 2rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-height: calc(100vh - 70px);
+      max-width: 1280px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+
     .panel {
-      background: #1a1a1a;
-      padding: 1.5rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: var(--panel-shadow);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .editor-toolbar h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .story-details-panel form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem 1.25rem;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+    }
+
+    .field > span {
+      color: #b9b9b9;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: rgba(30, 30, 30, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: inherit;
       border-radius: 10px;
-      margin-bottom: 2rem;
-    }
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
-    }
-
-    .node-card, .ending-card, .divider-card {
-      margin-bottom: 1.5rem; border-radius: 8px; background: #111;
-      padding: 1rem 1.25rem; border: 1px solid #333;
-    }
-    .node-card   { border-left: 4px solid #555; }
-    .ending-card { border-left: 4px solid #5d3fd3; }
-
-    .divider-card {
-      text-align: center; padding: 0.75rem 1rem; font-weight: 600;
-      border: 1px dashed #444; border-radius: 8px;
-    }
-    .divider-gray  { background: #2a2a2a; }
-    .divider-red   { background: #3a2222; }
-    .divider-blue  { background: #222f3a; }
-    .divider-green { background: #223a2a; }
-
-    .node-header, .ending-header {
-      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
-    }
-    .header-left { display:flex; gap:1rem; align-items:center; }
-    .header-actions { display:flex; gap:0.5rem; align-items:center; }
-
-    .notes-inline {
-      width: 380px; max-width: 40vw;
-      background: #1f1f1f; border: 1px solid #333; border-radius: 4px;
-      color: #ccc; font-size: 0.9rem; padding: 0.35rem 0.5rem;
+      padding: 0.55rem 0.7rem;
+      font: inherit;
+      resize: vertical;
+      box-sizing: border-box;
     }
 
-    .node-body, .ending-body { margin-top: 1rem; }
-
-    .grid.two-col {
-      display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;
-    }
-    @media (max-width: 900px){ .grid.two-col { grid-template-columns: 1fr; } }
-
-    input[type="text"], select, textarea {
-      width: 100%; padding: 0.6rem; border-radius: 6px;
-      border: 1px solid #333; background: #151515; color: #eee;
-    }
-    textarea.big-text {
-      min-height: 280px; font-size: 1rem; line-height: 1.5;
+    .field textarea {
+      min-height: 110px;
     }
 
-    .choices-section {
-      margin-top: 1rem; padding: 1rem; background: #202020; border-radius: 6px; color: #ccc;
+    .field.field--wide {
+      grid-column: 1 / -1;
     }
-    .choice-row {
-      display:flex; gap:0.5rem; align-items:center; margin-bottom: 0.5rem;
+
+    .field.field--wide textarea {
+      min-height: 90px;
+    }
+
+    .field.field--multiline textarea {
+      background: rgba(24, 24, 24, 0.95);
+    }
+
+    .field select option,
+    .choice-field select option {
+      background: #1f1f1f;
+      color: #f5f5f5;
+    }
+
+    textarea[name="notes"] {
+      min-height: 80px;
+    }
+
+    textarea[name="description"] {
+      min-height: 140px;
+    }
+
+    .story-details-panel .actions {
+      display: flex;
+      justify-content: flex-end;
+      grid-column: 1 / -1;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 0.45rem 1.05rem;
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
 
     .btn.small {
-      padding: 0.25rem 0.75rem; font-size: 0.85rem; background: #333; color:#eee;
-      border:none; border-radius:4px; cursor:pointer;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.82rem;
     }
-    .btn.small:hover { background:#444; }
-    .btn.small.danger { background:#5a1a1a; }
-    .btn.small.danger:hover { background:#822; }
 
-    .search-bar { margin: 0.5rem 0 1rem; display:flex; gap:0.5rem; }
-    .search-bar input { flex:1; }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .btn.danger {
+      background: rgba(255, 107, 107, 0.12);
+      border-color: rgba(255, 107, 107, 0.6);
+      color: #ffb3b3;
+    }
+
+    .btn.danger:hover {
+      background: rgba(255, 107, 107, 0.24);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .map-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      box-shadow: var(--panel-shadow);
+      overflow: hidden;
+      min-height: 540px;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .map-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--panel-border);
+      flex-wrap: wrap;
+      gap: 0.85rem;
+    }
+
+    .map-controls p {
+      margin: 0;
+      color: #b3b3b3;
+      font-size: 0.92rem;
+    }
+
+    .map-controls-right {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .map-viewport {
+      position: relative;
+      flex: 1;
+      overflow: auto;
+      background: #040404;
+      background-image: linear-gradient(transparent 49px, var(--map-grid) 50px),
+        linear-gradient(90deg, transparent 49px, var(--map-grid) 50px);
+      background-size: 50px 50px;
+      max-width: 100%;
+    }
+
+    .map-viewport::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    .map-viewport::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+    }
+
+    .map-viewport::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .map-canvas {
+      position: relative;
+      min-width: 100%;
+      min-height: 100%;
+    }
+
+    .map-links {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .map-node {
+      position: absolute;
+      width: 230px;
+      min-height: 110px;
+      padding: 0.95rem 1.1rem 1.1rem;
+      border-radius: 14px;
+      border: 2.5px solid rgba(255, 255, 255, 0.12);
+      background: rgba(18, 18, 18, 0.8);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+      cursor: grab;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+      --accent-color: rgba(108, 92, 231, 1);
+      --accent-border: rgba(108, 92, 231, 0.55);
+      --accent-shadow: rgba(108, 92, 231, 0.35);
+      z-index: 1;
+    }
+
+    .map-node:active {
+      cursor: grabbing;
+    }
+
+    .map-node.selected {
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 0 0 2px rgba(255, 255, 255, 0.2);
+    }
+
+    .map-node.color-twilight {
+      --accent-color: #7c6cff;
+      --accent-border: rgba(124, 108, 255, 0.65);
+      --accent-shadow: rgba(124, 108, 255, 0.35);
+    }
+
+    .map-node.color-ember {
+      --accent-color: #ff8b5c;
+      --accent-border: rgba(255, 139, 92, 0.68);
+      --accent-shadow: rgba(255, 139, 92, 0.36);
+    }
+
+    .map-node.color-moss {
+      --accent-color: #55efc4;
+      --accent-border: rgba(85, 239, 196, 0.6);
+      --accent-shadow: rgba(85, 239, 196, 0.33);
+    }
+
+    .map-node.color-dusk {
+      --accent-color: #45aaf2;
+      --accent-border: rgba(69, 170, 242, 0.62);
+      --accent-shadow: rgba(69, 170, 242, 0.34);
+    }
+
+    .map-node.color-rose {
+      --accent-color: #ff6bcb;
+      --accent-border: rgba(255, 107, 203, 0.62);
+      --accent-shadow: rgba(255, 107, 203, 0.34);
+    }
+
+    .map-node.color-slate {
+      --accent-color: #b2bec3;
+      --accent-border: rgba(178, 190, 195, 0.52);
+      --accent-shadow: rgba(178, 190, 195, 0.28);
+    }
+
+    .map-node:not(.ending) {
+      border-color: var(--accent-color);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45), 0 0 0 2px var(--accent-shadow);
+    }
+
+    .map-node.start-node {
+      border-color: var(--accent-color);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55), 0 0 0 3px var(--accent-color);
+    }
+
+    .map-node .node-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .node-title .node-id {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .node-title .image-flag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.16);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.72rem;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .node-snippet {
+      font-size: 0.82rem;
+      line-height: 1.35;
+      color: #e0e0e0;
+      max-height: 70px;
+      overflow: hidden;
+    }
+
+    .node-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #a2a2a2;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .map-node.ending {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .map-node.ending .node-title {
+      font-size: 0.92rem;
+    }
+
+    .ending-type {
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.78);
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      align-self: flex-start;
+    }
+
+    .link {
+      fill: none;
+      stroke: rgba(108, 92, 231, 0.6);
+      stroke-width: 2.2;
+      transition: stroke 0.2s ease;
+    }
+
+    .link.to-ending {
+      stroke: rgba(255, 139, 92, 0.7);
+    }
+
+    .entity-editor {
+      position: fixed;
+      right: 2rem;
+      bottom: 2rem;
+      width: min(480px, calc(100vw - 2.5rem));
+      max-height: calc(100vh - 4rem);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: var(--panel-shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 60;
+    }
+
+    .entity-editor.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(18px);
+    }
+
+    .entity-editor__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem 1.2rem 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .entity-editor__header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .entity-editor__subtitle {
+      margin: 0.2rem 0 0;
+      font-size: 0.78rem;
+      color: #b0b0b0;
+      letter-spacing: 0.05em;
+    }
+
+    .entity-editor__actions {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .entity-editor__body {
+      padding: 1rem 1.2rem 1.4rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .entity-editor.collapsed .entity-editor__body {
+      display: none;
+    }
+
+    .choices-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .choice-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0.6rem 0.75rem 0.65rem;
+    }
+
+    .choice-fields {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+      background: rgba(17, 17, 17, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 0.55rem 0.65rem;
+    }
+
+    .choice-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      font-size: 0.82rem;
+      color: #cfd2ff;
+    }
+
+    .choice-field span {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      color: #c7c7c7;
+    }
+
+    .choice-field input,
+    .choice-field select {
+      background: rgba(36, 36, 36, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 0.4rem 0.55rem;
+      color: inherit;
+      font: inherit;
+      width: 100%;
+    }
+
+    .choice-actions {
+      display: flex;
+      gap: 0.35rem;
+      justify-content: flex-end;
+    }
+
+    .choice-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .choice-form .choice-fields {
+      background: rgba(17, 17, 17, 0.7);
+    }
+
+    .empty-state {
+      font-size: 0.85rem;
+      color: #9c9c9c;
+    }
+
+    .monospace {
+      font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", monospace;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1100px) {
+      .story-editor-shell {
+        padding: 1.25rem 1.2rem 2.5rem;
+      }
+
+      .entity-editor {
+        right: 1rem;
+        bottom: 1rem;
+        width: min(520px, calc(100vw - 2rem));
+      }
+    }
+
+    @media (max-width: 800px) {
+      .story-details-panel form {
+        grid-template-columns: 1fr;
+      }
+
+      .map-panel {
+        border-radius: 18px;
+      }
+
+      .entity-editor {
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+      }
+    }
   </style>
 </head>
 <body>
   <%- include('../partials/header', { user }) %>
 
-  <main class="container">
-    <div class="section-header">
-      <a href="/admin/stories" class="btn small">← Back</a>
-      <a href="/admin/stories/<%= story._id %>/images" class="btn small">Manage Images</a>
+  <main class="story-editor-shell">
+    <div class="editor-toolbar">
+      <div class="toolbar-group">
+        <a href="/admin/stories" class="btn small">&larr; Back</a>
+        <h1 id="editorStoryTitle"><%= story.title %></h1>
+      </div>
+      <div class="toolbar-group">
+        <a href="/admin/stories/<%= story._id %>/images" class="btn small">Manage Images</a>
+      </div>
     </div>
 
-    <h1>Edit Story: <%= story.title %></h1>
-
-    <!-- Story Info -->
-    <form action="/admin/stories/<%= story._id %>/update-inline" method="post" class="panel stack">
-      <div class="grid two-col">
-        <div>
-          <label>Title</label>
-          <input type="text" name="title" value="<%= story.title %>">
-        </div>
-        <div>
-          <label>Cover Image</label>
-          <input type="text" name="coverImage" value="<%= story.coverImage || '' %>">
-        </div>
-        <div>
-          <label>Status</label>
-          <select name="status">
-            <option value="public" <%= story.status==="public"?"selected":"" %>>Public</option>
-            <option value="coming_soon" <%= story.status==="coming_soon"?"selected":"" %>>Coming Soon</option>
+    <section class="panel story-details-panel">
+      <form id="story-form">
+        <label class="field">
+          <span>Title</span>
+          <input type="text" name="title" value="<%= story.title %>" required>
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select name="status" id="story-status">
+            <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
+            <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
           </select>
-        </div>
-        <div>
-          <label>Start Node</label>
-          <select name="startNodeId">
+        </label>
+        <label class="field">
+          <span>Start Passage</span>
+          <select name="startNodeId" id="story-start-node">
             <option value="">-- Select --</option>
-            <% story.nodes.forEach(n=>{ if(n.type!=="divider"){ %>
-              <option value="<%= n._id %>" <%= story.startNodeId===n._id?"selected":"" %>><%= n._id %></option>
-            <% }}) %>
+            <% (story.nodes || []).filter(n => n.type !== 'divider').forEach(n => { %>
+              <option value="<%= n._id %>" <%= story.startNodeId === n._id ? 'selected' : '' %>><%= n._id %></option>
+            <% }) %>
           </select>
+        </label>
+        <label class="field">
+          <span>Cover Image</span>
+          <select name="coverImage" id="story-cover-image"></select>
+        </label>
+        <label class="field field--wide field--multiline">
+          <span>Author Notes (private)</span>
+          <textarea name="notes" rows="4"><%= story.notes || '' %></textarea>
+        </label>
+        <label class="field field--wide field--multiline">
+          <span>Description (public)</span>
+          <textarea name="description" rows="5"><%= story.description || '' %></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn small">Save Story</button>
         </div>
-      </div>
-
-      <label>Story Author Notes</label>
-      <textarea name="notes" rows="6" placeholder="These notes are private and will not be seen by the readers"><%= story.notes || "" %></textarea>
-
-      <label>Description (public)</label>
-      <textarea name="description" rows="10"><%= story.description %></textarea>
-
-      <button type="submit" class="btn small">Save Story</button>
-    </form>
-
-    <!-- Nodes -->
-    <section class="panel">
-      <div class="section-header">
-        <h2>Nodes</h2>
-        <div>
-          <button type="button" class="btn small collapse-all-nodes">Collapse All</button>
-          <button type="button" class="btn small expand-all-nodes">Expand All</button>
-          <form action="/admin/stories/<%= story._id %>/nodes/add" method="post" class="inline-form">
-            <button type="submit" class="btn small">+ Node</button>
-          </form>
-          <form action="/admin/stories/<%= story._id %>/nodes/add-divider" method="post" class="inline-form">
-            <button type="submit" class="btn small">+ Divider</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="search-bar">
-        <input type="text" id="node-search" placeholder="Search nodes...">
-      </div>
-
-      <div id="nodes-list">
-        <% story.nodes.forEach(n => { %>
-
-          <% if (n.type === "divider") { %>
-            <div class="divider-card divider-<%= n.color || 'gray' %>" data-id="<%= n._id %>">
-              <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/update-divider" method="post" class="inline-form" style="display:inline-flex; gap:.5rem; align-items:center;">
-                <input type="text" name="label" value="<%= n.label %>">
-                <select name="color">
-                  <option value="gray"  <%= n.color==="gray" ?"selected":"" %>>Gray</option>
-                  <option value="red"   <%= n.color==="red"  ?"selected":"" %>>Muted Red</option>
-                  <option value="blue"  <%= n.color==="blue" ?"selected":"" %>>Muted Blue</option>
-                  <option value="green" <%= n.color==="green"?"selected":"" %>>Muted Green</option>
-                </select>
-                <button type="submit" class="btn small">Save</button>
-              </form>
-              <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete-divider" method="post" class="inline-form" style="display:inline;">
-                <button type="submit" class="btn small danger">Delete</button>
-              </form>
-            </div>
-
-          <% } else { %>
-            <div class="node-card" data-id="<%= n._id %>">
-              <div class="node-header">
-                <div class="header-left">
-                  <h3><%= n._id %></h3>
-                  <input type="text" class="notes-inline" name="notes" value="<%= n.notes || '' %>" placeholder="Notes..." form="node-form-<%= n._id %>">
-                </div>
-                <div class="header-actions">
-                  <button type="button" class="btn small toggle-node">Collapse</button>
-                  <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete" method="post" class="inline-form">
-                    <button type="submit" class="btn small danger">Delete</button>
-                  </form>
-                </div>
-              </div>
-
-              <div class="node-body">
-                <form id="node-form-<%= n._id %>" action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/update-inline" method="post" class="stack">
-                  <div class="grid two-col">
-                    <div>
-                      <label>ID</label>
-                      <input type="text" name="_id" value="<%= n._id %>" required>
-                    </div>
-                    <div>
-                      <label>Image URL</label>
-                      <input type="text" name="image" value="<%= n.image || '' %>">
-                    </div>
-                  </div>
-                  <label>Story Text</label>
-                  <textarea name="text" class="big-text"><%= n.text %></textarea>
-                  <label>Choice Notes</label>
-                  <textarea name="choiceNotes" rows="3"><%= n.choiceNotes || "" %></textarea>
-                  <button type="submit" class="btn small">Save Node</button>
-                </form>
-
-                <!-- Choices simplified -->
-                <div class="choices-section">
-                  <h4>Choices</h4>
-                  <% n.choices.forEach(c => { %>
-                    <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/<%= c._id %>/update-inline" method="post" class="choice-row">
-                      <input type="text" name="label" value="<%= c.label %>">
-                      <select name="nextNodeId">
-                        <% story.nodes.forEach(n2 => { if(n2.type!=="divider"){ %>
-                          <option value="<%= n2._id %>" <%= c.nextNodeId===n2._id?"selected":"" %>><%= n2._id %></option>
-                        <% }}) %>
-                        <% story.endings.forEach(e2=>{ %>
-                          <option value="<%= e2._id %>" <%= c.nextNodeId===e2._id?"selected":"" %>>Ending: <%= e2._id %></option>
-                        <% }) %>
-                      </select>
-                      <button type="submit" class="btn small">Save</button>
-                    </form>
-                    <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/<%= c._id %>/delete" method="post" class="inline-form">
-                      <button type="submit" class="btn small danger">Delete</button>
-                    </form>
-                  <% }) %>
-
-                  <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/add-inline" method="post" class="choice-row">
-                    <input type="text" name="label" placeholder="New choice label" required>
-                    <select name="nextNodeId" required>
-                      <% story.nodes.forEach(n2=>{ if(n2.type!=="divider"){ %>
-                        <option value="<%= n2._id %>"><%= n2._id %></option>
-                      <% }}) %>
-                      <% story.endings.forEach(e2=>{ %>
-                        <option value="<%= e2._id %>">Ending: <%= e2._id %></option>
-                      <% }) %>
-                    </select>
-                    <button type="submit" class="btn small">Add</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          <% } %>
-        <% }) %>
-      </div>
+      </form>
     </section>
 
-    <!-- Endings -->
-    <section class="panel">
-      <div class="section-header">
-        <h2>Endings</h2>
-        <div>
-          <button type="button" class="btn small collapse-all-endings">Collapse All</button>
-          <button type="button" class="btn small expand-all-endings">Expand All</button>
-          <form action="/admin/stories/<%= story._id %>/endings/add" method="post" class="inline-form">
-            <button type="submit" class="btn small">+ Ending</button>
-          </form>
+    <section class="map-panel">
+      <div class="map-controls">
+        <p>Drag passages into place. Connections redraw automatically with arrows indicating their direction.</p>
+        <div class="map-controls-right">
+          <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
+          <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
+          <button type="button" class="btn small ghost" id="center-selection-btn">Center Selection</button>
         </div>
       </div>
-
-      <div class="search-bar">
-        <input type="text" id="ending-search" placeholder="Search endings...">
-      </div>
-
-      <div id="endings-list">
-        <% story.endings.forEach(e => { %>
-          <div class="ending-card" data-id="<%= e._id %>">
-            <div class="ending-header">
-              <div class="header-left">
-                <h3>Ending: <%= e._id %></h3>
-                <input type="text" class="notes-inline" name="notes" value="<%= e.notes || '' %>" placeholder="Notes..." form="ending-form-<%= e._id %>">
-              </div>
-              <div class="header-actions">
-                <button type="button" class="btn small toggle-ending">Collapse</button>
-                <form action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/delete" method="post" class="inline-form">
-                  <button type="submit" class="btn small danger">Delete</button>
-                </form>
-              </div>
-            </div>
-
-            <div class="ending-body">
-              <form id="ending-form-<%= e._id %>" action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/update-inline" method="post" class="stack">
-                <div class="grid two-col">
-                  <div>
-                    <label>ID</label>
-                    <input type="text" name="_id" value="<%= e._id %>">
-                  </div>
-                  <div>
-                    <label>Label</label>
-                    <input type="text" name="label" value="<%= e.label %>">
-                  </div>
-                  <div>
-                    <label>Type</label>
-                    <select name="type">
-                      <option value="true"  <%= e.type==="true" ?"selected":"" %>>True</option>
-                      <option value="death" <%= e.type==="death"?"selected":"" %>>Death</option>
-                      <option value="other" <%= e.type==="other"?"selected":"" %>>Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label>Image URL</label>
-                    <input type="text" name="image" value="<%= e.image || '' %>">
-                  </div>
-                </div>
-                <label>Story Text</label>
-                <textarea name="text" class="big-text"><%= e.text %></textarea>
-                <button type="submit" class="btn small">Save Ending</button>
-              </form>
-            </div>
-          </div>
-        <% }) %>
+      <div class="map-viewport" id="mapViewport">
+        <div class="map-canvas" id="mapCanvas">
+          <svg class="map-links" id="linkLayer"></svg>
+        </div>
       </div>
     </section>
   </main>
 
+  <div class="entity-editor hidden collapsed" id="entityEditor">
+    <div class="entity-editor__header">
+      <div>
+        <h2 id="entityEditorTitle">Passage</h2>
+        <p class="entity-editor__subtitle" id="entityEditorSubtitle"></p>
+      </div>
+      <div class="entity-editor__actions">
+        <button type="button" class="btn small ghost" id="editorCollapseBtn" aria-expanded="false">Expand</button>
+        <button type="button" class="btn small danger hidden" id="node-delete">Delete Passage</button>
+        <button type="button" class="btn small danger hidden" id="ending-delete">Delete Ending</button>
+      </div>
+    </div>
+    <div class="entity-editor__body">
+      <form id="node-form" class="stack hidden" data-editor="node">
+        <label class="field">
+          <span>Passage ID</span>
+          <input type="text" name="_id" required>
+        </label>
+        <label class="field">
+          <span>Border Color</span>
+          <select name="color">
+            <option value="twilight">Twilight Violet</option>
+            <option value="ember">Ember Orange</option>
+            <option value="moss">Moss Green</option>
+            <option value="dusk">Dusk Blue</option>
+            <option value="rose">Rose Magenta</option>
+            <option value="slate">Slate Gray</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Image</span>
+          <select name="image"></select>
+        </label>
+        <label class="field">
+          <span>Story Text</span>
+          <textarea name="text" rows="10" class="monospace"></textarea>
+        </label>
+        <button type="submit" class="btn small">Save Passage</button>
+      </form>
+
+      <div class="choices-block hidden" data-editor="node">
+        <div class="empty-state" id="choicesEmptyState">No choices yet.</div>
+        <div id="choice-list"></div>
+        <form id="choice-add-form" class="choice-form">
+          <div class="choice-fields">
+            <label class="choice-field">
+              <span>Label</span>
+              <input type="text" name="label" placeholder="Choice label" required>
+            </label>
+            <label class="choice-field">
+              <span>Next</span>
+              <select name="nextNodeId" required></select>
+            </label>
+          </div>
+          <div class="choice-actions">
+            <button type="submit" class="btn small">Add Choice</button>
+          </div>
+        </form>
+      </div>
+
+      <form id="ending-form" class="stack hidden" data-editor="ending">
+        <label class="field">
+          <span>Ending ID</span>
+          <input type="text" name="_id" required>
+        </label>
+        <label class="field">
+          <span>Ending Type</span>
+          <select name="type">
+            <option value="true">True</option>
+            <option value="death">Death</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Image</span>
+          <select name="image"></select>
+        </label>
+        <label class="field">
+          <span>Story Text</span>
+          <textarea name="text" rows="10" class="monospace"></textarea>
+        </label>
+        <button type="submit" class="btn small">Save Ending</button>
+      </form>
+    </div>
+  </div>
+
+
+  <script id="story-data" type="application/json"><%- JSON.stringify(story) %></script>
   <script>
-    // Collapsible cards
-    function setupCollapse(cardSelector, bodySelector, toggleSelector, storagePrefix) {
-      document.querySelectorAll(`${cardSelector} ${toggleSelector}`).forEach(btn => {
-        const card = btn.closest(cardSelector);
-        const body = card.querySelector(bodySelector);
-        const id   = card.dataset.id;
-        const collapsed = localStorage.getItem(storagePrefix + id) === "true";
-        if (collapsed) { body.style.display = "none"; btn.textContent = "Expand"; }
-        btn.addEventListener("click", () => {
-          const isHidden = body.style.display === "none";
-          body.style.display = isHidden ? "block" : "none";
-          btn.textContent = isHidden ? "Collapse" : "Expand";
-          localStorage.setItem(storagePrefix + id, (!isHidden).toString());
-        });
-      });
-    }
-    setupCollapse(".node-card", ".node-body", ".toggle-node",   "collapsed-node-");
-    setupCollapse(".ending-card", ".ending-body", ".toggle-ending", "collapsed-ending-");
-
-    // Collapse/Expand all
-    document.querySelector(".collapse-all-nodes").addEventListener("click", () => {
-      document.querySelectorAll(".node-card .node-body").forEach(b => b.style.display = "none");
-      document.querySelectorAll(".node-card .toggle-node").forEach(b => b.textContent = "Expand");
-    });
-    document.querySelector(".expand-all-nodes").addEventListener("click", () => {
-      document.querySelectorAll(".node-card .node-body").forEach(b => b.style.display = "block");
-      document.querySelectorAll(".node-card .toggle-node").forEach(b => b.textContent = "Collapse");
-    });
-    document.querySelector(".collapse-all-endings").addEventListener("click", () => {
-      document.querySelectorAll(".ending-card .ending-body").forEach(b => b.style.display = "none");
-      document.querySelectorAll(".ending-card .toggle-ending").forEach(b => b.textContent = "Expand");
-    });
-    document.querySelector(".expand-all-endings").addEventListener("click", () => {
-      document.querySelectorAll(".ending-card .ending-body").forEach(b => b.style.display = "block");
-      document.querySelectorAll(".ending-card .toggle-ending").forEach(b => b.textContent = "Collapse");
-    });
-
-    // Drag reorder
-    new Sortable(document.getElementById("nodes-list"), {
-      animation: 150,
-      handle: ".node-card,.divider-card",
-      onEnd: function (evt) {
-        const idsInOrder = Array.from(document.querySelectorAll("#nodes-list > div"))
-          .map(el => el.dataset.id);
-        fetch("/admin/stories/<%= story._id %>/nodes/reorder", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idsInOrder })
-        });
-      }
-    });
-    new Sortable(document.getElementById("endings-list"), {
-      animation: 150,
-      handle: ".ending-card",
-      onEnd: function (evt) {
-        const idsInOrder = Array.from(document.querySelectorAll("#endings-list > div"))
-          .map(el => el.dataset.id);
-        fetch("/admin/stories/<%= story._id %>/endings/reorder", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idsInOrder })
-        });
-      }
-    });
-
-    // Search filter
-    function setupSearch(inputId, listSelector, cardSelector){
-      document.getElementById(inputId).addEventListener("input", e => {
-        const q = e.target.value.toLowerCase();
-        document.querySelectorAll(listSelector+" "+cardSelector).forEach(card=>{
-          card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
-        });
-      });
-    }
-
     (function () {
-    // Keep scroll across reloads for this specific story
-    const KEY = "storyEditorScroll:<%= story._id %>";
-    // Let us control it (so the browser doesn't jump)
-    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      const storyId = "<%= story._id %>";
+      const storyScript = document.getElementById("story-data");
+      let storyData = JSON.parse(storyScript.textContent || "{}");
 
-    // Save position right before leaving this page
-    window.addEventListener("beforeunload", () => {
-      localStorage.setItem(KEY, String(window.scrollY));
-    });
+      const COLOR_OPTIONS = ["twilight", "ember", "moss", "dusk", "rose", "slate"];
 
-    // Restore it when we come back
-    window.addEventListener("DOMContentLoaded", () => {
-      const y = parseInt(localStorage.getItem(KEY) || "0", 10);
-      if (!Number.isNaN(y)) window.scrollTo(0, y);
-    });
+      const mapViewport = document.getElementById("mapViewport");
+      const mapCanvas = document.getElementById("mapCanvas");
+      const linkLayer = document.getElementById("linkLayer");
+      const storyForm = document.getElementById("story-form");
+      const coverImageSelect = document.getElementById("story-cover-image");
+      const startNodeSelect = document.getElementById("story-start-node");
+      const storyTitleHeading = document.getElementById("editorStoryTitle");
+      const addNodeBtn = document.getElementById("add-node-btn");
+      const addEndingBtn = document.getElementById("add-ending-btn");
+      const centerSelectionBtn = document.getElementById("center-selection-btn");
 
-    // If user clicks Back to Stories, clear the saved position
-    document.querySelectorAll('a[href="/admin/stories"]').forEach(a => {
-      a.addEventListener("click", () => localStorage.removeItem(KEY));
-    });
-  })();
+      const entityEditor = document.getElementById("entityEditor");
+      const editorTitle = document.getElementById("entityEditorTitle");
+      const editorSubtitle = document.getElementById("entityEditorSubtitle");
+      const collapseBtn = document.getElementById("editorCollapseBtn");
+      const nodeDeleteBtn = document.getElementById("node-delete");
+      const endingDeleteBtn = document.getElementById("ending-delete");
+      const nodeForm = document.getElementById("node-form");
+      const endingForm = document.getElementById("ending-form");
+      const choiceList = document.getElementById("choice-list");
+      const choiceAddForm = document.getElementById("choice-add-form");
+      const choicesEmptyState = document.getElementById("choicesEmptyState");
 
-    setupSearch("node-search", "#nodes-list", ".node-card,.divider-card");
-    setupSearch("ending-search", "#endings-list", ".ending-card");
+      const nodeEditorBlocks = entityEditor.querySelectorAll('[data-editor="node"]');
+      const endingEditorBlocks = entityEditor.querySelectorAll('[data-editor="ending"]');
+      const nodeColorSelect = nodeForm.elements.color;
+
+      const elementIndex = new Map();
+      let selected = null;
+      let inspectorVisible = false;
+      let drawFrame = null;
+      let dragInitialized = false;
+      let nodeFormPopulating = false;
+      let endingFormPopulating = false;
+      let nodeDirty = false;
+      let endingDirty = false;
+      let selectionQueue = Promise.resolve();
+
+      const normalizeCollections = (story) => {
+        story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
+        story.nodes = story.nodes.filter((node) => node.type !== "divider");
+        story.endings = Array.isArray(story.endings) ? story.endings : [];
+        story.images = Array.isArray(story.images) ? story.images : [];
+      };
+
+      const ensurePositions = (story) => {
+        normalizeCollections(story);
+        const spacingX = 240;
+        const spacingY = 200;
+        story.nodes.forEach((node, idx) => {
+          if (!node.position || typeof node.position.x !== "number" || typeof node.position.y !== "number") {
+            node.position = {
+              x: 160 + (idx % 5) * spacingX,
+              y: 160 + Math.floor(idx / 5) * spacingY,
+            };
+          }
+          if (!node.color || !COLOR_OPTIONS.includes(node.color)) {
+            node.color = "twilight";
+          }
+        });
+        const nodeRows = Math.max(1, Math.ceil(story.nodes.length / 5));
+        story.endings.forEach((ending, idx) => {
+          if (!ending.position || typeof ending.position.x !== "number" || typeof ending.position.y !== "number") {
+            ending.position = {
+              x: 160 + (idx % 4) * spacingX,
+              y: 160 + (nodeRows + 1 + Math.floor(idx / 4)) * spacingY,
+            };
+          }
+        });
+      };
+
+      const filenameFromUrl = (url) => {
+        if (!url) return "";
+        try {
+          const parsed = new URL(url);
+          const segment = parsed.pathname.split("/").pop() || "";
+          return decodeURIComponent(segment.split("?")[0]);
+        } catch {
+          const parts = url.split("/");
+          return decodeURIComponent(parts.pop() || url);
+        }
+      };
+
+      const deriveImageMeta = (item) => {
+        if (!item) return { url: "", label: "" };
+        if (typeof item === "string") {
+          return { url: item, label: filenameFromUrl(item) || item };
+        }
+        const url = item.url || item.path || "";
+        const label =
+          item.title ||
+          item.displayName ||
+          item.name ||
+          item.publicId ||
+          item.public_id ||
+          item.filename ||
+          filenameFromUrl(url);
+        return { url, label: label || filenameFromUrl(url) || url };
+      };
+
+      const getImageOptions = () => {
+        const raw = Array.isArray(storyData.images) ? storyData.images : [];
+        const seen = new Set();
+        return raw
+          .map(deriveImageMeta)
+          .filter((meta) => {
+            if (!meta.url || seen.has(meta.url)) return false;
+            seen.add(meta.url);
+            return true;
+          });
+      };
+
+      const populateImageSelect = (selectEl, currentValue) => {
+        if (!selectEl) return;
+        const options = getImageOptions();
+        selectEl.innerHTML = "";
+        const noneOption = document.createElement("option");
+        noneOption.value = "";
+        noneOption.textContent = "No image";
+        selectEl.appendChild(noneOption);
+        let hasMatch = false;
+        options.forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt.url;
+          option.textContent = opt.label || opt.url;
+          if (currentValue && currentValue === opt.url) {
+            option.selected = true;
+            hasMatch = true;
+          }
+          selectEl.appendChild(option);
+        });
+        if (currentValue && !hasMatch) {
+          const legacy = document.createElement("option");
+          legacy.value = currentValue;
+          legacy.selected = true;
+          legacy.textContent = `Current: ${currentValue}`;
+          selectEl.appendChild(legacy);
+        }
+      };
+
+      const postJSON = async (url, payload = {}) => {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          try {
+            const errorJson = JSON.parse(text);
+            throw new Error(errorJson.error || "Request failed");
+          } catch {
+            throw new Error(text || "Request failed");
+          }
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || "Request failed");
+        }
+        return data;
+      };
+
+      const handleError = (err) => {
+        console.error(err);
+        alert(err.message || "Something went wrong. Please try again.");
+      };
+
+      const getNodeById = (id) => storyData.nodes.find((n) => n._id === id);
+      const getEndingById = (id) => storyData.endings.find((e) => e._id === id);
+      const getEntity = (type, id) => {
+        if (type === "ending") return getEndingById(id);
+        return getNodeById(id);
+      };
+
+      const updateStoryTitle = () => {
+        storyTitleHeading.textContent = storyData.title || "Untitled Story";
+      };
+
+      const refreshStoryForm = () => {
+        storyForm.elements.title.value = storyData.title || "";
+        storyForm.elements.status.value = storyData.status || "coming_soon";
+        populateImageSelect(coverImageSelect, storyData.coverImage || "");
+        storyForm.elements.notes.value = storyData.notes || "";
+        storyForm.elements.description.value = storyData.description || "";
+
+        startNodeSelect.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "-- Select --";
+        startNodeSelect.appendChild(placeholder);
+        storyData.nodes.forEach((node) => {
+          const option = document.createElement("option");
+          option.value = node._id;
+          option.textContent = node._id;
+          if (storyData.startNodeId === node._id) {
+            option.selected = true;
+          }
+          startNodeSelect.appendChild(option);
+        });
+      };
+
+      const populateDestinationSelect = (selectEl, selectedValue) => {
+        selectEl.innerHTML = "";
+        storyData.nodes.forEach((node) => {
+          const option = document.createElement("option");
+          option.value = node._id;
+          option.textContent = node._id;
+          if (node._id === selectedValue) option.selected = true;
+          selectEl.appendChild(option);
+        });
+        storyData.endings.forEach((ending) => {
+          const option = document.createElement("option");
+          option.value = ending._id;
+          const typeLabel = ending.type ? ending.type.toUpperCase() : "ENDING";
+          option.textContent = `Ending: ${ending._id} (${typeLabel})`;
+          if (ending._id === selectedValue) option.selected = true;
+          selectEl.appendChild(option);
+        });
+      };
+
+      const renderChoices = (node) => {
+        choiceList.innerHTML = "";
+        if (!node || !Array.isArray(node.choices) || node.choices.length === 0) {
+          choicesEmptyState.classList.remove("hidden");
+          return;
+        }
+        choicesEmptyState.classList.add("hidden");
+        node.choices.forEach((choice) => {
+          const form = document.createElement("form");
+          form.className = "choice-item";
+
+          const fields = document.createElement("div");
+          fields.className = "choice-fields";
+
+          const labelField = document.createElement("label");
+          labelField.className = "choice-field";
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = "Label";
+          const labelInput = document.createElement("input");
+          labelInput.type = "text";
+          labelInput.name = "label";
+          labelInput.value = choice.label || "";
+          labelField.appendChild(labelSpan);
+          labelField.appendChild(labelInput);
+
+          const selectField = document.createElement("label");
+          selectField.className = "choice-field";
+          const selectSpan = document.createElement("span");
+          selectSpan.textContent = "Next";
+          const select = document.createElement("select");
+          select.name = "nextNodeId";
+          populateDestinationSelect(select, choice.nextNodeId);
+          selectField.appendChild(selectSpan);
+          selectField.appendChild(select);
+
+          fields.appendChild(labelField);
+          fields.appendChild(selectField);
+          form.appendChild(fields);
+
+          const actions = document.createElement("div");
+          actions.className = "choice-actions";
+
+          const saveBtn = document.createElement("button");
+          saveBtn.type = "submit";
+          saveBtn.className = "btn small";
+          saveBtn.textContent = "Save";
+          actions.appendChild(saveBtn);
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.type = "button";
+          deleteBtn.className = "btn small danger";
+          deleteBtn.textContent = "Delete";
+          actions.appendChild(deleteBtn);
+
+          form.appendChild(actions);
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const payload = {
+              label: labelInput.value,
+              nextNodeId: select.value,
+            };
+            queueTask(async () => {
+              await flushPendingChanges(selected ? { ...selected } : null);
+              const data = await postJSON(
+                `/admin/stories/${storyId}/nodes/${encodeURIComponent(node._id)}/choices/${encodeURIComponent(choice._id)}/update-inline`,
+                payload
+              );
+              selected = { type: "node", id: node._id };
+              setStoryData(data.story);
+            });
+          });
+
+          deleteBtn.addEventListener("click", () => {
+            if (!confirm("Delete this choice?")) return;
+            queueTask(async () => {
+              await flushPendingChanges(selected ? { ...selected } : null);
+              const data = await postJSON(
+                `/admin/stories/${storyId}/nodes/${encodeURIComponent(node._id)}/choices/${encodeURIComponent(choice._id)}/delete`
+              );
+              selected = { type: "node", id: node._id };
+              setStoryData(data.story);
+            });
+          });
+
+          choiceList.appendChild(form);
+        });
+      };
+
+      const fillNodeForm = (node) => {
+        if (!node) return;
+        nodeFormPopulating = true;
+        nodeForm.dataset.originalId = node._id;
+        nodeForm.elements._id.value = node._id || "";
+        const color = node.color && COLOR_OPTIONS.includes(node.color) ? node.color : "twilight";
+        if (nodeColorSelect) {
+          nodeColorSelect.value = color;
+        }
+        populateImageSelect(nodeForm.elements.image, node.image || "");
+        nodeForm.elements.text.value = node.text || "";
+        choiceAddForm.dataset.nodeId = node._id;
+        populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+        nodeDirty = false;
+        nodeFormPopulating = false;
+      };
+
+      const fillEndingForm = (ending) => {
+        if (!ending) return;
+        endingFormPopulating = true;
+        endingForm.dataset.originalId = ending._id;
+        endingForm.elements._id.value = ending._id || "";
+        endingForm.elements.type.value = ending.type || "other";
+        populateImageSelect(endingForm.elements.image, ending.image || "");
+        endingForm.elements.text.value = ending.text || "";
+        endingDirty = false;
+        endingFormPopulating = false;
+      };
+
+      const markNodeDirty = () => {
+        if (nodeFormPopulating) return;
+        if (selected && selected.type === "node") {
+          nodeDirty = true;
+        }
+      };
+
+      const markEndingDirty = () => {
+        if (endingFormPopulating) return;
+        if (selected && selected.type === "ending") {
+          endingDirty = true;
+        }
+      };
+
+      const getNodeFormPayload = () => ({
+        _id: nodeForm.elements._id.value,
+        image: nodeForm.elements.image.value,
+        text: nodeForm.elements.text.value,
+        color: nodeColorSelect ? nodeColorSelect.value : "twilight",
+      });
+
+      const getEndingFormPayload = () => ({
+        _id: endingForm.elements._id.value,
+        type: endingForm.elements.type.value,
+        image: endingForm.elements.image.value,
+        text: endingForm.elements.text.value,
+      });
+
+      const flushPendingChanges = async (targetSelection) => {
+        if (!targetSelection) return false;
+        if (targetSelection.type === "node" && nodeDirty) {
+          const originalId = nodeForm.dataset.originalId;
+          if (!originalId) {
+            nodeDirty = false;
+            return false;
+          }
+          const payload = getNodeFormPayload();
+          const data = await postJSON(
+            `/admin/stories/${storyId}/nodes/${encodeURIComponent(originalId)}/update-inline`,
+            payload
+          );
+          nodeDirty = false;
+          if (selected && selected.type === "node" && selected.id === targetSelection.id) {
+            selected = { type: "node", id: payload._id };
+          }
+          setStoryData(data.story);
+          return true;
+        }
+        if (targetSelection.type === "ending" && endingDirty) {
+          const originalId = endingForm.dataset.originalId;
+          if (!originalId) {
+            endingDirty = false;
+            return false;
+          }
+          const payload = getEndingFormPayload();
+          const data = await postJSON(
+            `/admin/stories/${storyId}/endings/${encodeURIComponent(originalId)}/update-inline`,
+            payload
+          );
+          endingDirty = false;
+          if (selected && selected.type === "ending" && selected.id === targetSelection.id) {
+            selected = { type: "ending", id: payload._id };
+          }
+          setStoryData(data.story);
+          return true;
+        }
+        return false;
+      };
+
+      const showEditorFor = (type, entity) => {
+        inspectorVisible = true;
+        entityEditor.classList.remove("hidden");
+        entityEditor.classList.remove("collapsed");
+        collapseBtn.textContent = "Collapse";
+        collapseBtn.setAttribute("aria-expanded", "true");
+        if (type === "node") {
+          editorTitle.textContent = "Passage";
+          editorSubtitle.textContent = entity._id || "";
+          nodeDeleteBtn.classList.remove("hidden");
+          endingDeleteBtn.classList.add("hidden");
+          nodeEditorBlocks.forEach((el) => el.classList.remove("hidden"));
+          endingEditorBlocks.forEach((el) => el.classList.add("hidden"));
+          fillNodeForm(entity);
+          renderChoices(entity);
+        } else if (type === "ending") {
+          editorTitle.textContent = "Ending";
+          const typeLabel = entity.type ? entity.type.toUpperCase() : "ENDING";
+          editorSubtitle.textContent = `${entity._id} • ${typeLabel}`;
+          nodeDeleteBtn.classList.add("hidden");
+          endingDeleteBtn.classList.remove("hidden");
+          nodeEditorBlocks.forEach((el) => el.classList.add("hidden"));
+          endingEditorBlocks.forEach((el) => el.classList.remove("hidden"));
+          fillEndingForm(entity);
+        }
+      };
+
+      const hideEditor = () => {
+        inspectorVisible = false;
+        entityEditor.classList.add("hidden");
+        collapseBtn.textContent = "Expand";
+        collapseBtn.setAttribute("aria-expanded", "false");
+      };
+
+      const highlightSelection = () => {
+        mapCanvas.querySelectorAll(".map-node").forEach((el) => el.classList.remove("selected"));
+        if (!selected) return;
+        const entry = elementIndex.get(selected.id);
+        if (entry) {
+          entry.element.classList.add("selected");
+        }
+      };
+
+      const refreshSelection = () => {
+        highlightSelection();
+        if (!selected) {
+          hideEditor();
+          return;
+        }
+        const entity = getEntity(selected.type, selected.id);
+        if (!entity) {
+          selected = null;
+          hideEditor();
+          highlightSelection();
+          return;
+        }
+        if (!inspectorVisible) {
+          hideEditor();
+          return;
+        }
+        showEditorFor(selected.type, entity);
+      };
+
+      const applySelection = async (type, id, options = {}) => {
+        const { center = false, open, preserveVisibility = false } = options;
+        const previous = selected ? { ...selected } : null;
+        await flushPendingChanges(previous);
+        const hasOpen = Object.prototype.hasOwnProperty.call(options, "open");
+
+        if (type && id) {
+          selected = { type, id };
+          if (hasOpen) {
+            if (open) {
+              inspectorVisible = true;
+            } else if (!preserveVisibility) {
+              inspectorVisible = false;
+            }
+          } else if (!inspectorVisible) {
+            inspectorVisible = true;
+          }
+        } else {
+          selected = null;
+          if (!preserveVisibility) {
+            inspectorVisible = hasOpen ? Boolean(open) : false;
+          }
+        }
+
+        refreshSelection();
+        if (center && selected) {
+          centerOnSelected();
+        }
+      };
+
+      const selectEntity = (type, id, options = {}) => {
+        selectionQueue = selectionQueue
+          .then(() => applySelection(type, id, options))
+          .catch((err) => {
+            handleError(err);
+          });
+        return selectionQueue;
+      };
+
+      const queueTask = (task) => {
+        selectionQueue = selectionQueue
+          .then(() => task())
+          .catch((err) => {
+            handleError(err);
+          });
+        return selectionQueue;
+      };
+
+      const centerOnSelected = () => {
+        if (!selected) return;
+        const entry = elementIndex.get(selected.id);
+        if (!entry) return;
+        const el = entry.element;
+        const x = el.offsetLeft + el.offsetWidth / 2 - mapViewport.clientWidth / 2;
+        const y = el.offsetTop + el.offsetHeight / 2 - mapViewport.clientHeight / 2;
+        mapViewport.scrollTo({
+          left: Math.max(x, 0),
+          top: Math.max(y, 0),
+          behavior: "smooth",
+        });
+      };
+
+      const scheduleDrawLinks = () => {
+        if (drawFrame) return;
+        drawFrame = requestAnimationFrame(() => {
+          drawFrame = null;
+          drawLinks();
+        });
+      };
+
+      const drawLinks = () => {
+        const width = parseFloat(mapCanvas.style.width) || mapCanvas.scrollWidth || 2400;
+        const height = parseFloat(mapCanvas.style.height) || mapCanvas.scrollHeight || 1600;
+        linkLayer.setAttribute("width", width);
+        linkLayer.setAttribute("height", height);
+        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        linkLayer.innerHTML = "";
+
+        const ns = "http://www.w3.org/2000/svg";
+        const defs = document.createElementNS(ns, "defs");
+        const createMarker = (id, color) => {
+          const marker = document.createElementNS(ns, "marker");
+          marker.setAttribute("id", id);
+          marker.setAttribute("markerWidth", "10");
+          marker.setAttribute("markerHeight", "10");
+          marker.setAttribute("refX", "8");
+          marker.setAttribute("refY", "5");
+          marker.setAttribute("orient", "auto");
+          marker.setAttribute("markerUnits", "strokeWidth");
+          const path = document.createElementNS(ns, "path");
+          path.setAttribute("d", "M0,0 L10,5 L0,10 z");
+          path.setAttribute("fill", color);
+          marker.appendChild(path);
+          return marker;
+        };
+        defs.appendChild(createMarker("link-arrow", "rgba(108, 92, 231, 0.75)"));
+        defs.appendChild(createMarker("link-arrow-ending", "rgba(255, 139, 92, 0.85)"));
+        linkLayer.appendChild(defs);
+
+        const frag = document.createDocumentFragment();
+        storyData.nodes.forEach((node) => {
+          const fromEntry = elementIndex.get(node._id);
+          if (!fromEntry) return;
+          (Array.isArray(node.choices) ? node.choices : []).forEach((choice) => {
+            const targetEntry = elementIndex.get(choice.nextNodeId);
+            if (!targetEntry) return;
+            const fromEl = fromEntry.element;
+            const toEl = targetEntry.element;
+            const fx = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+            const fy = fromEl.offsetTop + fromEl.offsetHeight / 2;
+            const tx = toEl.offsetLeft + toEl.offsetWidth / 2;
+            const ty = toEl.offsetTop + toEl.offsetHeight / 2;
+            const midX = (fx + tx) / 2;
+            const path = document.createElementNS(ns, "path");
+            path.setAttribute("d", `M${fx},${fy} C${midX},${fy} ${midX},${ty} ${tx},${ty}`);
+            path.classList.add("link");
+            if (targetEntry.type === "ending") {
+              path.classList.add("to-ending");
+              path.setAttribute("marker-end", "url(#link-arrow-ending)");
+            } else {
+              path.setAttribute("marker-end", "url(#link-arrow)");
+            }
+            frag.appendChild(path);
+          });
+        });
+        linkLayer.appendChild(frag);
+      };
+
+      const renderMap = () => {
+        elementIndex.clear();
+        mapCanvas.innerHTML = "";
+        mapCanvas.appendChild(linkLayer);
+
+        const entities = [...storyData.nodes, ...storyData.endings];
+        let maxX = 600;
+        let maxY = 400;
+        entities.forEach((entity) => {
+          if (!entity.position) return;
+          maxX = Math.max(maxX, entity.position.x + 320);
+          maxY = Math.max(maxY, entity.position.y + 260);
+        });
+        const viewportWidth = mapViewport.clientWidth || 0;
+        const viewportHeight = mapViewport.clientHeight || 0;
+        const width = Math.max(960, viewportWidth, maxX + 160);
+        const height = Math.max(720, viewportHeight, maxY + 160);
+        mapCanvas.style.width = `${width}px`;
+        mapCanvas.style.height = `${height}px`;
+        linkLayer.setAttribute("width", width);
+        linkLayer.setAttribute("height", height);
+        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        linkLayer.style.width = `${width}px`;
+        linkLayer.style.height = `${height}px`;
+
+        const createElement = (entity, type) => {
+          const el = document.createElement("div");
+          el.className = `map-node ${type}`;
+          el.dataset.id = entity._id;
+          el.dataset.entityType = type;
+          const x = entity.position?.x ?? 0;
+          const y = entity.position?.y ?? 0;
+          el.dataset.x = x;
+          el.dataset.y = y;
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+
+          if (type === "node") {
+            const color = entity.color && COLOR_OPTIONS.includes(entity.color) ? entity.color : "twilight";
+            el.classList.add(`color-${color}`);
+          }
+
+          const title = document.createElement("div");
+          title.className = "node-title";
+
+          if (entity.image) {
+            const flag = document.createElement("span");
+            flag.className = "image-flag";
+            flag.title = "Image attached";
+            flag.textContent = "🖼";
+            title.appendChild(flag);
+          }
+
+          const titleText = document.createElement("span");
+          titleText.className = "node-id";
+          titleText.textContent = entity._id;
+          title.appendChild(titleText);
+          el.appendChild(title);
+
+          if (type === "node") {
+            const snippet = document.createElement("div");
+            snippet.className = "node-snippet";
+            snippet.textContent = (entity.text || "").replace(/\s+/g, " " ).trim().slice(0, 160);
+            el.appendChild(snippet);
+
+            const meta = document.createElement("div");
+            meta.className = "node-meta";
+            const choiceCount = document.createElement("span");
+            const count = Array.isArray(entity.choices) ? entity.choices.length : 0;
+            choiceCount.textContent = `${count} choice${count === 1 ? "" : "s"}`;
+            meta.appendChild(choiceCount);
+            el.appendChild(meta);
+          } else if (type === "ending") {
+            const endingType = document.createElement("div");
+            endingType.className = "ending-type";
+            endingType.textContent = entity.type ? entity.type.toUpperCase() : "ENDING";
+            el.appendChild(endingType);
+
+            const snippet = document.createElement("div");
+            snippet.className = "node-snippet";
+            snippet.textContent = (entity.text || "").replace(/\s+/g, " " ).trim().slice(0, 160);
+            el.appendChild(snippet);
+          }
+
+          el.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const keepVisible =
+              inspectorVisible &&
+              selected &&
+              selected.id === entity._id &&
+              selected.type === type;
+            selectEntity(type, entity._id, {
+              center: false,
+              open: keepVisible,
+              preserveVisibility: keepVisible,
+            });
+          });
+
+          el.addEventListener("dblclick", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            selectEntity(type, entity._id, { center: false, open: true });
+          });
+
+          el.classList.add("draggable");
+          elementIndex.set(entity._id, { element: el, type });
+          mapCanvas.appendChild(el);
+          return el;
+        };
+
+        storyData.nodes.forEach((node) => {
+          const el = createElement(node, "node");
+          if (storyData.startNodeId && storyData.startNodeId === node._id) {
+            el.classList.add("start-node");
+          }
+        });
+
+        storyData.endings.forEach((ending) => {
+          createElement(ending, "ending");
+        });
+
+        highlightSelection();
+        drawLinks();
+        initDrag();
+      };
+
+      const setStoryData = (newStory) => {
+        storyData = newStory;
+        ensurePositions(storyData);
+        updateStoryTitle();
+        renderMap();
+        refreshStoryForm();
+        nodeDirty = false;
+        endingDirty = false;
+        refreshSelection();
+      };
+
+      const initDrag = () => {
+        if (dragInitialized) return;
+        dragInitialized = true;
+        interact(".map-node.draggable").draggable({
+          listeners: {
+            move(event) {
+              const target = event.target;
+              const x = (parseFloat(target.dataset.x) || 0) + event.dx;
+              const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+              target.dataset.x = x;
+              target.dataset.y = y;
+              target.style.left = `${x}px`;
+              target.style.top = `${y}px`;
+              scheduleDrawLinks();
+            },
+            end(event) {
+              const target = event.target;
+              const id = target.dataset.id;
+              const type = target.dataset.entityType || "node";
+              const x = parseFloat(target.dataset.x) || 0;
+              const y = parseFloat(target.dataset.y) || 0;
+              if (!id) return;
+              const url =
+                type === "ending"
+                  ? `/admin/stories/${storyId}/endings/${encodeURIComponent(id)}/position`
+                  : `/admin/stories/${storyId}/nodes/${encodeURIComponent(id)}/position`;
+              postJSON(url, { x, y })
+                .then((data) => {
+                  selected = { type, id };
+                  setStoryData(data.story);
+                })
+                .catch(handleError);
+            },
+          },
+          inertia: false,
+        });
+      };
+
+      mapViewport.addEventListener("click", () => {
+        selectEntity(null, null, { open: false });
+      });
+
+      collapseBtn.addEventListener("click", () => {
+        const isCollapsed = entityEditor.classList.toggle("collapsed");
+        collapseBtn.textContent = isCollapsed ? "Expand" : "Collapse";
+        collapseBtn.setAttribute("aria-expanded", String(!isCollapsed));
+      });
+
+      storyForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const payload = {
+          title: storyForm.elements.title.value,
+          status: storyForm.elements.status.value,
+          coverImage: storyForm.elements.coverImage.value,
+          notes: storyForm.elements.notes.value,
+          description: storyForm.elements.description.value,
+          startNodeId: startNodeSelect.value,
+        };
+        postJSON(`/admin/stories/${storyId}/update-inline`, payload)
+          .then((data) => {
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      addNodeBtn.addEventListener("click", () => {
+        queueTask(async () => {
+          await flushPendingChanges(selected ? { ...selected } : null);
+          const position = {
+            x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+            y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+          };
+          const data = await postJSON(`/admin/stories/${storyId}/nodes/add`, { position });
+          const newNode = data.story.nodes && data.story.nodes[0];
+          setStoryData(data.story);
+          if (newNode) {
+            selected = { type: "node", id: newNode._id };
+            inspectorVisible = true;
+            refreshSelection();
+            centerOnSelected();
+          }
+        });
+      });
+
+      addEndingBtn.addEventListener("click", () => {
+        queueTask(async () => {
+          await flushPendingChanges(selected ? { ...selected } : null);
+          const position = {
+            x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+            y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+          };
+          const data = await postJSON(`/admin/stories/${storyId}/endings/add`, { position });
+          const newEnding = data.story.endings && data.story.endings[0];
+          setStoryData(data.story);
+          if (newEnding) {
+            selected = { type: "ending", id: newEnding._id };
+            inspectorVisible = true;
+            refreshSelection();
+            centerOnSelected();
+          }
+        });
+      });
+
+      centerSelectionBtn.addEventListener("click", () => {
+        centerOnSelected();
+      });
+
+      nodeForm.addEventListener("input", markNodeDirty);
+      nodeForm.addEventListener("change", markNodeDirty);
+
+      endingForm.addEventListener("input", markEndingDirty);
+      endingForm.addEventListener("change", markEndingDirty);
+
+      nodeForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const originalId = nodeForm.dataset.originalId;
+        if (!originalId) return;
+        const payload = getNodeFormPayload();
+        queueTask(async () => {
+          const data = await postJSON(
+            `/admin/stories/${storyId}/nodes/${encodeURIComponent(originalId)}/update-inline`,
+            payload
+          );
+          selected = { type: "node", id: payload._id };
+          nodeDirty = false;
+          setStoryData(data.story);
+        });
+      });
+
+      endingForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const originalId = endingForm.dataset.originalId;
+        if (!originalId) return;
+        const payload = getEndingFormPayload();
+        queueTask(async () => {
+          const data = await postJSON(
+            `/admin/stories/${storyId}/endings/${encodeURIComponent(originalId)}/update-inline`,
+            payload
+          );
+          selected = { type: "ending", id: payload._id };
+          endingDirty = false;
+          setStoryData(data.story);
+        });
+      });
+
+      choiceAddForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const nodeId = choiceAddForm.dataset.nodeId;
+        if (!nodeId) return;
+        const payload = {
+          label: choiceAddForm.elements.label.value,
+          nextNodeId: choiceAddForm.elements.nextNodeId.value,
+        };
+        queueTask(async () => {
+          await flushPendingChanges(selected ? { ...selected } : null);
+          const data = await postJSON(
+            `/admin/stories/${storyId}/nodes/${encodeURIComponent(nodeId)}/choices/add-inline`,
+            payload
+          );
+          selected = { type: "node", id: nodeId };
+          choiceAddForm.reset();
+          populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+          setStoryData(data.story);
+        });
+      });
+
+      nodeDeleteBtn.addEventListener("click", () => {
+        if (!selected || selected.type !== "node") return;
+        if (!confirm("Delete this passage?")) return;
+        queueTask(async () => {
+          await flushPendingChanges(selected ? { ...selected } : null);
+          const data = await postJSON(
+            `/admin/stories/${storyId}/nodes/${encodeURIComponent(selected.id)}/delete`
+          );
+          selected = null;
+          setStoryData(data.story);
+        });
+      });
+
+      endingDeleteBtn.addEventListener("click", () => {
+        if (!selected || selected.type !== "ending") return;
+        if (!confirm("Delete this ending?")) return;
+        queueTask(async () => {
+          await flushPendingChanges(selected ? { ...selected } : null);
+          const data = await postJSON(
+            `/admin/stories/${storyId}/endings/${encodeURIComponent(selected.id)}/delete`
+          );
+          selected = null;
+          setStoryData(data.story);
+        });
+      });
+
+      ensurePositions(storyData);
+      updateStoryTitle();
+      renderMap();
+      refreshStoryForm();
+    })();
   </script>
 </body>
 </html>

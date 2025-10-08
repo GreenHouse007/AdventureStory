@@ -14,7 +14,8 @@
         <p class="muted">
           <%= typeof message !== 'undefined' ? message : fallbackMessage %>
         </p>
-        <a class="cta-button" href="/">Back to safety</a>
+        <% const fallbackBackLink = backLink || (user ? '/u/library' : '/'); %>
+        <a class="cta-button" href="<%= fallbackBackLink %>">Back to where you were</a>
       </section>
     </main>
 

@@ -32,6 +32,7 @@
               autocomplete="email"
               required
               placeholder="you@example.com"
+              value="<%= (typeof old !== 'undefined' && old && old.email) || '' %>"
             />
           </label>
 
@@ -47,7 +48,12 @@
           </label>
 
           <label class="checkbox">
-            <input type="checkbox" name="remember" value="1" />
+            <input
+              type="checkbox"
+              name="remember"
+              value="1"
+              <%= remember ? 'checked' : '' %>
+            />
             <span>Remember me on this device</span>
           </label>
 

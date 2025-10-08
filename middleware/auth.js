@@ -1,5 +1,7 @@
 const User = require("../models/user.model");
 
+const { getReturnPath } = require("../utils/navigation");
+
 exports.attachUser = async (req, res, next) => {
   if (req.session.userId) {
     try {
@@ -28,7 +30,11 @@ exports.requireAuth = (req, res, next) => {
 
 exports.requireAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== "admin") {
-    return res.status(403).render("public/403", { title: "Forbidden" });
+    return res.status(403).render("public/403", {
+      title: "Forbidden",
+      user: req.user,
+      backLink: getReturnPath(req),
+    });
   }
   next();
 };

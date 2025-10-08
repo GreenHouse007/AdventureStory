@@ -120,14 +120,15 @@ nav a:hover {
   opacity: 0.9;
 }
 
-footer {
+.site-footer {
   text-align: center;
   padding: 1rem;
   background: var(--muted-gray);
   font-size: 0.9rem;
+  margin-top: auto;
 }
 
-footer a {
+.site-footer a {
   color: var(--text-light);
   text-decoration: underline;
   text-underline-offset: 3px;

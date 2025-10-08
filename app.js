@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const routes = require("./routes");
+const { getReturnPath } = require("./utils/navigation");
 
 require("dotenv").config();
 const connectDB = require("./db");
@@ -50,7 +51,11 @@ app.use("/", routes);
 
 // 404 + error handler (no route matched)
 app.use((req, res) => {
-  res.status(404).render("public/404", { title: "Not Found" });
+  res.status(404).render("public/404", {
+    title: "Not Found",
+    user: req.user,
+    backLink: getReturnPath(req),
+  });
 });
 
 // 500 (error handler must have 4 params)
@@ -60,6 +65,8 @@ app.use((err, req, res, next) => {
   res.status(500).render("public/500", {
     title: "Server Error",
     message: showDetails ? err.message : "Something went wrong.",
+    user: req.user,
+    backLink: getReturnPath(req),
   });
 });
 
