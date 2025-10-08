@@ -17,6 +17,10 @@ const nodeSchema = new mongoose.Schema({
   notes: String, // private notes for each node
   choiceNotes: String, // shared notes for the choices section
   color: { type: String, default: "gray" }, // divider color
+  position: {
+    x: { type: Number, default: 0 },
+    y: { type: Number, default: 0 },
+  },
   choices: [choiceSchema], // choices only apply if type === "node"
 });
 
@@ -27,6 +31,10 @@ const endingSchema = new mongoose.Schema({
   text: String,
   image: String,
   notes: String, // private notes for ending
+  position: {
+    x: { type: Number, default: 0 },
+    y: { type: Number, default: 0 },
+  },
 });
 
 const storySchema = new mongoose.Schema(

@@ -2,412 +2,1299 @@
 <html lang="en">
 <head>
   <%- include('../partials/head') %>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
   <style>
-    main.container { max-width: 1200px; }
-    .panel {
-      background: #1a1a1a;
-      padding: 1.5rem;
+    :root {
+      --panel-bg: #111;
+      --panel-border: #202020;
+      --panel-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+      --accent: #6c5ce7;
+      --accent-2: #45aaf2;
+      --accent-danger: #ff6b6b;
+    }
+
+    body {
+      background-color: #080808;
+      color: #f1f1f1;
+    }
+
+    .story-editor-shell {
+      width: 100%;
+      max-width: none;
+      padding: 1.5rem 2rem 2rem;
+      min-height: calc(100vh - 70px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 1rem 1.5rem;
+      box-shadow: var(--panel-shadow);
+    }
+
+    .editor-toolbar h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-right {
+      justify-content: flex-end;
+    }
+
+    .editor-body {
+      flex: 1;
+      display: flex;
+      gap: 1.5rem;
+      min-height: 0;
+    }
+
+    .map-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: var(--panel-shadow);
+      overflow: hidden;
+    }
+
+    .map-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--panel-border);
+      gap: 1rem;
+    }
+
+    .map-controls-left {
+      font-size: 0.95rem;
+      color: #b5b5b5;
+    }
+
+    .map-controls-right {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .map-viewport {
+      flex: 1;
+      position: relative;
+      overflow: auto;
+      background: #050505;
+      background-image: linear-gradient(transparent 49px, rgba(255, 255, 255, 0.05) 50px),
+        linear-gradient(90deg, transparent 49px, rgba(255, 255, 255, 0.05) 50px);
+      background-size: 50px 50px;
+    }
+
+    .map-viewport::-webkit-scrollbar {
+      height: 12px;
+      width: 12px;
+    }
+
+    .map-viewport::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 10px;
-      margin-bottom: 2rem;
-    }
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
     }
 
-    .node-card, .ending-card, .divider-card {
-      margin-bottom: 1.5rem; border-radius: 8px; background: #111;
-      padding: 1rem 1.25rem; border: 1px solid #333;
-    }
-    .node-card   { border-left: 4px solid #555; }
-    .ending-card { border-left: 4px solid #5d3fd3; }
-
-    .divider-card {
-      text-align: center; padding: 0.75rem 1rem; font-weight: 600;
-      border: 1px dashed #444; border-radius: 8px;
-    }
-    .divider-gray  { background: #2a2a2a; }
-    .divider-red   { background: #3a2222; }
-    .divider-blue  { background: #222f3a; }
-    .divider-green { background: #223a2a; }
-
-    .node-header, .ending-header {
-      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
-    }
-    .header-left { display:flex; gap:1rem; align-items:center; }
-    .header-actions { display:flex; gap:0.5rem; align-items:center; }
-
-    .notes-inline {
-      width: 380px; max-width: 40vw;
-      background: #1f1f1f; border: 1px solid #333; border-radius: 4px;
-      color: #ccc; font-size: 0.9rem; padding: 0.35rem 0.5rem;
+    .map-viewport::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
     }
 
-    .node-body, .ending-body { margin-top: 1rem; }
-
-    .grid.two-col {
-      display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;
-    }
-    @media (max-width: 900px){ .grid.two-col { grid-template-columns: 1fr; } }
-
-    input[type="text"], select, textarea {
-      width: 100%; padding: 0.6rem; border-radius: 6px;
-      border: 1px solid #333; background: #151515; color: #eee;
-    }
-    textarea.big-text {
-      min-height: 280px; font-size: 1rem; line-height: 1.5;
+    .map-links,
+    .map-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
     }
 
-    .choices-section {
-      margin-top: 1rem; padding: 1rem; background: #202020; border-radius: 6px; color: #ccc;
-    }
-    .choice-row {
-      display:flex; gap:0.5rem; align-items:center; margin-bottom: 0.5rem;
+    .map-links {
+      z-index: 0;
+      pointer-events: none;
     }
 
-    .btn.small {
-      padding: 0.25rem 0.75rem; font-size: 0.85rem; background: #333; color:#eee;
-      border:none; border-radius:4px; cursor:pointer;
+    .map-canvas {
+      position: relative;
+      z-index: 1;
     }
-    .btn.small:hover { background:#444; }
-    .btn.small.danger { background:#5a1a1a; }
-    .btn.small.danger:hover { background:#822; }
 
-    .search-bar { margin: 0.5rem 0 1rem; display:flex; gap:0.5rem; }
-    .search-bar input { flex:1; }
+    .map-node {
+      position: absolute;
+      width: 220px;
+      min-height: 110px;
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(20, 20, 20, 0.95);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+      cursor: grab;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .map-node:active {
+      cursor: grabbing;
+    }
+
+    .map-node .node-title {
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .map-node .node-title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .map-node .node-meta {
+      font-size: 0.8rem;
+      color: #b5b5b5;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .map-node .node-snippet {
+      font-size: 0.8rem;
+      color: #d1d1d1;
+      line-height: 1.3;
+      max-height: 3.9em;
+      overflow: hidden;
+    }
+
+    .map-node.node {
+      border-color: rgba(108, 92, 231, 0.45);
+    }
+
+    .map-node.node.start-node {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.4), 0 18px 32px rgba(108, 92, 231, 0.2);
+    }
+
+    .map-node.ending {
+      background: rgba(30, 25, 40, 0.95);
+      border-color: rgba(69, 170, 242, 0.45);
+    }
+
+    .map-node.divider {
+      background: rgba(35, 35, 35, 0.95);
+      border-style: dashed;
+      border-color: rgba(200, 200, 200, 0.3);
+    }
+
+    .map-node.selected {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 18px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    .map-node .badge {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .map-links path {
+      fill: none;
+      stroke: rgba(96, 86, 222, 0.55);
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    .map-links path.to-ending {
+      stroke: rgba(69, 170, 242, 0.7);
+    }
+
+    .inspector {
+      width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: var(--panel-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin: 0;
+    }
+
+    .story-panel {
+      flex-shrink: 0;
+    }
+
+    .inspector-panel {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .panel-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-heading.compact {
+      margin-top: 0.5rem;
+    }
+
+    .panel p {
+      margin: 0;
+      color: #c2c2c2;
+      line-height: 1.5;
+      font-size: 0.9rem;
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    label.field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      color: #d7d7d7;
+    }
+
+    .story-editor-shell input,
+    .story-editor-shell select,
+    .story-editor-shell textarea {
+      width: 100%;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #f0f0f0;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.95rem;
+      transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .story-editor-shell textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .story-editor-shell input:focus,
+    .story-editor-shell select:focus,
+    .story-editor-shell textarea:focus {
+      outline: none;
+      border-color: rgba(108, 92, 231, 0.7);
+      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.25);
+    }
+
+    .choices-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .choice-item {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      background: rgba(18, 18, 18, 0.85);
+    }
+
+    .choice-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .choice-form {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      background: rgba(12, 12, 12, 0.6);
+    }
+
+    .btn.small.danger {
+      background: rgba(255, 107, 107, 0.15);
+      color: #ffb4b4;
+      border: 1px solid rgba(255, 107, 107, 0.4);
+    }
+
+    .btn.small.danger:hover {
+      background: rgba(255, 107, 107, 0.25);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .monospace {
+      font-family: "Fira Code", "JetBrains Mono", "SFMono-Regular", monospace;
+    }
+
+    @media (max-width: 1200px) {
+      .editor-body {
+        flex-direction: column;
+      }
+      .inspector {
+        width: 100%;
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
   <%- include('../partials/header', { user }) %>
 
-  <main class="container">
-    <div class="section-header">
-      <a href="/admin/stories" class="btn small">← Back</a>
-      <a href="/admin/stories/<%= story._id %>/images" class="btn small">Manage Images</a>
+  <main class="story-editor-shell">
+    <div class="editor-toolbar">
+      <div class="toolbar-left">
+        <a href="/admin/stories" class="btn small">&larr; Back</a>
+        <h1><%= story.title %></h1>
+      </div>
+      <div class="toolbar-right">
+        <a href="/admin/stories/<%= story._id %>/images" class="btn small">Manage Images</a>
+        <button type="button" class="btn small" id="center-selection-btn">Center Selection</button>
+      </div>
     </div>
 
-    <h1>Edit Story: <%= story.title %></h1>
-
-    <!-- Story Info -->
-    <form action="/admin/stories/<%= story._id %>/update-inline" method="post" class="panel stack">
-      <div class="grid two-col">
-        <div>
-          <label>Title</label>
-          <input type="text" name="title" value="<%= story.title %>">
-        </div>
-        <div>
-          <label>Cover Image</label>
-          <input type="text" name="coverImage" value="<%= story.coverImage || '' %>">
-        </div>
-        <div>
-          <label>Status</label>
-          <select name="status">
-            <option value="public" <%= story.status==="public"?"selected":"" %>>Public</option>
-            <option value="coming_soon" <%= story.status==="coming_soon"?"selected":"" %>>Coming Soon</option>
-          </select>
-        </div>
-        <div>
-          <label>Start Node</label>
-          <select name="startNodeId">
-            <option value="">-- Select --</option>
-            <% story.nodes.forEach(n=>{ if(n.type!=="divider"){ %>
-              <option value="<%= n._id %>" <%= story.startNodeId===n._id?"selected":"" %>><%= n._id %></option>
-            <% }}) %>
-          </select>
-        </div>
-      </div>
-
-      <label>Story Author Notes</label>
-      <textarea name="notes" rows="6" placeholder="These notes are private and will not be seen by the readers"><%= story.notes || "" %></textarea>
-
-      <label>Description (public)</label>
-      <textarea name="description" rows="10"><%= story.description %></textarea>
-
-      <button type="submit" class="btn small">Save Story</button>
-    </form>
-
-    <!-- Nodes -->
-    <section class="panel">
-      <div class="section-header">
-        <h2>Nodes</h2>
-        <div>
-          <button type="button" class="btn small collapse-all-nodes">Collapse All</button>
-          <button type="button" class="btn small expand-all-nodes">Expand All</button>
-          <form action="/admin/stories/<%= story._id %>/nodes/add" method="post" class="inline-form">
-            <button type="submit" class="btn small">+ Node</button>
-          </form>
-          <form action="/admin/stories/<%= story._id %>/nodes/add-divider" method="post" class="inline-form">
-            <button type="submit" class="btn small">+ Divider</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="search-bar">
-        <input type="text" id="node-search" placeholder="Search nodes...">
-      </div>
-
-      <div id="nodes-list">
-        <% story.nodes.forEach(n => { %>
-
-          <% if (n.type === "divider") { %>
-            <div class="divider-card divider-<%= n.color || 'gray' %>" data-id="<%= n._id %>">
-              <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/update-divider" method="post" class="inline-form" style="display:inline-flex; gap:.5rem; align-items:center;">
-                <input type="text" name="label" value="<%= n.label %>">
-                <select name="color">
-                  <option value="gray"  <%= n.color==="gray" ?"selected":"" %>>Gray</option>
-                  <option value="red"   <%= n.color==="red"  ?"selected":"" %>>Muted Red</option>
-                  <option value="blue"  <%= n.color==="blue" ?"selected":"" %>>Muted Blue</option>
-                  <option value="green" <%= n.color==="green"?"selected":"" %>>Muted Green</option>
-                </select>
-                <button type="submit" class="btn small">Save</button>
-              </form>
-              <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete-divider" method="post" class="inline-form" style="display:inline;">
-                <button type="submit" class="btn small danger">Delete</button>
-              </form>
-            </div>
-
-          <% } else { %>
-            <div class="node-card" data-id="<%= n._id %>">
-              <div class="node-header">
-                <div class="header-left">
-                  <h3><%= n._id %></h3>
-                  <input type="text" class="notes-inline" name="notes" value="<%= n.notes || '' %>" placeholder="Notes..." form="node-form-<%= n._id %>">
-                </div>
-                <div class="header-actions">
-                  <button type="button" class="btn small toggle-node">Collapse</button>
-                  <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/delete" method="post" class="inline-form">
-                    <button type="submit" class="btn small danger">Delete</button>
-                  </form>
-                </div>
-              </div>
-
-              <div class="node-body">
-                <form id="node-form-<%= n._id %>" action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/update-inline" method="post" class="stack">
-                  <div class="grid two-col">
-                    <div>
-                      <label>ID</label>
-                      <input type="text" name="_id" value="<%= n._id %>" required>
-                    </div>
-                    <div>
-                      <label>Image URL</label>
-                      <input type="text" name="image" value="<%= n.image || '' %>">
-                    </div>
-                  </div>
-                  <label>Story Text</label>
-                  <textarea name="text" class="big-text"><%= n.text %></textarea>
-                  <label>Choice Notes</label>
-                  <textarea name="choiceNotes" rows="3"><%= n.choiceNotes || "" %></textarea>
-                  <button type="submit" class="btn small">Save Node</button>
-                </form>
-
-                <!-- Choices simplified -->
-                <div class="choices-section">
-                  <h4>Choices</h4>
-                  <% n.choices.forEach(c => { %>
-                    <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/<%= c._id %>/update-inline" method="post" class="choice-row">
-                      <input type="text" name="label" value="<%= c.label %>">
-                      <select name="nextNodeId">
-                        <% story.nodes.forEach(n2 => { if(n2.type!=="divider"){ %>
-                          <option value="<%= n2._id %>" <%= c.nextNodeId===n2._id?"selected":"" %>><%= n2._id %></option>
-                        <% }}) %>
-                        <% story.endings.forEach(e2=>{ %>
-                          <option value="<%= e2._id %>" <%= c.nextNodeId===e2._id?"selected":"" %>>Ending: <%= e2._id %></option>
-                        <% }) %>
-                      </select>
-                      <button type="submit" class="btn small">Save</button>
-                    </form>
-                    <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/<%= c._id %>/delete" method="post" class="inline-form">
-                      <button type="submit" class="btn small danger">Delete</button>
-                    </form>
-                  <% }) %>
-
-                  <form action="/admin/stories/<%= story._id %>/nodes/<%= n._id %>/choices/add-inline" method="post" class="choice-row">
-                    <input type="text" name="label" placeholder="New choice label" required>
-                    <select name="nextNodeId" required>
-                      <% story.nodes.forEach(n2=>{ if(n2.type!=="divider"){ %>
-                        <option value="<%= n2._id %>"><%= n2._id %></option>
-                      <% }}) %>
-                      <% story.endings.forEach(e2=>{ %>
-                        <option value="<%= e2._id %>">Ending: <%= e2._id %></option>
-                      <% }) %>
-                    </select>
-                    <button type="submit" class="btn small">Add</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          <% } %>
-        <% }) %>
-      </div>
-    </section>
-
-    <!-- Endings -->
-    <section class="panel">
-      <div class="section-header">
-        <h2>Endings</h2>
-        <div>
-          <button type="button" class="btn small collapse-all-endings">Collapse All</button>
-          <button type="button" class="btn small expand-all-endings">Expand All</button>
-          <form action="/admin/stories/<%= story._id %>/endings/add" method="post" class="inline-form">
-            <button type="submit" class="btn small">+ Ending</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="search-bar">
-        <input type="text" id="ending-search" placeholder="Search endings...">
-      </div>
-
-      <div id="endings-list">
-        <% story.endings.forEach(e => { %>
-          <div class="ending-card" data-id="<%= e._id %>">
-            <div class="ending-header">
-              <div class="header-left">
-                <h3>Ending: <%= e._id %></h3>
-                <input type="text" class="notes-inline" name="notes" value="<%= e.notes || '' %>" placeholder="Notes..." form="ending-form-<%= e._id %>">
-              </div>
-              <div class="header-actions">
-                <button type="button" class="btn small toggle-ending">Collapse</button>
-                <form action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/delete" method="post" class="inline-form">
-                  <button type="submit" class="btn small danger">Delete</button>
-                </form>
-              </div>
-            </div>
-
-            <div class="ending-body">
-              <form id="ending-form-<%= e._id %>" action="/admin/stories/<%= story._id %>/endings/<%= e._id %>/update-inline" method="post" class="stack">
-                <div class="grid two-col">
-                  <div>
-                    <label>ID</label>
-                    <input type="text" name="_id" value="<%= e._id %>">
-                  </div>
-                  <div>
-                    <label>Label</label>
-                    <input type="text" name="label" value="<%= e.label %>">
-                  </div>
-                  <div>
-                    <label>Type</label>
-                    <select name="type">
-                      <option value="true"  <%= e.type==="true" ?"selected":"" %>>True</option>
-                      <option value="death" <%= e.type==="death"?"selected":"" %>>Death</option>
-                      <option value="other" <%= e.type==="other"?"selected":"" %>>Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label>Image URL</label>
-                    <input type="text" name="image" value="<%= e.image || '' %>">
-                  </div>
-                </div>
-                <label>Story Text</label>
-                <textarea name="text" class="big-text"><%= e.text %></textarea>
-                <button type="submit" class="btn small">Save Ending</button>
-              </form>
-            </div>
+    <div class="editor-body">
+      <section class="map-panel">
+        <div class="map-controls">
+          <div class="map-controls-left">
+            Drag passages into place. Connections update automatically as you move nodes.
           </div>
-        <% }) %>
-      </div>
-    </section>
+          <div class="map-controls-right">
+            <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
+            <button type="button" class="btn small" id="add-divider-btn">+ Divider</button>
+            <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
+          </div>
+        </div>
+        <div class="map-viewport" id="mapViewport">
+          <svg class="map-links" id="linkLayer"></svg>
+          <div class="map-canvas" id="mapCanvas"></div>
+        </div>
+      </section>
+
+      <aside class="inspector">
+        <section class="panel story-panel">
+          <h2>Story Details</h2>
+          <form id="story-form" class="stack">
+            <label class="field">
+              <span>Title</span>
+              <input type="text" name="title" value="<%= story.title %>" required>
+            </label>
+            <label class="field">
+              <span>Status</span>
+              <select name="status" id="story-status">
+                <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
+                <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Start Node</span>
+              <select name="startNodeId" id="story-start-node">
+                <option value="">-- Select --</option>
+                <% story.nodes.filter(n => n.type !== 'divider').forEach(n => { %>
+                  <option value="<%= n._id %>" <%= story.startNodeId === n._id ? 'selected' : '' %>><%= n._id %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label class="field">
+              <span>Cover Image URL</span>
+              <input type="text" name="coverImage" value="<%= story.coverImage || '' %>">
+            </label>
+            <label class="field">
+              <span>Author Notes (private)</span>
+              <textarea name="notes" rows="3"><%= story.notes || '' %></textarea>
+            </label>
+            <label class="field">
+              <span>Description (public)</span>
+              <textarea name="description" rows="5"><%= story.description || '' %></textarea>
+            </label>
+            <button type="submit" class="btn small">Save Story</button>
+          </form>
+        </section>
+
+        <section class="panel inspector-panel" data-panel="empty">
+          <p>Select a passage, divider, or ending from the map to edit its details.</p>
+        </section>
+
+        <section class="panel inspector-panel hidden" data-panel="node">
+          <div class="panel-heading">
+            <h2>Passage</h2>
+            <button type="button" class="btn small danger" id="node-delete">Delete</button>
+          </div>
+          <form id="node-form" class="stack">
+            <label class="field">
+              <span>Passage ID</span>
+              <input type="text" name="_id" required>
+            </label>
+            <label class="field">
+              <span>Image URL</span>
+              <input type="text" name="image">
+            </label>
+            <label class="field">
+              <span>Notes</span>
+              <textarea name="notes" rows="2"></textarea>
+            </label>
+            <label class="field">
+              <span>Choice Notes</span>
+              <textarea name="choiceNotes" rows="2"></textarea>
+            </label>
+            <label class="field">
+              <span>Story Text</span>
+              <textarea name="text" rows="10" class="monospace"></textarea>
+            </label>
+            <button type="submit" class="btn small">Save Passage</button>
+          </form>
+
+          <div class="choices-block">
+            <div class="panel-heading compact">
+              <h3>Choices</h3>
+            </div>
+            <div id="choice-list"></div>
+            <form id="choice-add-form" class="choice-form">
+              <input type="text" name="label" placeholder="Choice label" required>
+              <select name="nextNodeId" required></select>
+              <div class="choice-actions">
+                <button type="submit" class="btn small">Add Choice</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel inspector-panel hidden" data-panel="ending">
+          <div class="panel-heading">
+            <h2>Ending</h2>
+            <button type="button" class="btn small danger" id="ending-delete">Delete</button>
+          </div>
+          <form id="ending-form" class="stack">
+            <label class="field">
+              <span>Ending ID</span>
+              <input type="text" name="_id" required>
+            </label>
+            <label class="field">
+              <span>Label</span>
+              <input type="text" name="label">
+            </label>
+            <label class="field">
+              <span>Type</span>
+              <select name="type">
+                <option value="true">True</option>
+                <option value="death">Death</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Image URL</span>
+              <input type="text" name="image">
+            </label>
+            <label class="field">
+              <span>Notes</span>
+              <textarea name="notes" rows="2"></textarea>
+            </label>
+            <label class="field">
+              <span>Story Text</span>
+              <textarea name="text" rows="10" class="monospace"></textarea>
+            </label>
+            <button type="submit" class="btn small">Save Ending</button>
+          </form>
+        </section>
+
+        <section class="panel inspector-panel hidden" data-panel="divider">
+          <div class="panel-heading">
+            <h2>Divider</h2>
+            <button type="button" class="btn small danger" id="divider-delete">Delete</button>
+          </div>
+          <form id="divider-form" class="stack">
+            <label class="field">
+              <span>Label</span>
+              <input type="text" name="label" required>
+            </label>
+            <label class="field">
+              <span>Color</span>
+              <select name="color">
+                <option value="gray">Muted Gray</option>
+                <option value="red">Muted Red</option>
+                <option value="blue">Muted Blue</option>
+                <option value="green">Muted Green</option>
+              </select>
+            </label>
+            <button type="submit" class="btn small">Save Divider</button>
+          </form>
+        </section>
+      </aside>
+    </div>
   </main>
 
+  <script id="story-data" type="application/json"><%- JSON.stringify(story) %></script>
   <script>
-    // Collapsible cards
-    function setupCollapse(cardSelector, bodySelector, toggleSelector, storagePrefix) {
-      document.querySelectorAll(`${cardSelector} ${toggleSelector}`).forEach(btn => {
-        const card = btn.closest(cardSelector);
-        const body = card.querySelector(bodySelector);
-        const id   = card.dataset.id;
-        const collapsed = localStorage.getItem(storagePrefix + id) === "true";
-        if (collapsed) { body.style.display = "none"; btn.textContent = "Expand"; }
-        btn.addEventListener("click", () => {
-          const isHidden = body.style.display === "none";
-          body.style.display = isHidden ? "block" : "none";
-          btn.textContent = isHidden ? "Collapse" : "Expand";
-          localStorage.setItem(storagePrefix + id, (!isHidden).toString());
-        });
-      });
-    }
-    setupCollapse(".node-card", ".node-body", ".toggle-node",   "collapsed-node-");
-    setupCollapse(".ending-card", ".ending-body", ".toggle-ending", "collapsed-ending-");
-
-    // Collapse/Expand all
-    document.querySelector(".collapse-all-nodes").addEventListener("click", () => {
-      document.querySelectorAll(".node-card .node-body").forEach(b => b.style.display = "none");
-      document.querySelectorAll(".node-card .toggle-node").forEach(b => b.textContent = "Expand");
-    });
-    document.querySelector(".expand-all-nodes").addEventListener("click", () => {
-      document.querySelectorAll(".node-card .node-body").forEach(b => b.style.display = "block");
-      document.querySelectorAll(".node-card .toggle-node").forEach(b => b.textContent = "Collapse");
-    });
-    document.querySelector(".collapse-all-endings").addEventListener("click", () => {
-      document.querySelectorAll(".ending-card .ending-body").forEach(b => b.style.display = "none");
-      document.querySelectorAll(".ending-card .toggle-ending").forEach(b => b.textContent = "Expand");
-    });
-    document.querySelector(".expand-all-endings").addEventListener("click", () => {
-      document.querySelectorAll(".ending-card .ending-body").forEach(b => b.style.display = "block");
-      document.querySelectorAll(".ending-card .toggle-ending").forEach(b => b.textContent = "Collapse");
-    });
-
-    // Drag reorder
-    new Sortable(document.getElementById("nodes-list"), {
-      animation: 150,
-      handle: ".node-card,.divider-card",
-      onEnd: function (evt) {
-        const idsInOrder = Array.from(document.querySelectorAll("#nodes-list > div"))
-          .map(el => el.dataset.id);
-        fetch("/admin/stories/<%= story._id %>/nodes/reorder", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idsInOrder })
-        });
-      }
-    });
-    new Sortable(document.getElementById("endings-list"), {
-      animation: 150,
-      handle: ".ending-card",
-      onEnd: function (evt) {
-        const idsInOrder = Array.from(document.querySelectorAll("#endings-list > div"))
-          .map(el => el.dataset.id);
-        fetch("/admin/stories/<%= story._id %>/endings/reorder", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idsInOrder })
-        });
-      }
-    });
-
-    // Search filter
-    function setupSearch(inputId, listSelector, cardSelector){
-      document.getElementById(inputId).addEventListener("input", e => {
-        const q = e.target.value.toLowerCase();
-        document.querySelectorAll(listSelector+" "+cardSelector).forEach(card=>{
-          card.style.display = card.innerText.toLowerCase().includes(q) ? "" : "none";
-        });
-      });
-    }
-
     (function () {
-    // Keep scroll across reloads for this specific story
-    const KEY = "storyEditorScroll:<%= story._id %>";
-    // Let us control it (so the browser doesn't jump)
-    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      const storyId = "<%= story._id %>";
+      const storyScript = document.getElementById("story-data");
+      let storyData = JSON.parse(storyScript.textContent || "{}");
 
-    // Save position right before leaving this page
-    window.addEventListener("beforeunload", () => {
-      localStorage.setItem(KEY, String(window.scrollY));
-    });
+      const mapViewport = document.getElementById("mapViewport");
+      const mapCanvas = document.getElementById("mapCanvas");
+      const linkLayer = document.getElementById("linkLayer");
+      const elementIndex = new Map();
+      let selected = null;
+      let dragInitialized = false;
+      let drawFrame = null;
 
-    // Restore it when we come back
-    window.addEventListener("DOMContentLoaded", () => {
-      const y = parseInt(localStorage.getItem(KEY) || "0", 10);
-      if (!Number.isNaN(y)) window.scrollTo(0, y);
-    });
+      const storyForm = document.getElementById("story-form");
+      const startNodeSelect = document.getElementById("story-start-node");
+      const nodeForm = document.getElementById("node-form");
+      const endingForm = document.getElementById("ending-form");
+      const dividerForm = document.getElementById("divider-form");
+      const choiceList = document.getElementById("choice-list");
+      const choiceAddForm = document.getElementById("choice-add-form");
+      const nodeDeleteBtn = document.getElementById("node-delete");
+      const endingDeleteBtn = document.getElementById("ending-delete");
+      const dividerDeleteBtn = document.getElementById("divider-delete");
 
-    // If user clicks Back to Stories, clear the saved position
-    document.querySelectorAll('a[href="/admin/stories"]').forEach(a => {
-      a.addEventListener("click", () => localStorage.removeItem(KEY));
-    });
-  })();
+      const inspectorPanels = {
+        empty: document.querySelector('[data-panel="empty"]'),
+        node: document.querySelector('[data-panel="node"]'),
+        ending: document.querySelector('[data-panel="ending"]'),
+        divider: document.querySelector('[data-panel="divider"]'),
+      };
 
-    setupSearch("node-search", "#nodes-list", ".node-card,.divider-card");
-    setupSearch("ending-search", "#endings-list", ".ending-card");
+      const postJSON = async (url, payload = {}) => {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          try {
+            const errorJson = JSON.parse(text);
+            throw new Error(errorJson.error || "Request failed");
+          } catch {
+            throw new Error(text || "Request failed");
+          }
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || "Request failed");
+        }
+        return data;
+      };
+
+      const handleError = (err) => {
+        console.error(err);
+        alert(err.message || "Something went wrong. Please try again.");
+      };
+
+      const ensurePositions = (story) => {
+        story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
+        story.endings = Array.isArray(story.endings) ? story.endings : [];
+        const spacingX = 240;
+        const spacingY = 200;
+        story.nodes.forEach((node, idx) => {
+          if (!node.position || typeof node.position.x !== "number" || typeof node.position.y !== "number") {
+            node.position = {
+              x: 160 + (idx % 5) * spacingX,
+              y: 160 + Math.floor(idx / 5) * spacingY,
+            };
+          }
+        });
+        const nodeRows = Math.max(1, Math.ceil(story.nodes.length / 5));
+        story.endings.forEach((ending, idx) => {
+          if (!ending.position || typeof ending.position.x !== "number" || typeof ending.position.y !== "number") {
+            ending.position = {
+              x: 160 + (idx % 4) * spacingX,
+              y: 160 + (nodeRows + 1 + Math.floor(idx / 4)) * spacingY,
+            };
+          }
+        });
+      };
+
+      const getNodeById = (id) => storyData.nodes.find((n) => n._id === id);
+      const getEndingById = (id) => storyData.endings.find((e) => e._id === id);
+      const getEntity = (type, id) => {
+        if (!id) return null;
+        if (type === "node" || type === "divider") {
+          return storyData.nodes.find((n) => n._id === id);
+        }
+        if (type === "ending") {
+          return getEndingById(id);
+        }
+        return null;
+      };
+
+      const showPanel = (type) => {
+        Object.entries(inspectorPanels).forEach(([panelType, el]) => {
+          el.classList.toggle("hidden", panelType !== type);
+        });
+      };
+
+      const scheduleDrawLinks = () => {
+        if (drawFrame) return;
+        drawFrame = requestAnimationFrame(() => {
+          drawFrame = null;
+          drawLinks();
+        });
+      };
+
+      const drawLinks = () => {
+        const width = parseFloat(mapCanvas.style.width) || 2400;
+        const height = parseFloat(mapCanvas.style.height) || 1600;
+        linkLayer.setAttribute("width", width);
+        linkLayer.setAttribute("height", height);
+        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        linkLayer.innerHTML = "";
+
+        const frag = document.createDocumentFragment();
+        storyData.nodes.forEach((node) => {
+          if (node.type !== "node") return;
+          const fromEntry = elementIndex.get(node._id);
+          if (!fromEntry) return;
+
+          node.choices.forEach((choice) => {
+            const targetEntry = elementIndex.get(choice.nextNodeId);
+            if (!targetEntry) return;
+            const fromEl = fromEntry.element;
+            const toEl = targetEntry.element;
+            const fx = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+            const fy = fromEl.offsetTop + fromEl.offsetHeight / 2;
+            const tx = toEl.offsetLeft + toEl.offsetWidth / 2;
+            const ty = toEl.offsetTop + toEl.offsetHeight / 2;
+            const midX = (fx + tx) / 2;
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", `M${fx},${fy} C${midX},${fy} ${midX},${ty} ${tx},${ty}`);
+            path.classList.add("link");
+            if (targetEntry.type === "ending") {
+              path.classList.add("to-ending");
+            }
+            frag.appendChild(path);
+          });
+        });
+        linkLayer.appendChild(frag);
+      };
+
+      const renderMap = () => {
+        elementIndex.clear();
+        mapCanvas.innerHTML = "";
+
+        const entities = [...storyData.nodes, ...storyData.endings];
+        let maxX = 800;
+        let maxY = 600;
+        entities.forEach((entity) => {
+          if (!entity.position) return;
+          maxX = Math.max(maxX, entity.position.x + 320);
+          maxY = Math.max(maxY, entity.position.y + 260);
+        });
+        const width = Math.max(1800, maxX + 120);
+        const height = Math.max(1200, maxY + 120);
+        mapCanvas.style.width = `${width}px`;
+        mapCanvas.style.height = `${height}px`;
+        linkLayer.setAttribute("width", width);
+        linkLayer.setAttribute("height", height);
+        linkLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+        const createNodeElement = (entity, type) => {
+          const el = document.createElement("div");
+          el.className = `map-node ${type}`;
+          el.dataset.id = entity._id;
+          el.dataset.entityType = type;
+          el.dataset.x = entity.position?.x ?? 0;
+          el.dataset.y = entity.position?.y ?? 0;
+          el.style.left = `${entity.position?.x ?? 0}px`;
+          el.style.top = `${entity.position?.y ?? 0}px`;
+
+          const title = document.createElement("div");
+          title.className = "node-title";
+          const titleText = document.createElement("span");
+          if (type === "divider") {
+            titleText.textContent = entity.label || entity._id;
+          } else if (type === "ending") {
+            titleText.textContent = entity.label ? `${entity._id} — ${entity.label}` : entity._id;
+          } else {
+            titleText.textContent = entity._id;
+          }
+          title.appendChild(titleText);
+
+          if (type === "ending") {
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = entity.type || "ending";
+            title.appendChild(badge);
+          }
+
+          el.appendChild(title);
+
+          if (type === "node") {
+            const snippet = document.createElement("div");
+            snippet.className = "node-snippet";
+            snippet.textContent = (entity.text || "").replace(/\s+/g, " ").trim().slice(0, 140);
+            el.appendChild(snippet);
+
+            const meta = document.createElement("div");
+            meta.className = "node-meta";
+            const choiceCount = document.createElement("span");
+            choiceCount.textContent = `${entity.choices.length} choice${entity.choices.length === 1 ? "" : "s"}`;
+            meta.appendChild(choiceCount);
+            if (entity.image) {
+              const imageBadge = document.createElement("span");
+              imageBadge.className = "badge";
+              imageBadge.textContent = "Image";
+              meta.appendChild(imageBadge);
+            }
+            el.appendChild(meta);
+          }
+
+          if (type === "divider") {
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = entity.color || "divider";
+            el.appendChild(badge);
+          }
+
+          el.addEventListener("click", (event) => {
+            event.stopPropagation();
+            if (type === "divider") {
+              selectEntity("divider", entity._id, { center: false });
+            } else if (type === "ending") {
+              selectEntity("ending", entity._id, { center: false });
+            } else {
+              selectEntity("node", entity._id, { center: false });
+            }
+          });
+
+          elementIndex.set(entity._id, { element: el, type });
+          mapCanvas.appendChild(el);
+          return el;
+        };
+
+        storyData.nodes.forEach((node) => {
+          const type = node.type === "divider" ? "divider" : "node";
+          const el = createNodeElement(node, type);
+          if (storyData.startNodeId && storyData.startNodeId === node._id) {
+            el.classList.add("start-node");
+          }
+          if (type === "divider") {
+            el.classList.remove("draggable");
+            el.classList.add("draggable");
+          } else {
+            el.classList.add("draggable");
+          }
+        });
+
+        storyData.endings.forEach((ending) => {
+          const el = createNodeElement(ending, "ending");
+          el.classList.add("draggable");
+        });
+
+        highlightSelection();
+        drawLinks();
+        initDrag();
+      };
+
+      const highlightSelection = () => {
+        mapCanvas.querySelectorAll(".map-node").forEach((el) => {
+          el.classList.remove("selected");
+        });
+        if (!selected) return;
+        const entry = elementIndex.get(selected.id);
+        if (entry) {
+          entry.element.classList.add("selected");
+        }
+      };
+
+      const centerOnSelected = () => {
+        if (!selected) return;
+        const entry = elementIndex.get(selected.id);
+        if (!entry) return;
+        const el = entry.element;
+        const x = el.offsetLeft + el.offsetWidth / 2 - mapViewport.clientWidth / 2;
+        const y = el.offsetTop + el.offsetHeight / 2 - mapViewport.clientHeight / 2;
+        mapViewport.scrollTo({
+          left: Math.max(x, 0),
+          top: Math.max(y, 0),
+          behavior: "smooth",
+        });
+      };
+
+      const refreshStoryForm = () => {
+        storyForm.elements.title.value = storyData.title || "";
+        storyForm.elements.status.value = storyData.status || "coming_soon";
+        storyForm.elements.coverImage.value = storyData.coverImage || "";
+        storyForm.elements.notes.value = storyData.notes || "";
+        storyForm.elements.description.value = storyData.description || "";
+
+        startNodeSelect.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "-- Select --";
+        startNodeSelect.appendChild(placeholder);
+        storyData.nodes
+          .filter((n) => n.type !== "divider")
+          .forEach((node) => {
+            const option = document.createElement("option");
+            option.value = node._id;
+            option.textContent = node._id;
+            if (storyData.startNodeId === node._id) {
+              option.selected = true;
+            }
+            startNodeSelect.appendChild(option);
+          });
+      };
+
+      const populateDestinationSelect = (selectEl, selectedValue) => {
+        selectEl.innerHTML = "";
+        storyData.nodes
+          .filter((n) => n.type !== "divider")
+          .forEach((node) => {
+            const opt = document.createElement("option");
+            opt.value = node._id;
+            opt.textContent = node._id;
+            if (node._id === selectedValue) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+        storyData.endings.forEach((ending) => {
+          const opt = document.createElement("option");
+          opt.value = ending._id;
+          opt.textContent = ending.label
+            ? `Ending: ${ending._id} — ${ending.label}`
+            : `Ending: ${ending._id}`;
+          if (ending._id === selectedValue) opt.selected = true;
+          selectEl.appendChild(opt);
+        });
+      };
+
+      const renderChoices = (node) => {
+        choiceList.innerHTML = "";
+        if (!node) return;
+        const choices = Array.isArray(node.choices) ? node.choices : [];
+        choices.forEach((choice) => {
+          const form = document.createElement("form");
+          form.className = "choice-item";
+
+          const labelInput = document.createElement("input");
+          labelInput.type = "text";
+          labelInput.name = "label";
+          labelInput.value = choice.label || "";
+          form.appendChild(labelInput);
+
+          const select = document.createElement("select");
+          select.name = "nextNodeId";
+          populateDestinationSelect(select, choice.nextNodeId);
+          form.appendChild(select);
+
+          const actions = document.createElement("div");
+          actions.className = "choice-actions";
+
+          const saveBtn = document.createElement("button");
+          saveBtn.type = "submit";
+          saveBtn.className = "btn small";
+          saveBtn.textContent = "Save";
+          actions.appendChild(saveBtn);
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.type = "button";
+          deleteBtn.className = "btn small danger";
+          deleteBtn.textContent = "Delete";
+          actions.appendChild(deleteBtn);
+
+          form.appendChild(actions);
+          choiceList.appendChild(form);
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const payload = {
+              label: labelInput.value,
+              nextNodeId: select.value,
+            };
+            postJSON(
+              `/admin/stories/${storyId}/nodes/${encodeURIComponent(
+                node._id
+              )}/choices/${encodeURIComponent(choice._id)}/update-inline`,
+              payload
+            )
+              .then((data) => {
+                selected = { type: "node", id: node._id };
+                setStoryData(data.story);
+              })
+              .catch(handleError);
+          });
+
+          deleteBtn.addEventListener("click", () => {
+            if (!confirm("Delete this choice?")) return;
+            postJSON(
+              `/admin/stories/${storyId}/nodes/${encodeURIComponent(
+                node._id
+              )}/choices/${encodeURIComponent(choice._id)}/delete`
+            )
+              .then((data) => {
+                selected = { type: "node", id: node._id };
+                setStoryData(data.story);
+              })
+              .catch(handleError);
+          });
+        });
+
+        choiceAddForm.dataset.nodeId = node._id;
+        choiceAddForm.reset();
+        populateDestinationSelect(choiceAddForm.elements.nextNodeId, null);
+      };
+
+      const fillNodeForm = (node) => {
+        if (!node) return;
+        nodeForm.dataset.originalId = node._id;
+        nodeForm.elements._id.value = node._id;
+        nodeForm.elements.image.value = node.image || "";
+        nodeForm.elements.notes.value = node.notes || "";
+        nodeForm.elements.choiceNotes.value = node.choiceNotes || "";
+        nodeForm.elements.text.value = node.text || "";
+        renderChoices(node);
+        showPanel("node");
+      };
+
+      const fillEndingForm = (ending) => {
+        if (!ending) return;
+        endingForm.dataset.originalId = ending._id;
+        endingForm.elements._id.value = ending._id;
+        endingForm.elements.label.value = ending.label || "";
+        endingForm.elements.type.value = ending.type || "other";
+        endingForm.elements.image.value = ending.image || "";
+        endingForm.elements.notes.value = ending.notes || "";
+        endingForm.elements.text.value = ending.text || "";
+        showPanel("ending");
+      };
+
+      const fillDividerForm = (divider) => {
+        if (!divider) return;
+        dividerForm.dataset.originalId = divider._id;
+        dividerForm.elements.label.value = divider.label || "";
+        dividerForm.elements.color.value = divider.color || "gray";
+        showPanel("divider");
+      };
+
+      const refreshSelection = () => {
+        if (!selected) {
+          showPanel("empty");
+          highlightSelection();
+          return;
+        }
+        const entity = getEntity(selected.type, selected.id);
+        if (!entity) {
+          selected = null;
+          showPanel("empty");
+          highlightSelection();
+          return;
+        }
+        if (selected.type === "node") {
+          fillNodeForm(entity);
+        } else if (selected.type === "divider") {
+          fillDividerForm(entity);
+        } else if (selected.type === "ending") {
+          fillEndingForm(entity);
+        }
+        highlightSelection();
+      };
+
+      const setStoryData = (newStory) => {
+        storyData = newStory;
+        ensurePositions(storyData);
+        renderMap();
+        refreshStoryForm();
+        refreshSelection();
+      };
+
+      const selectEntity = (type, id, { center = false } = {}) => {
+        selected = { type, id };
+        refreshSelection();
+        if (center) {
+          centerOnSelected();
+        }
+      };
+
+      const initDrag = () => {
+        if (dragInitialized) return;
+        dragInitialized = true;
+        interact(".map-node.draggable").draggable({
+          listeners: {
+            move(event) {
+              const target = event.target;
+              const x = (parseFloat(target.dataset.x) || 0) + event.dx;
+              const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+              target.dataset.x = x;
+              target.dataset.y = y;
+              target.style.left = `${x}px`;
+              target.style.top = `${y}px`;
+              scheduleDrawLinks();
+            },
+            end(event) {
+              const target = event.target;
+              const id = target.dataset.id;
+              const type = target.dataset.entityType || "node";
+              const x = parseFloat(target.dataset.x) || 0;
+              const y = parseFloat(target.dataset.y) || 0;
+              if (!id) return;
+              const url =
+                type === "ending"
+                  ? `/admin/stories/${storyId}/endings/${encodeURIComponent(id)}/position`
+                  : `/admin/stories/${storyId}/nodes/${encodeURIComponent(id)}/position`;
+              postJSON(url, { x, y })
+                .then((data) => {
+                  selected = { type: type === "ending" ? "ending" : type === "divider" ? "divider" : "node", id };
+                  setStoryData(data.story);
+                })
+                .catch(handleError);
+            },
+          },
+          inertia: false,
+        });
+      };
+
+      storyForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const payload = {
+          title: storyForm.elements.title.value,
+          status: storyForm.elements.status.value,
+          coverImage: storyForm.elements.coverImage.value,
+          notes: storyForm.elements.notes.value,
+          description: storyForm.elements.description.value,
+          startNodeId: startNodeSelect.value,
+        };
+        postJSON(`/admin/stories/${storyId}/update-inline`, payload)
+          .then((data) => {
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      nodeForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const originalId = nodeForm.dataset.originalId;
+        if (!originalId) return;
+        const payload = {
+          _id: nodeForm.elements._id.value,
+          image: nodeForm.elements.image.value,
+          notes: nodeForm.elements.notes.value,
+          choiceNotes: nodeForm.elements.choiceNotes.value,
+          text: nodeForm.elements.text.value,
+        };
+        postJSON(
+          `/admin/stories/${storyId}/nodes/${encodeURIComponent(originalId)}/update-inline`,
+          payload
+        )
+          .then((data) => {
+            selected = { type: "node", id: payload._id };
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      endingForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const originalId = endingForm.dataset.originalId;
+        if (!originalId) return;
+        const payload = {
+          _id: endingForm.elements._id.value,
+          label: endingForm.elements.label.value,
+          type: endingForm.elements.type.value,
+          image: endingForm.elements.image.value,
+          notes: endingForm.elements.notes.value,
+          text: endingForm.elements.text.value,
+        };
+        postJSON(
+          `/admin/stories/${storyId}/endings/${encodeURIComponent(originalId)}/update-inline`,
+          payload
+        )
+          .then((data) => {
+            selected = { type: "ending", id: payload._id };
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      dividerForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const originalId = dividerForm.dataset.originalId;
+        if (!originalId) return;
+        const payload = {
+          label: dividerForm.elements.label.value,
+          color: dividerForm.elements.color.value,
+        };
+        postJSON(
+          `/admin/stories/${storyId}/nodes/${encodeURIComponent(originalId)}/update-divider`,
+          payload
+        )
+          .then((data) => {
+            selected = { type: "divider", id: originalId };
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      choiceAddForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const nodeId = choiceAddForm.dataset.nodeId;
+        if (!nodeId) return;
+        const payload = {
+          label: choiceAddForm.elements.label.value,
+          nextNodeId: choiceAddForm.elements.nextNodeId.value,
+        };
+        postJSON(
+          `/admin/stories/${storyId}/nodes/${encodeURIComponent(nodeId)}/choices/add-inline`,
+          payload
+        )
+          .then((data) => {
+            choiceAddForm.reset();
+            selected = { type: "node", id: nodeId };
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      nodeDeleteBtn.addEventListener("click", () => {
+        if (!selected || selected.type !== "node") return;
+        if (!confirm("Delete this passage?")) return;
+        postJSON(
+          `/admin/stories/${storyId}/nodes/${encodeURIComponent(selected.id)}/delete`
+        )
+          .then((data) => {
+            selected = null;
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      endingDeleteBtn.addEventListener("click", () => {
+        if (!selected || selected.type !== "ending") return;
+        if (!confirm("Delete this ending?")) return;
+        postJSON(
+          `/admin/stories/${storyId}/endings/${encodeURIComponent(selected.id)}/delete`
+        )
+          .then((data) => {
+            selected = null;
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      dividerDeleteBtn.addEventListener("click", () => {
+        if (!selected || selected.type !== "divider") return;
+        if (!confirm("Delete this divider?")) return;
+        postJSON(
+          `/admin/stories/${storyId}/nodes/${encodeURIComponent(selected.id)}/delete-divider`
+        )
+          .then((data) => {
+            selected = null;
+            setStoryData(data.story);
+          })
+          .catch(handleError);
+      });
+
+      document.getElementById("add-node-btn").addEventListener("click", () => {
+        const position = {
+          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+          y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+        };
+        postJSON(`/admin/stories/${storyId}/nodes/add`, { position })
+          .then((data) => {
+            const newNode = data.story.nodes && data.story.nodes[0];
+            if (newNode) {
+              selected = { type: newNode.type === "divider" ? "divider" : "node", id: newNode._id };
+            }
+            setStoryData(data.story);
+            if (newNode) centerOnSelected();
+          })
+          .catch(handleError);
+      });
+
+      document.getElementById("add-divider-btn").addEventListener("click", () => {
+        const position = {
+          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+          y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+        };
+        postJSON(`/admin/stories/${storyId}/nodes/add-divider`, { position })
+          .then((data) => {
+            const newDivider = data.story.nodes && data.story.nodes[0];
+            if (newDivider) {
+              selected = { type: "divider", id: newDivider._id };
+            }
+            setStoryData(data.story);
+            if (newDivider) centerOnSelected();
+          })
+          .catch(handleError);
+      });
+
+      document.getElementById("add-ending-btn").addEventListener("click", () => {
+        const position = {
+          x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
+          y: mapViewport.scrollTop + mapViewport.clientHeight / 2,
+        };
+        postJSON(`/admin/stories/${storyId}/endings/add`, { position })
+          .then((data) => {
+            const newEnding = data.story.endings && data.story.endings[0];
+            if (newEnding) {
+              selected = { type: "ending", id: newEnding._id };
+            }
+            setStoryData(data.story);
+            if (newEnding) centerOnSelected();
+          })
+          .catch(handleError);
+      });
+
+      document.getElementById("center-selection-btn").addEventListener("click", centerOnSelected);
+
+      mapViewport.addEventListener("click", () => {
+        selected = null;
+        refreshSelection();
+      });
+
+      ensurePositions(storyData);
+      setStoryData(storyData);
+    })();
   </script>
 </body>
 </html>
