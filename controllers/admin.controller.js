@@ -6,6 +6,211 @@ const path = require("path");
 const { randomUUID } = require("node:crypto"); // built-in UUID
 const { updateUserMedals } = require("../utils/updateMedals");
 const { v2: cloudinary } = require("cloudinary");
+const STORY_CATEGORIES = require("../utils/storyCategories");
+
+const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
+const ALLOWED_STORY_STATUSES = new Set(["public", "coming_soon", "invisible"]);
+
+const STORY_SEED_EXAMPLE = JSON.stringify(
+  {
+    title: "The Lantern Path",
+    description: "A short mystery that guides readers through an enchanted forest.",
+    startNodeId: "start",
+    nodes: [
+      {
+        id: "start",
+        text: "You arrive at the forest edge where pale lanterns hover above the moss.",
+        choices: [
+          { label: "Follow the lanterns", next: "clearing" },
+          { label: "Turn back", next: "ending_lost" },
+        ],
+      },
+      {
+        id: "clearing",
+        text: "A moonlit clearing opens up, revealing an ancient stone altar.",
+        choices: [{ label: "Light the final lantern", next: "ending_true" }],
+      },
+    ],
+    endings: [
+      {
+        id: "ending_true",
+        label: "Guided Home",
+        type: "true",
+        text: "The spirits guide you safely back with newfound wisdom.",
+      },
+      {
+        id: "ending_lost",
+        label: "Lost to the Dark",
+        type: "death",
+        text: "You disappear into the fog, never to be seen again.",
+      },
+    ],
+  },
+  null,
+  2
+);
+
+const buildStorySeedFromText = (rawText) => {
+  if (typeof rawText !== "string" || !rawText.trim()) {
+    return { error: "Enter the story seed using the required JSON format." };
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(rawText);
+  } catch (err) {
+    return {
+      error: "The story seed must be valid JSON. Copy the example format and adjust it for your story.",
+    };
+  }
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { error: "The story seed must be a JSON object." };
+  }
+
+  const title = typeof payload.title === "string" ? payload.title.trim() : "";
+  if (!title) {
+    return { error: 'Include a non-empty "title" string.' };
+  }
+
+  const description =
+    typeof payload.description === "string" ? payload.description.trim() : "";
+
+  const nodesInput = Array.isArray(payload.nodes) ? payload.nodes : [];
+  if (nodesInput.length === 0) {
+    return { error: 'Provide at least one node in the "nodes" array.' };
+  }
+
+  const nodeIds = new Set();
+  const nodes = [];
+  for (let idx = 0; idx < nodesInput.length; idx++) {
+    const node = nodesInput[idx];
+    if (!node || typeof node !== "object" || Array.isArray(node)) {
+      return { error: `Node #${idx + 1} must be an object.` };
+    }
+
+    const id = typeof node.id === "string" ? node.id.trim() : "";
+    if (!id) {
+      return { error: `Node #${idx + 1} is missing an "id".` };
+    }
+    if (nodeIds.has(id)) {
+      return { error: `Duplicate node id "${id}" found.` };
+    }
+    nodeIds.add(id);
+
+    const text = typeof node.text === "string" ? node.text.trim() : "";
+    if (!text) {
+      return { error: `Node "${id}" requires a "text" value.` };
+    }
+
+    const choicesInput = Array.isArray(node.choices) ? node.choices : [];
+    const choices = [];
+    for (let cIdx = 0; cIdx < choicesInput.length; cIdx++) {
+      const choice = choicesInput[cIdx];
+      if (!choice || typeof choice !== "object" || Array.isArray(choice)) {
+        return { error: `Choice #${cIdx + 1} on node "${id}" must be an object.` };
+      }
+
+      const label =
+        typeof choice.label === "string" ? choice.label.trim() : "";
+      const next = typeof choice.next === "string" ? choice.next.trim() : "";
+      if (!label) {
+        return { error: `Choice #${cIdx + 1} on node "${id}" needs a "label".` };
+      }
+      if (!next) {
+        return { error: `Choice "${label}" on node "${id}" needs a "next" id.` };
+      }
+
+      choices.push({ label, nextNodeId: next });
+    }
+
+    nodes.push({
+      _id: id,
+      text,
+      choices,
+    });
+  }
+
+  const endingsInput = Array.isArray(payload.endings) ? payload.endings : [];
+  if (endingsInput.length === 0) {
+    return { error: 'Provide at least one ending in the "endings" array.' };
+  }
+
+  const endingIds = new Set();
+  const endings = [];
+  for (let idx = 0; idx < endingsInput.length; idx++) {
+    const ending = endingsInput[idx];
+    if (!ending || typeof ending !== "object" || Array.isArray(ending)) {
+      return { error: `Ending #${idx + 1} must be an object.` };
+    }
+
+    const id = typeof ending.id === "string" ? ending.id.trim() : "";
+    if (!id) {
+      return { error: `Ending #${idx + 1} requires an "id".` };
+    }
+    if (endingIds.has(id)) {
+      return { error: `Duplicate ending id "${id}" found.` };
+    }
+    endingIds.add(id);
+
+    const label = typeof ending.label === "string" ? ending.label.trim() : "";
+    if (!label) {
+      return { error: `Ending "${id}" requires a "label".` };
+    }
+
+    const typeRaw =
+      typeof ending.type === "string" ? ending.type.trim().toLowerCase() : "other";
+    if (!ALLOWED_ENDING_TYPES.has(typeRaw)) {
+      return {
+        error: `Ending "${id}" has an invalid type. Use one of: ${Array.from(
+          ALLOWED_ENDING_TYPES
+        ).join(", ")}.`,
+      };
+    }
+
+    const text = typeof ending.text === "string" ? ending.text.trim() : "";
+
+    endings.push({
+      _id: id,
+      label,
+      type: typeRaw,
+      text,
+    });
+  }
+
+  const requestedStart =
+    typeof payload.startNodeId === "string" ? payload.startNodeId.trim() : "";
+  const startNodeId = requestedStart || (nodes.length ? nodes[0]._id : null);
+  if (!startNodeId || !nodeIds.has(startNodeId)) {
+    return {
+      error: 'The "startNodeId" must match one of the node ids.',
+    };
+  }
+
+  return {
+    storyDoc: {
+      title,
+      description,
+      coverImage: null,
+      status: "invisible",
+      startNodeId,
+      categories: [],
+      nodes,
+      endings,
+    },
+  };
+};
+
+const normalizeStatus = (value, fallback = "invisible") => {
+  if (!value || typeof value !== "string") {
+    return fallback ?? null;
+  }
+  const lowered = value.trim().toLowerCase();
+  if (ALLOWED_STORY_STATUSES.has(lowered)) {
+    return lowered;
+  }
+  return fallback ?? null;
+};
 
 const wantsJSON = (req) => {
   const acceptHeader = req.headers.accept || "";
@@ -25,6 +230,21 @@ const respondWithStory = (req, res, story, redirectPath) => {
     });
   }
   return res.redirect(redirectPath);
+};
+
+const normalizeCategories = (input) => {
+  if (!input) return [];
+  const rawValues = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+    ? input.split(",")
+    : [];
+  const sanitized = rawValues
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const unique = Array.from(new Set(sanitized));
+  const allowed = new Set(STORY_CATEGORIES);
+  return unique.filter((cat) => allowed.has(cat));
 };
 
 const respondError = (req, res, statusCode, message) => {
@@ -244,24 +464,81 @@ exports.storiesList = async (req, res) => {
   }
 };
 
-exports.storyAddForm = (req, res) =>
-  res.render("admin/storyAdd", { title: "Add Story" });
-
-exports.storyAddPost = async (req, res) => {
+exports.storyQuickCreate = async (req, res) => {
   try {
-    const { title, description, coverImage, status } = req.body;
-    await Story.create({
+    const displayOrder = await Story.countDocuments();
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const title = `New Story ${randomSuffix}`;
+
+    const story = await Story.create({
       title,
-      description,
-      coverImage,
-      status,
+      description: "",
+      coverImage: null,
+      status: "invisible",
+      categories: [],
       nodes: [],
       endings: [],
+      displayOrder,
     });
-    res.redirect("/admin/stories");
+
+    res.redirect(`/admin/stories/${story._id}/edit`);
   } catch (err) {
     console.error(err);
     res.status(500).send("Error creating story");
+  }
+};
+
+exports.storySeedForm = (req, res) => {
+  res.render("admin/storySeed", {
+    title: "Story Seeds",
+    user: req.user,
+    seedExample: STORY_SEED_EXAMPLE,
+    formValue: "",
+    error: null,
+    success: null,
+  });
+};
+
+exports.storySeedCreate = async (req, res) => {
+  const seedText = req.body?.seedText || "";
+  const { storyDoc, error } = buildStorySeedFromText(seedText);
+
+  if (error) {
+    return res.status(400).render("admin/storySeed", {
+      title: "Story Seeds",
+      user: req.user,
+      seedExample: STORY_SEED_EXAMPLE,
+      formValue: seedText,
+      error,
+      success: null,
+    });
+  }
+
+  try {
+    const displayOrder = await Story.countDocuments();
+    const story = await Story.create({
+      ...storyDoc,
+      displayOrder,
+    });
+
+    return res.render("admin/storySeed", {
+      title: "Story Seeds",
+      user: req.user,
+      seedExample: STORY_SEED_EXAMPLE,
+      formValue: "",
+      error: null,
+      success: `Seed story "${story.title}" added successfully.`,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).render("admin/storySeed", {
+      title: "Story Seeds",
+      user: req.user,
+      seedExample: STORY_SEED_EXAMPLE,
+      formValue: seedText,
+      error: "We couldn't save that story. Please try again.",
+      success: null,
+    });
   }
 };
 
@@ -328,7 +605,11 @@ exports.storyEditForm = async (req, res) => {
 
     if (changed) await story.save();
 
-    res.render("admin/storyEditor", { title: "Story Editor", story });
+    res.render("admin/storyEditor", {
+      title: "Story Editor",
+      story,
+      categories: STORY_CATEGORIES,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error loading story");
@@ -337,14 +618,22 @@ exports.storyEditForm = async (req, res) => {
 
 exports.storyEditPost = async (req, res) => {
   try {
-    const { title, description, coverImage, status, startNodeId } = req.body;
-    await Story.findByIdAndUpdate(req.params.id, {
+    const { title, description, coverImage, status, startNodeId, categories } =
+      req.body;
+    const update = {
       title,
       description,
       coverImage,
-      status: (status || "coming_soon").toLowerCase(),
       startNodeId: startNodeId || null,
-    });
+      categories: normalizeCategories(categories),
+    };
+
+    const normalizedStatus = normalizeStatus(status, null);
+    if (normalizedStatus) {
+      update.status = normalizedStatus;
+    }
+
+    await Story.findByIdAndUpdate(req.params.id, update);
     res.redirect("/admin/stories");
   } catch (err) {
     console.error(err);
@@ -364,20 +653,32 @@ exports.storyDelete = async (req, res) => {
 
 exports.storyUpdateInline = async (req, res) => {
   try {
-    const { title, description, coverImage, status, startNodeId, notes } =
-      req.body;
-    const story = await Story.findByIdAndUpdate(
-      req.params.id,
-      {
-        title,
-        description,
-        coverImage,
-        status: (status || "coming_soon").toLowerCase(),
-        startNodeId: startNodeId || null,
-        notes: notes || "",
-      },
-      { new: true }
-    );
+    const {
+      title,
+      description,
+      coverImage,
+      status,
+      startNodeId,
+      notes,
+      categories,
+    } = req.body;
+    const update = {
+      title,
+      description,
+      coverImage,
+      startNodeId: startNodeId || null,
+      notes: notes || "",
+      categories: normalizeCategories(categories),
+    };
+
+    const normalizedStatus = normalizeStatus(status, null);
+    if (normalizedStatus) {
+      update.status = normalizedStatus;
+    }
+
+    const story = await Story.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+    });
     if (!story)
       return respondError(req, res, 404, "Story not found for update");
     return respondWithStory(
@@ -652,13 +953,21 @@ exports.storyEndingUpdatePosition = async (req, res) => {
 exports.nodeChoiceAddInline = async (req, res) => {
   try {
     const { label, nextNodeId } = req.body;
+    const locked = Boolean(req.body.locked);
+    const parsedCost = Number(req.body.unlockCost);
+    const unlockCost = Number.isFinite(parsedCost) ? Math.max(parsedCost, 0) : 0;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
     const node = story.nodes.find((n) => n._id === req.params.nodeId);
     if (!node) return respondError(req, res, 404, "Node not found");
 
-    node.choices.push({ label, nextNodeId });
+    node.choices.push({
+      label,
+      nextNodeId,
+      locked,
+      unlockCost: locked ? unlockCost : 0,
+    });
     await story.save();
     return respondWithStory(
       req,
@@ -675,6 +984,9 @@ exports.nodeChoiceAddInline = async (req, res) => {
 exports.nodeChoiceUpdateInline = async (req, res) => {
   try {
     const { label, nextNodeId } = req.body;
+    const locked = Boolean(req.body.locked);
+    const parsedCost = Number(req.body.unlockCost);
+    const unlockCost = Number.isFinite(parsedCost) ? Math.max(parsedCost, 0) : 0;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
@@ -686,6 +998,8 @@ exports.nodeChoiceUpdateInline = async (req, res) => {
 
     choice.label = label;
     choice.nextNodeId = nextNodeId;
+    choice.locked = locked;
+    choice.unlockCost = locked ? unlockCost : 0;
 
     await story.save();
     return respondWithStory(

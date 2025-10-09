@@ -15,16 +15,115 @@
 
       <p><%= node.text %></p>
 
+      <% if (feedback) { %>
+      <div class="notice notice--<%= feedback.type %>"><%= feedback.message %></div>
+      <% } %>
+
       <div class="choices">
-        <% node.choices.forEach(c => { const isEnding = story.endings.some(e =>
-        e._id === c.nextNodeId); const href = isEnding ?
-        `/u/play/${story._id}/ending/${c.nextNodeId}` :
-        `/u/play/${story._id}/${c.nextNodeId}`; %>
+        <% node.choices.forEach(function (c) { %>
+        <% const isEnding = story.endings.some(function (e) {
+             return e._id === c.nextNodeId;
+           });
+           const href = isEnding
+             ? `/u/play/${story._id}/ending/${c.nextNodeId}`
+             : `/u/play/${story._id}/${c.nextNodeId}`;
+           if (c.isLocked && !c.isUnlocked) {
+             const remaining = Math.max((c.unlockCost || 0) - (currency || 0), 0);
+             const disabled = currency < c.unlockCost;
+        %>
 
-        <a class="cta-button" href="<%= href %>"><%= c.label %></a>
+        <form
+          class="choice-unlock-form"
+          method="POST"
+          action="/u/story/<%= story._id %>/nodes/<%= node._id %>/choices/<%= c._id %>/unlock"
+        >
+          <button
+            type="submit"
+            class="cta-button choice-button locked"
+            <%= disabled ? 'disabled' : '' %>
+            aria-label="Unlock &ldquo;<%= c.label %>&rdquo; for <%= c.unlockCost %> gems"
+          >
+            <span class="choice-main">
+              <span class="choice-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zm-7-2a2 2 0 0 1 4 0v2h-4V7zm7 13H7v-9h10z"
+                  />
+                </svg>
+              </span>
+              <span class="choice-label"><%= c.label %></span>
+            </span>
+            <span class="choice-cost">
+              <span class="icon icon-gem" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M12 2 3 9l9 13 9-13-9-7zm0 3.2 3.9 3.3H8.1L12 5.2zm0 13.9-5.4-8.1h10.8L12 19.1z"
+                  />
+                </svg>
+              </span>
+              <span class="choice-cost-value"><%= c.unlockCost %></span>
+            </span>
+          </button>
+          <% if (disabled && c.unlockCost > 0) { %>
+          <p class="unlock-hint">You need <%= remaining %> more gems.</p>
+          <% } %>
+        </form>
 
-        <% }) %>
+        <% } else { %>
+        <a
+          class="cta-button choice-button <%= c.isLocked ? 'cta-button-unlocked' : '' %>"
+          href="<%= href %>"
+          aria-label="<%= c.isLocked ? 'Unlocked choice: ' + c.label : c.label %>"
+        >
+          <span class="choice-main">
+            <% if (c.isLocked) { %>
+            <span class="choice-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M17 9h-6V7a3 3 0 0 0-6 0v2h2V7a1 1 0 0 1 2 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zm0 11H7v-9h10z"
+                />
+              </svg>
+            </span>
+            <% } %>
+            <span class="choice-label"><%= c.label %></span>
+          </span>
+          <% if (c.isLocked && c.unlockCost > 0) { %>
+          <span class="choice-cost">
+            <span class="icon icon-gem" aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M12 2 3 9l9 13 9-13-9-7zm0 3.2 3.9 3.3H8.1L12 5.2zm0 13.9-5.4-8.1h10.8L12 19.1z"
+                />
+              </svg>
+            </span>
+            <span class="choice-cost-value"><%= c.unlockCost %></span>
+          </span>
+          <% } %>
+        </a>
+        <% } %>
+        <% }); %>
       </div>
+
+      <% if (hasLockedChoices) { %>
+      <div class="currency-readout" aria-live="polite">
+        <span class="icon icon-gem" aria-hidden="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              fill="currentColor"
+              d="M12 2 3 9l9 13 9-13-9-7zm0 3.2 3.9 3.3H8.1L12 5.2zm0 13.9-5.4-8.1h10.8L12 19.1z"
+            />
+          </svg>
+        </span>
+        <div class="currency-readout__content">
+          <span class="currency-readout__label">Your gems</span>
+          <strong class="currency-readout__value"><%= currency || 0 %></strong>
+        </div>
+      </div>
+      <% } %>
     </main>
 
     <%- include('../partials/footer') %>

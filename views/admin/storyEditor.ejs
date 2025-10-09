@@ -119,12 +119,43 @@
       color: #f5f5f5;
     }
 
-    textarea[name="notes"] {
-      min-height: 80px;
-    }
-
     textarea[name="description"] {
       min-height: 140px;
+    }
+
+    .field.field--tags {
+      gap: 0.65rem;
+    }
+
+    .tag-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .tag-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(26, 26, 26, 0.92);
+      font-size: 0.82rem;
+      letter-spacing: 0.01em;
+    }
+
+    .tag-option input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+
+    .tag-option span {
+      pointer-events: none;
+    }
+
+    .tag-empty {
+      font-size: 0.85rem;
+      color: #808080;
     }
 
     .story-details-panel .actions {
@@ -148,6 +179,21 @@
     .btn.small {
       padding: 0.35rem 0.85rem;
       font-size: 0.82rem;
+    }
+
+    .btn.icon-only {
+      padding: 0.35rem;
+      min-width: 2.25rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-weight: 600;
+    }
+
+    .btn.small.icon-only {
+      padding: 0.25rem 0.35rem;
+      font-size: 1.15rem;
     }
 
     .btn:hover {
@@ -202,6 +248,14 @@
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .map-zoom-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-right: 0.35rem;
     }
 
     .map-viewport {
@@ -233,6 +287,7 @@
       position: relative;
       min-width: 100%;
       min-height: 100%;
+      transform-origin: top left;
     }
 
     .map-links {
@@ -399,6 +454,19 @@
       stroke: rgba(255, 139, 92, 0.7);
     }
 
+    .link.locked {
+      stroke: rgba(250, 204, 21, 0.9);
+      stroke-width: 3.2;
+      stroke-dasharray: 6 4;
+    }
+
+    .link-lock-icon {
+      font-size: 1rem;
+      fill: rgba(250, 204, 21, 0.9);
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
+    }
+
     .entity-editor {
       position: fixed;
       right: 2rem;
@@ -484,12 +552,13 @@
 
     .choice-fields {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.45rem;
       background: rgba(17, 17, 17, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 10px;
       padding: 0.55rem 0.65rem;
+      align-items: end;
     }
 
     .choice-field {
@@ -518,6 +587,40 @@
       width: 100%;
     }
 
+    .choice-field--toggle {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .choice-field--toggle span {
+      margin: 0;
+    }
+
+    .choice-field--toggle input[type="checkbox"] {
+      width: auto;
+      accent-color: #facc15;
+      transform: scale(1.05);
+    }
+
+    .choice-field--label input {
+      max-width: 200px;
+    }
+
+    .choice-field--cost input {
+      text-align: right;
+      max-width: 120px;
+    }
+
+    .choice-field--cost {
+      justify-self: flex-start;
+    }
+
+    .choice-item.locked {
+      border-color: rgba(250, 204, 21, 0.35);
+      box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.12) inset;
+    }
+
     .choice-actions {
       display: flex;
       gap: 0.35rem;
@@ -532,6 +635,13 @@
 
     .choice-form .choice-fields {
       background: rgba(17, 17, 17, 0.7);
+    }
+
+    @media (max-width: 640px) {
+      .choice-field--label input,
+      .choice-field--cost input {
+        max-width: 100%;
+      }
     }
 
     .empty-state {
@@ -601,6 +711,7 @@
           <select name="status" id="story-status">
             <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
             <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
+            <option value="invisible" <%= story.status === 'invisible' ? 'selected' : '' %>>Invisible</option>
           </select>
         </label>
         <label class="field">
@@ -616,10 +727,27 @@
           <span>Cover Image</span>
           <select name="coverImage" id="story-cover-image"></select>
         </label>
-        <label class="field field--wide field--multiline">
-          <span>Author Notes (private)</span>
-          <textarea name="notes" rows="4"><%= story.notes || '' %></textarea>
-        </label>
+        <div class="field field--wide field--tags" data-categories>
+          <span>Categories</span>
+          <div class="tag-options">
+            <% const activeCategories = Array.isArray(story.categories) ? story.categories : []; %>
+            <% if (Array.isArray(categories) && categories.length) { %>
+              <% categories.forEach(function(cat) { %>
+                <label class="tag-option">
+                  <input
+                    type="checkbox"
+                    name="categories"
+                    value="<%= cat %>"
+                    <%= activeCategories.includes(cat) ? 'checked' : '' %>
+                  />
+                  <span><%= cat %></span>
+                </label>
+              <% }) %>
+            <% } else { %>
+              <span class="tag-empty">No categories configured.</span>
+            <% } %>
+          </div>
+        </div>
         <label class="field field--wide field--multiline">
           <span>Description (public)</span>
           <textarea name="description" rows="5"><%= story.description || '' %></textarea>
@@ -634,6 +762,14 @@
       <div class="map-controls">
         <p>Drag passages into place. Connections redraw automatically with arrows indicating their direction.</p>
         <div class="map-controls-right">
+          <div class="map-zoom-controls" role="group" aria-label="Zoom map view">
+            <button type="button" class="btn small ghost icon-only" id="map-zoom-out-btn" aria-label="Zoom out">
+              <span aria-hidden="true">&minus;</span>
+            </button>
+            <button type="button" class="btn small ghost icon-only" id="map-zoom-in-btn" aria-label="Zoom in">
+              <span aria-hidden="true">+</span>
+            </button>
+          </div>
           <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
           <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
           <button type="button" class="btn small ghost" id="center-selection-btn">Center Selection</button>
@@ -692,13 +828,21 @@
         <div id="choice-list"></div>
         <form id="choice-add-form" class="choice-form">
           <div class="choice-fields">
-            <label class="choice-field">
+            <label class="choice-field choice-field--label">
               <span>Label</span>
               <input type="text" name="label" placeholder="Choice label" required>
             </label>
             <label class="choice-field">
               <span>Next</span>
               <select name="nextNodeId" required></select>
+            </label>
+            <label class="choice-field choice-field--toggle">
+              <span>Locked</span>
+              <input type="checkbox" name="locked" data-lock-toggle>
+            </label>
+            <label class="choice-field choice-field--cost">
+              <span>Unlock Cost</span>
+              <input type="number" name="unlockCost" min="0" step="1" value="0" data-lock-cost>
             </label>
           </div>
           <div class="choice-actions">
@@ -718,6 +862,7 @@
             <option value="true">True</option>
             <option value="death">Death</option>
             <option value="other">Other</option>
+            <option value="secret">Secret</option>
           </select>
         </label>
         <label class="field">
@@ -753,6 +898,11 @@
       const addNodeBtn = document.getElementById("add-node-btn");
       const addEndingBtn = document.getElementById("add-ending-btn");
       const centerSelectionBtn = document.getElementById("center-selection-btn");
+      const zoomOutBtn = document.getElementById("map-zoom-out-btn");
+      const zoomInBtn = document.getElementById("map-zoom-in-btn");
+      const categoryCheckboxes = Array.from(
+        storyForm.querySelectorAll('input[name="categories"]')
+      );
 
       const entityEditor = document.getElementById("entityEditor");
       const editorTitle = document.getElementById("entityEditorTitle");
@@ -764,13 +914,37 @@
       const endingForm = document.getElementById("ending-form");
       const choiceList = document.getElementById("choice-list");
       const choiceAddForm = document.getElementById("choice-add-form");
+      const choiceAddLockToggle = choiceAddForm
+        ? choiceAddForm.querySelector("[data-lock-toggle]")
+        : null;
+      const choiceAddCostInput = choiceAddForm
+        ? choiceAddForm.querySelector("[data-lock-cost]")
+        : null;
       const choicesEmptyState = document.getElementById("choicesEmptyState");
+
+      const syncAddLockState = () => {
+        if (!choiceAddCostInput) return;
+        const locked = Boolean(choiceAddLockToggle?.checked);
+        choiceAddCostInput.disabled = !locked;
+        if (!locked) {
+          choiceAddCostInput.value = "0";
+        }
+      };
+      if (choiceAddLockToggle && choiceAddCostInput) {
+        syncAddLockState();
+        choiceAddLockToggle.addEventListener("change", syncAddLockState);
+      }
 
       const nodeEditorBlocks = entityEditor.querySelectorAll('[data-editor="node"]');
       const endingEditorBlocks = entityEditor.querySelectorAll('[data-editor="ending"]');
       const nodeColorSelect = nodeForm.elements.color;
 
       const elementIndex = new Map();
+      const MIN_MAP_SCALE = 0.6;
+      const MAX_MAP_SCALE = 1.8;
+      const MAP_SCALE_STEP = 0.2;
+
+      let mapScale = 1;
       let selected = null;
       let inspectorVisible = false;
       let drawFrame = null;
@@ -781,11 +955,48 @@
       let endingDirty = false;
       let selectionQueue = Promise.resolve();
 
+      const getViewportWidthInContent = (scale = mapScale) => {
+        if (!mapViewport) return 0;
+        const factor = scale > 0 ? scale : 1;
+        return mapViewport.clientWidth / factor;
+      };
+
+      const getViewportHeightInContent = (scale = mapScale) => {
+        if (!mapViewport) return 0;
+        const factor = scale > 0 ? scale : 1;
+        return mapViewport.clientHeight / factor;
+      };
+
+      const getViewportCenter = (scale = mapScale) => ({
+        x: mapViewport.scrollLeft + getViewportWidthInContent(scale) / 2,
+        y: mapViewport.scrollTop + getViewportHeightInContent(scale) / 2,
+      });
+
+      const applyMapScale = () => {
+        if (!mapCanvas) return;
+        mapCanvas.style.transform = `scale(${mapScale})`;
+      };
+
+      const updateZoomButtons = () => {
+        if (zoomOutBtn) {
+          zoomOutBtn.disabled = mapScale <= MIN_MAP_SCALE + 0.001;
+        }
+        if (zoomInBtn) {
+          zoomInBtn.disabled = mapScale >= MAX_MAP_SCALE - 0.001;
+        }
+      };
+
+      applyMapScale();
+      updateZoomButtons();
+
       const normalizeCollections = (story) => {
         story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
         story.nodes = story.nodes.filter((node) => node.type !== "divider");
         story.endings = Array.isArray(story.endings) ? story.endings : [];
         story.images = Array.isArray(story.images) ? story.images : [];
+        story.categories = Array.isArray(story.categories)
+          ? story.categories
+          : [];
       };
 
       const ensurePositions = (story) => {
@@ -928,10 +1139,16 @@
 
       const refreshStoryForm = () => {
         storyForm.elements.title.value = storyData.title || "";
-        storyForm.elements.status.value = storyData.status || "coming_soon";
+        storyForm.elements.status.value = storyData.status || "invisible";
         populateImageSelect(coverImageSelect, storyData.coverImage || "");
-        storyForm.elements.notes.value = storyData.notes || "";
         storyForm.elements.description.value = storyData.description || "";
+
+        const selectedCategories = Array.isArray(storyData.categories)
+          ? storyData.categories
+          : [];
+        categoryCheckboxes.forEach((checkbox) => {
+          checkbox.checked = selectedCategories.includes(checkbox.value);
+        });
 
         startNodeSelect.innerHTML = "";
         const placeholder = document.createElement("option");
@@ -978,12 +1195,15 @@
         node.choices.forEach((choice) => {
           const form = document.createElement("form");
           form.className = "choice-item";
+          if (choice.locked) {
+            form.classList.add("locked");
+          }
 
           const fields = document.createElement("div");
           fields.className = "choice-fields";
 
           const labelField = document.createElement("label");
-          labelField.className = "choice-field";
+          labelField.className = "choice-field choice-field--label";
           const labelSpan = document.createElement("span");
           labelSpan.textContent = "Label";
           const labelInput = document.createElement("input");
@@ -1003,8 +1223,34 @@
           selectField.appendChild(selectSpan);
           selectField.appendChild(select);
 
+          const lockedField = document.createElement("label");
+          lockedField.className = "choice-field choice-field--toggle";
+          const lockedSpan = document.createElement("span");
+          lockedSpan.textContent = "Locked";
+          const lockedInput = document.createElement("input");
+          lockedInput.type = "checkbox";
+          lockedInput.name = "locked";
+          lockedInput.checked = Boolean(choice.locked);
+          lockedField.appendChild(lockedSpan);
+          lockedField.appendChild(lockedInput);
+
+          const costField = document.createElement("label");
+          costField.className = "choice-field choice-field--cost";
+          const costSpan = document.createElement("span");
+          costSpan.textContent = "Unlock Cost";
+          const costInput = document.createElement("input");
+          costInput.type = "number";
+          costInput.name = "unlockCost";
+          costInput.min = "0";
+          costInput.step = "1";
+          costInput.value = Math.max(Number(choice.unlockCost) || 0, 0);
+          costField.appendChild(costSpan);
+          costField.appendChild(costInput);
+
           fields.appendChild(labelField);
           fields.appendChild(selectField);
+          fields.appendChild(lockedField);
+          fields.appendChild(costField);
           form.appendChild(fields);
 
           const actions = document.createElement("div");
@@ -1024,11 +1270,23 @@
 
           form.appendChild(actions);
 
+          const syncLockState = () => {
+            const isLocked = lockedInput.checked;
+            costInput.disabled = !isLocked;
+            form.classList.toggle("locked", isLocked);
+          };
+          syncLockState();
+          lockedInput.addEventListener("change", syncLockState);
+
           form.addEventListener("submit", (event) => {
             event.preventDefault();
             const payload = {
               label: labelInput.value,
               nextNodeId: select.value,
+              locked: lockedInput.checked,
+              unlockCost: lockedInput.checked
+                ? Math.max(Number(costInput.value) || 0, 0)
+                : 0,
             };
             queueTask(async () => {
               await flushPendingChanges(selected ? { ...selected } : null);
@@ -1271,8 +1529,10 @@
         const entry = elementIndex.get(selected.id);
         if (!entry) return;
         const el = entry.element;
-        const x = el.offsetLeft + el.offsetWidth / 2 - mapViewport.clientWidth / 2;
-        const y = el.offsetTop + el.offsetHeight / 2 - mapViewport.clientHeight / 2;
+        const viewportWidth = getViewportWidthInContent();
+        const viewportHeight = getViewportHeightInContent();
+        const x = el.offsetLeft + el.offsetWidth / 2 - viewportWidth / 2;
+        const y = el.offsetTop + el.offsetHeight / 2 - viewportHeight / 2;
         mapViewport.scrollTo({
           left: Math.max(x, 0),
           top: Math.max(y, 0),
@@ -1286,6 +1546,28 @@
           drawFrame = null;
           drawLinks();
         });
+      };
+
+      const changeMapScale = (delta) => {
+        if (!mapViewport) return;
+        const proposed = Math.round((mapScale + delta) * 100) / 100;
+        const nextScale = Math.min(
+          MAX_MAP_SCALE,
+          Math.max(MIN_MAP_SCALE, proposed)
+        );
+        if (nextScale === mapScale) return;
+        const previousScale = mapScale;
+        const previousCenter = getViewportCenter(previousScale);
+        mapScale = nextScale;
+        applyMapScale();
+        updateZoomButtons();
+        const nextWidth = getViewportWidthInContent();
+        const nextHeight = getViewportHeightInContent();
+        mapViewport.scrollTo({
+          left: Math.max(previousCenter.x - nextWidth / 2, 0),
+          top: Math.max(previousCenter.y - nextHeight / 2, 0),
+        });
+        scheduleDrawLinks();
       };
 
       const drawLinks = () => {
@@ -1331,6 +1613,7 @@
             const tx = toEl.offsetLeft + toEl.offsetWidth / 2;
             const ty = toEl.offsetTop + toEl.offsetHeight / 2;
             const midX = (fx + tx) / 2;
+            const midY = (fy + ty) / 2;
             const path = document.createElementNS(ns, "path");
             path.setAttribute("d", `M${fx},${fy} C${midX},${fy} ${midX},${ty} ${tx},${ty}`);
             path.classList.add("link");
@@ -1340,7 +1623,20 @@
             } else {
               path.setAttribute("marker-end", "url(#link-arrow)");
             }
+            if (choice.locked) {
+              path.classList.add("locked");
+            }
             frag.appendChild(path);
+            if (choice.locked) {
+              const lockIcon = document.createElementNS(ns, "text");
+              lockIcon.setAttribute("x", midX);
+              lockIcon.setAttribute("y", midY);
+              lockIcon.setAttribute("text-anchor", "middle");
+              lockIcon.setAttribute("dominant-baseline", "middle");
+              lockIcon.classList.add("link-lock-icon");
+              lockIcon.textContent = "🔒";
+              frag.appendChild(lockIcon);
+            }
           });
         });
         linkLayer.appendChild(frag);
@@ -1470,6 +1766,7 @@
         highlightSelection();
         drawLinks();
         initDrag();
+        applyMapScale();
       };
 
       const setStoryData = (newStory) => {
@@ -1490,8 +1787,10 @@
           listeners: {
             move(event) {
               const target = event.target;
-              const x = (parseFloat(target.dataset.x) || 0) + event.dx;
-              const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+              const deltaX = event.dx / (mapScale || 1);
+              const deltaY = event.dy / (mapScale || 1);
+              const x = (parseFloat(target.dataset.x) || 0) + deltaX;
+              const y = (parseFloat(target.dataset.y) || 0) + deltaY;
               target.dataset.x = x;
               target.dataset.y = y;
               target.style.left = `${x}px`;
@@ -1537,9 +1836,12 @@
           title: storyForm.elements.title.value,
           status: storyForm.elements.status.value,
           coverImage: storyForm.elements.coverImage.value,
-          notes: storyForm.elements.notes.value,
+          notes: storyData.notes || "",
           description: storyForm.elements.description.value,
           startNodeId: startNodeSelect.value,
+          categories: categoryCheckboxes
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => checkbox.value),
         };
         postJSON(`/admin/stories/${storyId}/update-inline`, payload)
           .then((data) => {
@@ -1551,9 +1853,10 @@
       addNodeBtn.addEventListener("click", () => {
         queueTask(async () => {
           await flushPendingChanges(selected ? { ...selected } : null);
+          const center = getViewportCenter();
           const position = {
-            x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-            y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+            x: center.x - 110,
+            y: center.y - 80,
           };
           const data = await postJSON(`/admin/stories/${storyId}/nodes/add`, { position });
           const newNode = data.story.nodes && data.story.nodes[0];
@@ -1570,9 +1873,10 @@
       addEndingBtn.addEventListener("click", () => {
         queueTask(async () => {
           await flushPendingChanges(selected ? { ...selected } : null);
+          const center = getViewportCenter();
           const position = {
-            x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-            y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+            x: center.x - 110,
+            y: center.y - 80,
           };
           const data = await postJSON(`/admin/stories/${storyId}/endings/add`, { position });
           const newEnding = data.story.endings && data.story.endings[0];
@@ -1585,6 +1889,18 @@
           }
         });
       });
+
+      if (zoomOutBtn) {
+        zoomOutBtn.addEventListener("click", () => {
+          changeMapScale(-MAP_SCALE_STEP);
+        });
+      }
+
+      if (zoomInBtn) {
+        zoomInBtn.addEventListener("click", () => {
+          changeMapScale(MAP_SCALE_STEP);
+        });
+      }
 
       centerSelectionBtn.addEventListener("click", () => {
         centerOnSelected();
@@ -1635,6 +1951,10 @@
         const payload = {
           label: choiceAddForm.elements.label.value,
           nextNodeId: choiceAddForm.elements.nextNodeId.value,
+          locked: Boolean(choiceAddLockToggle?.checked),
+          unlockCost: Boolean(choiceAddLockToggle?.checked)
+            ? Math.max(Number(choiceAddCostInput?.value) || 0, 0)
+            : 0,
         };
         queueTask(async () => {
           await flushPendingChanges(selected ? { ...selected } : null);
@@ -1645,6 +1965,13 @@
           selected = { type: "node", id: nodeId };
           choiceAddForm.reset();
           populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+          if (choiceAddLockToggle) {
+            choiceAddLockToggle.checked = false;
+          }
+          if (choiceAddCostInput) {
+            choiceAddCostInput.value = "0";
+          }
+          syncAddLockState();
           setStoryData(data.story);
         });
       });
