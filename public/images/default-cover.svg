@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Default Story Cover</title>
+  <desc id="desc">Illustrated placeholder cover with mountains and stars</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="mountain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+    <linearGradient id="mountain2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3730a3" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="600" fill="url(#bg)" />
+  <g fill="#f1f5f9" opacity="0.85">
+    <circle cx="140" cy="120" r="3" />
+    <circle cx="220" cy="90" r="2" />
+    <circle cx="320" cy="150" r="2.5" />
+    <circle cx="420" cy="80" r="2" />
+    <circle cx="540" cy="130" r="3" />
+    <circle cx="660" cy="70" r="2.5" />
+    <circle cx="760" cy="140" r="3" />
+    <circle cx="880" cy="90" r="2" />
+  </g>
+  <path d="M0 460 L240 260 L420 420 L560 280 L760 440 L960 340 L960 600 L0 600 Z" fill="url(#mountain)" opacity="0.85" />
+  <path d="M0 520 L200 340 L420 520 L640 360 L820 520 L960 420 L960 600 L0 600 Z" fill="url(#mountain2)" opacity="0.95" />
+  <text x="50%" y="55%" font-family="'Cinzel', 'Georgia', serif" font-size="72" fill="#e0e7ff" text-anchor="middle" letter-spacing="4">Adventure Awaits</text>
+  <text x="50%" y="68%" font-family="'Inter', 'Helvetica', sans-serif" font-size="28" fill="#c7d2fe" text-anchor="middle" letter-spacing="6" opacity="0.85">STORY PLACEHOLDER</text>
+</svg>

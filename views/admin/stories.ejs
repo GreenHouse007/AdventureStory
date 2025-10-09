@@ -9,31 +9,111 @@
         opacity: 0.6;
         transform: rotate(2deg);
       }
+
       .card-grid {
         margin-top: 2rem;
       }
-      .story-actions {
-        margin-top: 0.75rem;
-        display: flex;
-        gap: 0.5rem;
-      }
+
       .btn.small {
-        padding: 0.25rem 0.75rem;
+        padding: 0.35rem 0.9rem;
         font-size: 0.85rem;
         background: #333;
         color: #eee;
         border: none;
-        border-radius: 4px;
+        border-radius: 999px;
         cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
       }
+
       .btn.small:hover {
         background: #444;
       }
+
+      .btn.small.ghost {
+        background: rgba(148, 163, 184, 0.12);
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+      }
+
+      .btn.small.ghost:hover {
+        background: rgba(148, 163, 184, 0.22);
+      }
+
+      .btn.small.primary {
+        background: #4338ca;
+        color: #fff;
+      }
+
+      .btn.small.primary:hover {
+        background: #3730a3;
+      }
+
       .btn.small.danger {
         background: #5a1a1a;
       }
+
       .btn.small.danger:hover {
         background: #822;
+      }
+
+      .stories-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1.25rem;
+      }
+
+      .stories-toolbar form {
+        margin: 0;
+      }
+
+      .story-card__actions--admin {
+        flex-direction: row;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .story-card__actions--admin form {
+        margin: 0;
+      }
+
+      .story-card__actions--admin .btn.small,
+      .story-card__actions--admin button.btn.small {
+        border-radius: 8px;
+      }
+
+      .admin-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgba(148, 163, 184, 0.12);
+        color: #e2e8f0;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+      }
+
+      .admin-status.status-public {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.35);
+        color: #bbf7d0;
+      }
+
+      .admin-status.status-coming_soon {
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.35);
+        color: #bfdbfe;
+      }
+
+      .admin-status.status-invisible {
+        background: rgba(148, 163, 184, 0.08);
+        border-color: rgba(100, 116, 139, 0.35);
+        color: #cbd5f5;
+        font-style: italic;
       }
     </style>
   </head>
@@ -43,23 +123,41 @@
     <main class="container">
       <h1 class="title">Manage Stories</h1>
 
-      <a href="/admin/stories/add" class="btn small">+ Add Story</a>
+      <div class="stories-toolbar">
+        <a href="/admin" class="btn small ghost">&larr; Back to Dashboard</a>
+        <form action="/admin/stories/create-quick" method="post">
+          <button type="submit" class="btn small primary">+ New Story</button>
+        </form>
+      </div>
 
       <div id="stories-list" class="card-grid">
         <% stories.sort((a,b)=>a.displayOrder-b.displayOrder).forEach(s => { %>
         <div class="story-card" data-id="<%= s._id %>">
-          <% if (s.coverImage) { %>
-          <img src="<%= s.coverImage %>" alt="<%= s.title %> cover" />
-          <% } %>
-          <div class="card-body">
-            <h2><%= s.title %></h2>
-            <p><%= s.description ? s.description.substring(0,100) : "" %></p>
-            <p style="opacity: 0.7; font-size: 0.85rem">
-              Status: <%= s.status %>
-            </p>
+          <div class="story-card__media">
+            <img
+              src="<%= s.coverImage || '/images/default-cover.svg' %>"
+              alt="<%= s.title %> cover"
+            />
+          </div>
+          <div class="story-card__body">
+            <div class="story-card__content">
+              <h3><%= s.title %></h3>
+              <p><%= s.description ? s.description.substring(0, 100) : "" %></p>
+            </div>
 
-            <div class="story-actions">
-              <a href="/admin/stories/<%= s._id %>/edit" class="btn small"
+            <div class="story-card__meta">
+              <span class="admin-status status-<%= s.status %>">
+                Status:
+                <%= s.status === 'public'
+                  ? 'Public'
+                  : s.status === 'coming_soon'
+                  ? 'Coming Soon'
+                  : 'Invisible' %>
+              </span>
+            </div>
+
+            <div class="story-card__actions story-card__actions--admin">
+              <a href="/admin/stories/<%= s._id %>/edit" class="btn small primary"
                 >Edit</a
               >
               <form

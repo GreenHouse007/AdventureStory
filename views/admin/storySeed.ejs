@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container seed-page">
+      <a href="/admin" class="back-link">← Back to Dashboard</a>
+      <h1 class="title">Story Seed Uploader</h1>
+      <p class="muted">
+        Paste a JSON formatted story seed below. If everything looks good we will
+        create a new story in "Invisible" status so you can finish editing it
+        before making it public.
+      </p>
+
+      <section class="seed-instructions">
+        <h2>Required format</h2>
+        <ol>
+          <li><code>title</code> and <code>description</code> strings.</li>
+          <li>
+            A <code>startNodeId</code> that matches one of the ids inside the
+            <code>nodes</code> array.
+          </li>
+          <li>
+            Each entry in <code>nodes</code> needs an <code>id</code>,
+            <code>text</code>, and a <code>choices</code> array with
+            <code>label</code> and <code>next</code> values.
+          </li>
+          <li>
+            Provide at least one ending in the <code>endings</code> array using
+            one of these types: <strong>true</strong>, <strong>death</strong>,
+            <strong>other</strong>, or <strong>secret</strong>.
+          </li>
+        </ol>
+        <p class="muted small">Copy the example below and edit it to match your story.</p>
+        <pre class="seed-example"><code><%- seedExample %></code></pre>
+      </section>
+
+      <% if (error) { %>
+      <div class="flash flash-error"><%= error %></div>
+      <% } %>
+
+      <% if (success) { %>
+      <div class="flash flash-success"><%= success %></div>
+      <% } %>
+
+      <form
+        action="/admin/stories/seeds"
+        method="post"
+        class="seed-form stack"
+      >
+        <label class="field">
+          <span>Story seed JSON</span>
+          <textarea
+            id="seedText"
+            name="seedText"
+            rows="18"
+            required
+            class="monospace"><%= formValue %></textarea>
+        </label>
+        <button type="submit" class="cta-button">Upload Seed</button>
+      </form>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <% if (error) { %>
+    <script>
+      window.addEventListener("DOMContentLoaded", function () {
+        alert(<%- JSON.stringify(error) %>);
+      });
+    </script>
+    <% } %>
+
+    <% if (success) { %>
+    <script>
+      window.addEventListener("DOMContentLoaded", function () {
+        alert(<%- JSON.stringify(success) %>);
+      });
+    </script>
+    <% } %>
+
+    <style>
+      .seed-page {
+        padding-bottom: 4rem;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 1rem;
+        color: #a5b4fc;
+        text-decoration: none;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+
+      .seed-instructions {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 2rem 0 2.5rem;
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.35);
+      }
+
+      .seed-instructions h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+      }
+
+      .seed-instructions ol {
+        padding-left: 1.5rem;
+        margin: 0 0 1.25rem;
+        line-height: 1.6;
+      }
+
+      .seed-instructions code {
+        background: rgba(147, 197, 253, 0.12);
+        padding: 0.1rem 0.3rem;
+        border-radius: 4px;
+      }
+
+      .seed-instructions .small {
+        font-size: 0.9rem;
+      }
+
+      .seed-example {
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        line-height: 1.55;
+      }
+
+      .seed-form .field span {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+      }
+
+      .seed-form textarea {
+        width: 100%;
+        border-radius: 12px;
+        padding: 1rem;
+        border: 1px solid #334155;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+        min-height: 320px;
+      }
+
+      .seed-form textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+      }
+
+      .flash {
+        border-radius: 12px;
+        padding: 0.9rem 1.1rem;
+        margin-bottom: 1.25rem;
+        font-weight: 500;
+      }
+
+      .flash-error {
+        background: rgba(248, 113, 113, 0.16);
+        border: 1px solid rgba(248, 113, 113, 0.4);
+        color: #fecaca;
+      }
+
+      .flash-success {
+        background: rgba(34, 197, 94, 0.16);
+        border: 1px solid rgba(34, 197, 94, 0.4);
+        color: #bbf7d0;
+      }
+
+      .monospace {
+        font-family: "Fira Code", "SFMono-Regular", Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+    </style>
+  </body>
+</html>

@@ -4,6 +4,8 @@ const choiceSchema = new mongoose.Schema(
   {
     label: String,
     nextNodeId: String,
+    locked: { type: Boolean, default: false },
+    unlockCost: { type: Number, default: 0 },
   },
   { _id: true }
 );
@@ -24,7 +26,11 @@ const nodeSchema = new mongoose.Schema({
 const endingSchema = new mongoose.Schema({
   _id: String, // "ending1"
   label: String,
-  type: { type: String, enum: ["true", "death", "other"], default: "other" },
+  type: {
+    type: String,
+    enum: ["true", "death", "other", "secret"],
+    default: "other",
+  },
   text: String,
   image: String,
   notes: String, // private notes for ending
@@ -41,13 +47,15 @@ const storySchema = new mongoose.Schema(
     coverImage: String,
     status: {
       type: String,
-      enum: ["public", "coming_soon"],
-      default: "coming_soon",
+      enum: ["public", "coming_soon", "invisible"],
+      default: "invisible",
     },
     startNodeId: { type: String, default: null },
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     notes: String,
+
+    categories: { type: [String], default: [] },
 
     nodes: [nodeSchema],
     endings: [endingSchema],
