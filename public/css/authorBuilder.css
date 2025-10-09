@@ -469,6 +469,11 @@ map-node.color-rose {
   z-index: 30;
 }
 
+
+.hidden {
+  display: none !important;
+}
+
 .entity-editor.hidden {
   display: none;
 }

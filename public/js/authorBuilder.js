@@ -529,7 +529,6 @@
     if (!ending) return;
     endingForm.dataset.originalId = ending._id;
     endingForm.elements._id.value = ending._id || "";
-    endingForm.elements.label.value = ending.label || "";
     endingForm.elements.type.value = ENDING_TYPES.includes(ending.type) ? ending.type : "other";
     populateImageSelect(endingForm.elements.image, ending.image || "");
     endingForm.elements.text.value = ending.text || "";
@@ -877,14 +876,27 @@
 
   endingForm.addEventListener("input", () => {
     if (!selected || selected.type !== "ending") return;
-    const ending = storyData.endings.find((e) => e._id === endingForm.dataset.originalId);
+    const currentOriginalId = endingForm.dataset.originalId;
+    const ending = storyData.endings.find((e) => e._id === currentOriginalId);
     if (!ending) return;
+
+    const idInput = endingForm.elements._id;
+    const rawId = (idInput.value || "").replace(/\u00a0/g, " ");
+    const sanitizedId = rawId.replace(/\s{2,}/g, " ").replace(/^\s+/, "");
+    if (idInput.value !== sanitizedId) {
+      idInput.value = sanitizedId;
+    }
+
     const previousId = ending._id;
-    ending._id = endingForm.elements._id.value.trim();
-    ending.label = endingForm.elements.label.value.trim() || ending._id;
+    ending._id = sanitizedId;
     ending.type = endingForm.elements.type.value;
     ending.image = endingForm.elements.image.value.trim();
     ending.text = endingForm.elements.text.value;
+
+    if (!ending.label || ending.label === previousId) {
+      ending.label = ending._id;
+    }
+
     if (previousId !== ending._id) {
       storyData.nodes.forEach((node) => {
         node.choices.forEach((choice) => {
@@ -898,9 +910,10 @@
       }
       endingForm.dataset.originalId = ending._id;
     }
+
+    editorSubtitle.textContent = ending._id || "Unnamed ending";
     populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
     renderMap();
-    selectEntity("ending", ending._id, { focusInspector: false });
   });
 
   const ensureNodeIdOnBlur = () => {
@@ -1049,7 +1062,11 @@
     });
 
     const endingIds = new Set();
-    storyData.endings.forEach((ending, index) => {
+    storyData.endings.forEach((ending) => {
+      const originalId = ending._id;
+      const rawLabel = typeof ending.label === "string" ? ending.label : "";
+      const trimmedLabel = rawLabel.trim();
+      ending._id = typeof ending._id === "string" ? ending._id.trim() : "";
       if (!ending._id) {
         ending._id = generateUniqueId("ending");
       }
@@ -1058,9 +1075,11 @@
         ending._id = reassignedId;
       }
       endingIds.add(ending._id);
-      if (!ending.label || !ending.label.trim()) {
-        ending.label = ending._id;
-      }
+      const trimmedOriginalId =
+        typeof originalId === "string" ? originalId.trim() : "";
+      const hasCustomLabel =
+        trimmedLabel && trimmedLabel !== trimmedOriginalId;
+      ending.label = hasCustomLabel ? trimmedLabel : ending._id;
     });
 
     if (storyData.nodes.length) {
