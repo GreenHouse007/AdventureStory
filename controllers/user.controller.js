@@ -8,24 +8,249 @@ exports.stats = async (req, res) => {
       "progress.story"
     );
 
-    // Compute "stories completed" = all endings found for that story
+    if (!user) {
+      return res.status(404).render("user/stats", {
+        title: "My Stats",
+        dbUser: null,
+        storiesCompleted: 0,
+        overview: {
+          totalEndingsFound: 0,
+          storiesStarted: 0,
+          storiesCreated: 0,
+          trueEndingsFound: 0,
+          deathEndingsFound: 0,
+          secretEndingsFound: 0,
+          pathsUnlocked: 0,
+        },
+        trophies: [],
+        trophyRequirements: [],
+      });
+    }
+
     const allStories = await Story.find().select("_id endings");
+    const storyMap = new Map(
+      allStories.map((story) => [String(story._id), story])
+    );
+
+    const storiesStarted = user.progress.filter((p) => Boolean(p.story)).length;
     let storiesCompleted = 0;
+    let totalEndingsFound = 0;
+    let trueEndingsFound = 0;
+    let deathEndingsFound = 0;
+    let secretEndingsFound = 0;
+    let pathsUnlocked = 0;
 
     user.progress.forEach((p) => {
-      const st = allStories.find((s) => s._id.equals(p.story?._id || p.story));
-      const total = st?.endings?.length || 0;
-      const found = p.endingsFound?.length || 0;
-      if (total > 0 && found >= total) storiesCompleted++;
+      const storyId = String(p.story?._id || p.story || "");
+      const story = storyMap.get(storyId);
+      const endings = Array.isArray(story?.endings) ? story.endings : [];
+      const endingsById = new Map(
+        endings.map((ending) => [String(ending._id), ending])
+      );
+
+      const foundSet = new Set((p.endingsFound || []).map((id) => String(id)));
+      totalEndingsFound += foundSet.size;
+
+      if (endings.length > 0 && foundSet.size >= endings.length) {
+        storiesCompleted += 1;
+      }
+
+      foundSet.forEach((endingId) => {
+        const ending = endingsById.get(endingId);
+        if (!ending) return;
+        if (ending.type === "true") trueEndingsFound += 1;
+        if (ending.type === "death") deathEndingsFound += 1;
+        if (ending.type === "secret") secretEndingsFound += 1;
+      });
+
+      if (Array.isArray(p.unlockedChoices)) {
+        pathsUnlocked += p.unlockedChoices.length;
+      }
     });
 
-    // You can store it or just render it
-    user.storiesRead = storiesCompleted; // reuse the field; it now means "completed"
+    user.storiesRead = storiesCompleted; // reuse the field to reflect completions
+
+    const storiesCreated = 0; // placeholder until authoring stats are tracked
+
+    const gradeTrophy = (value, thresholds) => {
+      if (value >= thresholds.platinum) return "platinum";
+      if (value >= thresholds.gold) return "gold";
+      if (value >= thresholds.silver) return "silver";
+      if (value >= thresholds.bronze) return "bronze";
+      return "none";
+    };
+
+    const trophyLevels = {
+      storiesCompleted: gradeTrophy(storiesCompleted, {
+        bronze: 1,
+        silver: 3,
+        gold: 5,
+        platinum: 10,
+      }),
+      trueEndings: gradeTrophy(trueEndingsFound, {
+        bronze: 1,
+        silver: 3,
+        gold: 5,
+        platinum: 10,
+      }),
+      deathEndings: gradeTrophy(deathEndingsFound, {
+        bronze: 1,
+        silver: 5,
+        gold: 10,
+        platinum: 20,
+      }),
+      secretEndings: gradeTrophy(secretEndingsFound, {
+        bronze: 1,
+        silver: 3,
+        gold: 5,
+        platinum: 10,
+      }),
+      storyBuilder: "none",
+      bigSpender: gradeTrophy(pathsUnlocked, {
+        bronze: 1,
+        silver: 5,
+        gold: 10,
+        platinum: 20,
+      }),
+    };
+
+    const formatLevel = (level) =>
+      level === "none"
+        ? "No trophy yet"
+        : `${level.charAt(0).toUpperCase()}${level.slice(1)}`;
+
+    const trophies = [
+      {
+        key: "storiesCompleted",
+        label: "Stories Completed",
+        level: trophyLevels.storiesCompleted,
+        levelLabel: formatLevel(trophyLevels.storiesCompleted),
+        progressText:
+          storiesCompleted === 1
+            ? "1 story finished"
+            : `${storiesCompleted} stories finished`,
+      },
+      {
+        key: "trueEndings",
+        label: "True Endings",
+        level: trophyLevels.trueEndings,
+        levelLabel: formatLevel(trophyLevels.trueEndings),
+        progressText:
+          trueEndingsFound === 1
+            ? "1 true ending discovered"
+            : `${trueEndingsFound} true endings discovered`,
+      },
+      {
+        key: "deathEndings",
+        label: "Death Endings",
+        level: trophyLevels.deathEndings,
+        levelLabel: formatLevel(trophyLevels.deathEndings),
+        progressText:
+          deathEndingsFound === 1
+            ? "1 death ending uncovered"
+            : `${deathEndingsFound} death endings uncovered`,
+      },
+      {
+        key: "secretEndings",
+        label: "Secret Endings",
+        level: trophyLevels.secretEndings,
+        levelLabel: formatLevel(trophyLevels.secretEndings),
+        progressText:
+          secretEndingsFound === 1
+            ? "1 secret ending discovered"
+            : `${secretEndingsFound} secret endings discovered`,
+      },
+      {
+        key: "storyBuilder",
+        label: "Story Builder",
+        level: trophyLevels.storyBuilder,
+        levelLabel: "Coming soon",
+        progressText: "Create and publish adventures to earn this trophy.",
+      },
+      {
+        key: "bigSpender",
+        label: "Big Spender",
+        level: trophyLevels.bigSpender,
+        levelLabel: formatLevel(trophyLevels.bigSpender),
+        progressText:
+          pathsUnlocked === 1
+            ? "1 path unlocked"
+            : `${pathsUnlocked} paths unlocked`,
+      },
+    ];
+
+    const trophyRequirements = [
+      {
+        label: "Stories Completed Trophy",
+        requirements: [
+          "Bronze: Finish 1 story",
+          "Silver: Finish 3 stories",
+          "Gold: Finish 5 stories",
+          "Platinum: Finish 10 stories",
+        ],
+      },
+      {
+        label: "True Endings Trophy",
+        requirements: [
+          "Bronze: Discover 1 true ending",
+          "Silver: Discover 3 true endings",
+          "Gold: Discover 5 true endings",
+          "Platinum: Discover 10 true endings",
+        ],
+      },
+      {
+        label: "Death Endings Trophy",
+        requirements: [
+          "Bronze: Uncover 1 death ending",
+          "Silver: Uncover 5 death endings",
+          "Gold: Uncover 10 death endings",
+          "Platinum: Uncover 20 death endings",
+        ],
+      },
+      {
+        label: "Secret Endings Trophy",
+        requirements: [
+          "Bronze: Find 1 secret ending",
+          "Silver: Find 3 secret endings",
+          "Gold: Find 5 secret endings",
+          "Platinum: Find 10 secret endings",
+        ],
+      },
+      {
+        label: "Story Builder Trophy",
+        requirements: [
+          "Bronze: Publish your first story (coming soon)",
+          "Silver: Publish 3 stories (coming soon)",
+          "Gold: Publish 5 stories (coming soon)",
+          "Platinum: Publish 10 stories (coming soon)",
+        ],
+      },
+      {
+        label: "Big Spender Trophy",
+        requirements: [
+          "Bronze: Unlock 1 path",
+          "Silver: Unlock 5 paths",
+          "Gold: Unlock 10 paths",
+          "Platinum: Unlock 20 paths",
+        ],
+      },
+    ];
 
     res.render("user/stats", {
       title: "My Stats",
       dbUser: user,
       storiesCompleted,
+      overview: {
+        totalEndingsFound,
+        storiesStarted,
+        storiesCreated,
+        trueEndingsFound,
+        deathEndingsFound,
+        secretEndingsFound,
+        pathsUnlocked,
+      },
+      trophies,
+      trophyRequirements,
     });
   } catch (err) {
     console.error(err);

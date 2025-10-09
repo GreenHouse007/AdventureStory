@@ -5,6 +5,7 @@ const {
   storyLanding,
   playNode,
   playEnding,
+  unlockChoice,
 } = require("../controllers/story.controller");
 
 const router = express.Router();
@@ -15,5 +16,9 @@ router.get("/stats", stats);
 router.get("/story/:id", storyLanding);
 router.get("/play/:id/:nodeId", playNode);
 router.get("/play/:id/ending/:endingId", playEnding);
+router.post(
+  "/story/:id/nodes/:nodeId/choices/:choiceId/unlock",
+  unlockChoice
+);
 
 module.exports = router;

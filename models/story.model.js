@@ -4,6 +4,8 @@ const choiceSchema = new mongoose.Schema(
   {
     label: String,
     nextNodeId: String,
+    locked: { type: Boolean, default: false },
+    unlockCost: { type: Number, default: 0 },
   },
   { _id: true }
 );

@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
         trueEndingFound: { type: Boolean, default: false },
         deathEndingCount: { type: Number, default: 0 },
         lastNodeId: { type: String, default: null },
+        unlockedChoices: [{ type: String }],
       },
     ],
 
