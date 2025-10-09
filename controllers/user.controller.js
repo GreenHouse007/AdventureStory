@@ -1,3 +1,4 @@
+const { v2: cloudinary } = require("cloudinary");
 const User = require("../models/user.model");
 const Story = require("../models/story.model");
 const STORY_CATEGORIES = require("../utils/storyCategories");
@@ -31,6 +32,63 @@ const parseCategories = (input) => {
     .map((value) => String(value || "").trim())
     .filter(Boolean);
   return [...new Set(cleaned)];
+};
+
+const derivePublicIdFromUrl = (urlStr) => {
+  if (!urlStr) return null;
+  try {
+    const u = new URL(urlStr);
+    const parts = u.pathname.split("/");
+    const uploadIndex = parts.indexOf("upload");
+    if (uploadIndex === -1) return null;
+    const pathParts = parts.slice(uploadIndex + 1);
+    if (pathParts[0] && /^v\d+/.test(pathParts[0])) pathParts.shift();
+    const filename = (pathParts.pop() || "").replace(/\.[^.]+$/, "");
+    pathParts.push(filename);
+    return pathParts.join("/");
+  } catch (err) {
+    return null;
+  }
+};
+
+const deriveFilenameFromUrl = (urlStr) => {
+  if (!urlStr) return "";
+  try {
+    const u = new URL(urlStr);
+    const base = u.pathname.split("/").pop() || "";
+    return decodeURIComponent(base.split("?")[0]);
+  } catch (err) {
+    const base = String(urlStr).split("/").pop() || String(urlStr);
+    return decodeURIComponent(base.split("?")[0]);
+  }
+};
+
+const mapStoryImages = (rawImages = []) => {
+  if (!Array.isArray(rawImages)) return [];
+  return rawImages
+    .map((item) => {
+      if (typeof item === "string") {
+        return {
+          url: item,
+          publicId: derivePublicIdFromUrl(item),
+          title: deriveFilenameFromUrl(item),
+        };
+      }
+      const url = item?.url || item?.path || "";
+      const publicId = item?.publicId || item?.filename || derivePublicIdFromUrl(url);
+      const title =
+        item?.title ||
+        item?.displayName ||
+        deriveFilenameFromUrl(url) ||
+        publicId ||
+        "";
+      return {
+        url,
+        publicId,
+        title,
+      };
+    })
+    .filter((img) => Boolean(img.url));
 };
 
 const toBoolean = (value) =>
@@ -219,6 +277,7 @@ const parseStoryPayload = (body = {}) => {
     const text = typeof ending?.text === "string" ? ending.text.trim() : "";
     const endingNotes =
       typeof ending?.notes === "string" ? ending.notes.trim() : "";
+    const image = typeof ending?.image === "string" ? ending.image.trim() : "";
 
     const endPosX = Number(ending?.position?.x ?? ending?.position?.X ?? ending?.posX);
     const endPosY = Number(ending?.position?.y ?? ending?.position?.Y ?? ending?.posY);
@@ -232,6 +291,7 @@ const parseStoryPayload = (body = {}) => {
       label,
       type,
       text,
+      image,
       notes: endingNotes,
       position: endingPosition,
     });
@@ -308,6 +368,7 @@ const prepareStoryFormData = (story = {}) => ({
         label: ending.label || "",
         type: ending.type || "other",
         text: ending.text || "",
+        image: ending.image || "",
         notes: ending.notes || "",
         position: {
           x: Number(ending.position?.x) || 0,
@@ -748,36 +809,77 @@ exports.authorDashboard = async (req, res) => {
   }
 };
 
+exports.authorStoryCreateDraft = async (req, res) => {
+  try {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const title = `Author Story ${randomSuffix}`;
+
+    const story = await Story.create({
+      title,
+      description: "",
+      notes: "",
+      coverImage: null,
+      author: req.user._id,
+      origin: "user",
+      status: "private",
+      categories: [],
+      nodes: [],
+      endings: [],
+      startNodeId: null,
+      images: [],
+    });
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: `Draft "${story.title}" created. Time to start building!`,
+    });
+
+    res.redirect(`/u/authors/stories/${story._id}/edit`);
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't start a new story. Please try again.",
+    });
+    res.redirect("/u/authors");
+  }
+};
+
 exports.authorStoryForm = async (req, res) => {
   try {
-    const storyId = req.params.id || null;
-    let story = null;
-
-    if (storyId) {
-      story = await Story.findOne({
-        _id: storyId,
-        author: req.user._id,
-        origin: "user",
-      }).lean();
-      if (!story) {
-        return res.status(404).render("user/authorDashboard", {
-          title: "My Author Library",
-          stories: [],
-          flash: { type: "error", message: "Story not found." },
-        });
-      }
+    const storyId = req.params.id;
+    if (!storyId) {
+      await setAuthorFlash(req, {
+        type: "error",
+        message: "Select a story to edit before opening the builder.",
+      });
+      return res.redirect("/u/authors");
     }
 
-    const formData = prepareStoryFormData(story || {});
+    const story = await Story.findOne({
+      _id: storyId,
+      author: req.user._id,
+      origin: "user",
+    }).lean();
+
+    if (!story) {
+      await setAuthorFlash(req, { type: "error", message: "Story not found." });
+      return res.redirect("/u/authors");
+    }
+
+    const formData = prepareStoryFormData(story);
+    const imageOptions = mapStoryImages(story.images);
 
     res.render("user/storyBuilder", {
-      title: story ? `Edit ${story.title || "Story"}` : "Create a New Story",
-      builderMode: story ? "edit" : "create",
+      title: `Edit ${story.title || "Story"}`,
+      builderMode: "edit",
       storyId,
       formData,
       errors: [],
       availableCategories: STORY_CATEGORIES,
-      storyStatus: story?.status || "private",
+      storyStatus: story.status || "private",
+      imageOptions,
+      imageLibraryUrl: `/u/authors/stories/${storyId}/images`,
     });
   } catch (err) {
     console.error(err);
@@ -786,6 +888,148 @@ exports.authorStoryForm = async (req, res) => {
       stories: [],
       flash: { type: "error", message: "Unable to open the story builder." },
     });
+  }
+};
+
+exports.authorStoryImages = async (req, res) => {
+  try {
+    const story = await Story.findOne({
+      _id: req.params.id,
+      author: req.user._id,
+      origin: "user",
+    }).lean();
+
+    if (!story) {
+      await setAuthorFlash(req, { type: "error", message: "Story not found." });
+      return res.redirect("/u/authors");
+    }
+
+    const flash = await popAuthorFlash(req);
+    const images = mapStoryImages(story.images);
+
+    res.render("user/authorImages", {
+      title: `Image Library for ${story.title || "Story"}`,
+      story,
+      images,
+      flash,
+    });
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't load the image library. Please try again.",
+    });
+    res.redirect("/u/authors");
+  }
+};
+
+exports.authorStoryImageUpload = async (req, res) => {
+  const storyId = req.params.id;
+  try {
+    const story = await Story.findOne({
+      _id: storyId,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      await setAuthorFlash(req, { type: "error", message: "Story not found." });
+      return res.redirect("/u/authors");
+    }
+
+    if (!req.file || !req.file.path) {
+      await setAuthorFlash(req, {
+        type: "error",
+        message: "Upload failed. Please choose an image file.",
+      });
+      return res.redirect(`/u/authors/stories/${storyId}/images`);
+    }
+
+    const url = req.file.path;
+    const publicId = req.file.filename || req.file.public_id || null;
+
+    story.images = Array.isArray(story.images) ? story.images : [];
+    story.images.unshift({
+      url,
+      publicId,
+      title: deriveFilenameFromUrl(url),
+    });
+
+    await story.save();
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: "Image uploaded successfully.",
+    });
+
+    res.redirect(`/u/authors/stories/${storyId}/images`);
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't upload that image. Please try again.",
+    });
+    res.redirect(`/u/authors/stories/${storyId}/images`);
+  }
+};
+
+exports.authorStoryImageDelete = async (req, res) => {
+  const storyId = req.params.id;
+  try {
+    const story = await Story.findOne({
+      _id: storyId,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      await setAuthorFlash(req, { type: "error", message: "Story not found." });
+      return res.redirect("/u/authors");
+    }
+
+    let { publicId = "", url = "" } = req.body;
+    publicId = typeof publicId === "string" ? publicId.trim() : "";
+    url = typeof url === "string" ? url.trim() : "";
+    if (!publicId && url) {
+      publicId = derivePublicIdFromUrl(url) || "";
+    }
+
+    if (publicId) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch (err) {
+        console.warn("[Author image delete]", err?.message || err);
+      }
+    }
+
+    const before = Array.isArray(story.images) ? story.images.length : 0;
+    story.images = (Array.isArray(story.images) ? story.images : []).filter((item) => {
+      if (typeof item === "string") {
+        return url ? item !== url : true;
+      }
+      const matchesId = publicId && item?.publicId === publicId;
+      const matchesUrl = url && item?.url === url;
+      return !(matchesId || matchesUrl);
+    });
+
+    await story.save();
+
+    const removed = story.images.length < before;
+    await setAuthorFlash(req, {
+      type: removed ? "success" : "error",
+      message: removed
+        ? "Image removed from your library."
+        : "We couldn't find that image in your library.",
+    });
+
+    res.redirect(`/u/authors/stories/${storyId}/images`);
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't remove that image. Please try again.",
+    });
+    res.redirect(`/u/authors/stories/${storyId}/images`);
   }
 };
 
@@ -800,6 +1044,8 @@ exports.authorStoryCreate = async (req, res) => {
       errors,
       availableCategories: STORY_CATEGORIES,
       storyStatus: "private",
+      imageOptions: [],
+      imageLibraryUrl: null,
     });
   }
 
@@ -828,6 +1074,8 @@ exports.authorStoryCreate = async (req, res) => {
       errors: ["We couldn't save your story. Please try again."],
       availableCategories: STORY_CATEGORIES,
       storyStatus: "private",
+      imageOptions: [],
+      imageLibraryUrl: null,
     });
   }
 };
@@ -853,6 +1101,7 @@ exports.authorStoryUpdate = async (req, res) => {
     const parsed = parseStoryPayload(req.body);
     storyDoc = parsed.storyDoc;
     if (parsed.errors.length) {
+      const imageOptions = mapStoryImages(story.images);
       return res.status(400).render("user/storyBuilder", {
         title: `Edit ${story.title || "Story"}`,
         builderMode: "edit",
@@ -861,6 +1110,8 @@ exports.authorStoryUpdate = async (req, res) => {
         errors: parsed.errors,
         availableCategories: STORY_CATEGORIES,
         storyStatus: story.status,
+        imageOptions,
+        imageLibraryUrl: `/u/authors/stories/${story._id}/images`,
       });
     }
 
@@ -883,6 +1134,7 @@ exports.authorStoryUpdate = async (req, res) => {
     res.redirect("/u/authors");
   } catch (err) {
     console.error(err);
+    const fallbackImages = story ? mapStoryImages(story.images) : [];
     res.status(500).render("user/storyBuilder", {
       title: story ? `Edit ${story.title || "Story"}` : "Edit Story",
       builderMode: "edit",
@@ -891,6 +1143,8 @@ exports.authorStoryUpdate = async (req, res) => {
       errors: ["We couldn't update your story. Please try again."],
       availableCategories: STORY_CATEGORIES,
       storyStatus: story?.status || "private",
+      imageOptions: fallbackImages,
+      imageLibraryUrl: story ? `/u/authors/stories/${story._id}/images` : null,
     });
   }
 };

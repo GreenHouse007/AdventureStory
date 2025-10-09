@@ -89,6 +89,12 @@ body {
   letter-spacing: 0.02em;
 }
 
+.field .field-hint {
+  font-size: 0.75rem;
+  color: #7f8ea3;
+  font-weight: 400;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -114,6 +120,12 @@ body {
 .field.field--multiline textarea {
   min-height: 140px;
   background: rgba(24, 24, 24, 0.95);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
 .field select option,

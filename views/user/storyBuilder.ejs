@@ -22,6 +22,9 @@
         </div>
         <div class="toolbar-group">
           <a href="/u/authors" class="btn ghost">Back to Author Library</a>
+          <% if (imageLibraryUrl) { %>
+          <a href="<%= imageLibraryUrl %>" class="btn ghost">Manage Images</a>
+          <% } %>
           <button type="submit" form="authorStoryForm" class="btn primary">
             <%= builderMode === 'edit' ? 'Save Changes' : 'Save Draft' %>
           </button>
@@ -59,13 +62,15 @@
               </select>
             </label>
             <label class="field">
-              <span>Cover Image URL</span>
-              <input
-                type="text"
-                name="coverImage"
-                value="<%= formData.coverImage || '' %>"
-                placeholder="https://example.com/cover.jpg"
-              />
+              <span>Cover Image</span>
+              <select name="coverImage" id="story-cover-image"></select>
+              <span class="field-hint">
+                <% if (imageLibraryUrl) { %>
+                Add new artwork from the Manage Images panel.
+                <% } else { %>
+                Upload images once your draft is created.
+                <% } %>
+              </span>
             </label>
             <label class="field">
               <span>Author Notes (private)</span>
@@ -175,8 +180,8 @@
             </select>
           </label>
           <label class="field">
-            <span>Image URL</span>
-            <input type="text" name="image" placeholder="https://example.com/image.jpg" />
+            <span>Image</span>
+            <select name="image"></select>
           </label>
           <label class="field field--multiline">
             <span>Story Text</span>
@@ -186,6 +191,9 @@
             <span>Author Notes</span>
             <textarea name="notes" rows="5" placeholder="Optional notes just for you"></textarea>
           </label>
+          <div class="form-actions">
+            <button type="submit" class="btn small">Save Passage</button>
+          </div>
         </form>
 
         <div class="choices-block hidden" data-editor="node">
@@ -239,8 +247,8 @@
             </select>
           </label>
           <label class="field">
-            <span>Image URL</span>
-            <input type="text" name="image" placeholder="https://example.com/image.jpg" />
+            <span>Image</span>
+            <select name="image"></select>
           </label>
           <label class="field field--multiline">
             <span>Ending Text</span>
@@ -250,6 +258,9 @@
             <span>Author Notes</span>
             <textarea name="notes" rows="5" placeholder="Optional notes"></textarea>
           </label>
+          <div class="form-actions">
+            <button type="submit" class="btn small">Save Ending</button>
+          </div>
         </form>
       </div>
     </div>
@@ -264,7 +275,8 @@
       categories: formData.categories || [],
       startNodeId: formData.startNodeId || '',
       nodes: formData.nodes || [],
-      endings: formData.endings || []
+      endings: formData.endings || [],
+      images: imageOptions || []
     }) %></script>
     <script src="/js/authorBuilder.js"></script>
   </body>

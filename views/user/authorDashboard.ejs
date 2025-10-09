@@ -21,7 +21,9 @@
           Shadow Paths story builder. Submit drafts for review when you're ready
           to share them with the community.
         </p>
-        <a class="cta-button" href="/u/authors/stories/new">+ Create a new story</a>
+        <form action="/u/authors/stories/new" method="post">
+          <button type="submit" class="cta-button">+ Create a new story</button>
+        </form>
       </div>
 
       <% if (!stories || stories.length === 0) { %>
@@ -115,6 +117,10 @@
         border-radius: 16px;
         background: rgba(30, 41, 59, 0.55);
         border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .author-dashboard__intro form {
+        margin: 0;
       }
 
       .author-dashboard__intro p {

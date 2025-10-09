@@ -6,6 +6,7 @@
   const hiddenInputs = document.getElementById("builderDataInputs");
   const builderDataEl = document.getElementById("builder-data");
   const startNodeSelect = document.getElementById("story-start-node");
+  const coverImageSelect = document.getElementById("story-cover-image");
   const mapViewport = document.getElementById("mapViewport");
   const mapCanvas = document.getElementById("mapCanvas");
   const linkLayer = document.getElementById("linkLayer");
@@ -62,12 +63,34 @@
         startNodeId: "",
         nodes: [],
         endings: [],
+        images: [],
       },
       raw || {}
     );
     story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
     story.endings = Array.isArray(story.endings) ? story.endings : [];
     story.categories = Array.isArray(story.categories) ? story.categories : [];
+    story.images = Array.isArray(story.images)
+      ? story.images
+          .map((img) => {
+            if (!img) return null;
+            if (typeof img === "string") {
+              return {
+                url: img,
+                title: img,
+                publicId: "",
+              };
+            }
+            const url = img.url || img.path || "";
+            if (!url) return null;
+            return {
+              url,
+              title: img.title || img.displayName || url,
+              publicId: img.publicId || img.filename || "",
+            };
+          })
+          .filter(Boolean)
+      : [];
     story.nodes = story.nodes.map((node) => ({
       _id: node._id || "",
       text: node.text || "",
@@ -159,6 +182,43 @@
   applyMapScale();
   updateZoomButtons();
 
+  const getImageOptions = () => (Array.isArray(storyData.images) ? storyData.images : []);
+
+  const populateImageSelect = (selectEl, currentValue) => {
+    if (!selectEl) return;
+    const options = getImageOptions();
+    selectEl.innerHTML = "";
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "No image";
+    selectEl.appendChild(emptyOption);
+    let matched = false;
+    options.forEach((opt) => {
+      if (!opt || !opt.url) return;
+      const option = document.createElement("option");
+      option.value = opt.url;
+      option.textContent = opt.title || opt.url;
+      if (currentValue && currentValue === opt.url) {
+        option.selected = true;
+        matched = true;
+      }
+      selectEl.appendChild(option);
+    });
+    if (currentValue && !matched) {
+      const legacy = document.createElement("option");
+      legacy.value = currentValue;
+      legacy.selected = true;
+      legacy.textContent = `Current: ${currentValue}`;
+      selectEl.appendChild(legacy);
+    }
+  };
+
+  const refreshCoverImageSelect = () => {
+    populateImageSelect(coverImageSelect, storyData.coverImage || "");
+  };
+
+  refreshCoverImageSelect();
+
   const scheduleDrawLinks = () => {
     if (drawFrame) return;
     drawFrame = requestAnimationFrame(() => {
@@ -187,6 +247,7 @@
   };
 
   const populateDestinationSelect = (selectEl, selectedValue) => {
+    if (!selectEl) return;
     selectEl.innerHTML = "";
     storyData.nodes.forEach((node) => {
       const option = document.createElement("option");
@@ -428,7 +489,7 @@
     nodeForm.dataset.originalId = node._id;
     nodeForm.elements._id.value = node._id || "";
     nodeForm.elements.color.value = COLOR_OPTIONS.includes(node.color) ? node.color : "twilight";
-    nodeForm.elements.image.value = node.image || "";
+    populateImageSelect(nodeForm.elements.image, node.image || "");
     nodeForm.elements.text.value = node.text || "";
     if (nodeForm.elements.notes) {
       nodeForm.elements.notes.value = node.notes || "";
@@ -441,7 +502,7 @@
     endingForm.elements._id.value = ending._id || "";
     endingForm.elements.label.value = ending.label || "";
     endingForm.elements.type.value = ENDING_TYPES.includes(ending.type) ? ending.type : "other";
-    endingForm.elements.image.value = ending.image || "";
+    populateImageSelect(endingForm.elements.image, ending.image || "");
     endingForm.elements.text.value = ending.text || "";
     if (endingForm.elements.notes) {
       endingForm.elements.notes.value = ending.notes || "";
@@ -565,8 +626,19 @@
 
       const snippet = document.createElement("p");
       snippet.className = "node-snippet";
-      const textSource = entity.text || entity.notes || "";
-      snippet.textContent = textSource.slice(0, 140) + (textSource.length > 140 ? "…" : "");
+      const textSource = (entity.text || entity.notes || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (textSource) {
+        const limit = 160;
+        snippet.textContent =
+          textSource.length > limit
+            ? `${textSource.slice(0, limit)}…`
+            : textSource;
+      } else {
+        snippet.textContent =
+          type === "node" ? "Add your passage text" : "Describe this ending";
+      }
       el.appendChild(snippet);
 
       const meta = document.createElement("div");
@@ -582,6 +654,12 @@
       el.addEventListener("click", (event) => {
         event.stopPropagation();
         selectEntity(type, entity._id);
+      });
+
+      el.addEventListener("dblclick", (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        selectEntity(type, entity._id, { focusInspector: true });
       });
 
       elementIndex.set(entity._id, { element: el, type });
@@ -807,6 +885,24 @@
     selectEntity("ending", ending._id, { focusInspector: false });
   });
 
+  nodeForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!selected || selected.type !== "node") return;
+    const node = storyData.nodes.find((n) => n._id === selected.id);
+    if (node) {
+      fillNodeForm(node);
+    }
+  });
+
+  endingForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!selected || selected.type !== "ending") return;
+    const ending = storyData.endings.find((e) => e._id === selected.id);
+    if (ending) {
+      fillEndingForm(ending);
+    }
+  });
+
   choiceAddForm.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!selected || selected.type !== "node") return;
@@ -987,6 +1083,10 @@
     });
   };
 
+  coverImageSelect?.addEventListener("change", (event) => {
+    storyData.coverImage = event.target.value;
+  });
+
   storyForm.addEventListener("submit", (event) => {
     const errors = validateStory();
     if (errors.length) {
@@ -995,6 +1095,7 @@
       return;
     }
     storyData.startNodeId = startNodeSelect?.value || storyData.startNodeId;
+    storyData.coverImage = coverImageSelect?.value || storyData.coverImage || "";
     persistStoryData();
   });
 })();
