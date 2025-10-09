@@ -953,13 +953,21 @@ exports.storyEndingUpdatePosition = async (req, res) => {
 exports.nodeChoiceAddInline = async (req, res) => {
   try {
     const { label, nextNodeId } = req.body;
+    const locked = Boolean(req.body.locked);
+    const parsedCost = Number(req.body.unlockCost);
+    const unlockCost = Number.isFinite(parsedCost) ? Math.max(parsedCost, 0) : 0;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
     const node = story.nodes.find((n) => n._id === req.params.nodeId);
     if (!node) return respondError(req, res, 404, "Node not found");
 
-    node.choices.push({ label, nextNodeId });
+    node.choices.push({
+      label,
+      nextNodeId,
+      locked,
+      unlockCost: locked ? unlockCost : 0,
+    });
     await story.save();
     return respondWithStory(
       req,
@@ -976,6 +984,9 @@ exports.nodeChoiceAddInline = async (req, res) => {
 exports.nodeChoiceUpdateInline = async (req, res) => {
   try {
     const { label, nextNodeId } = req.body;
+    const locked = Boolean(req.body.locked);
+    const parsedCost = Number(req.body.unlockCost);
+    const unlockCost = Number.isFinite(parsedCost) ? Math.max(parsedCost, 0) : 0;
     const story = await Story.findById(req.params.id);
     if (!story) return respondError(req, res, 404, "Story not found");
 
@@ -987,6 +998,8 @@ exports.nodeChoiceUpdateInline = async (req, res) => {
 
     choice.label = label;
     choice.nextNodeId = nextNodeId;
+    choice.locked = locked;
+    choice.unlockCost = locked ? unlockCost : 0;
 
     await story.save();
     return respondWithStory(

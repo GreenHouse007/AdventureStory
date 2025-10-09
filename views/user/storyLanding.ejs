@@ -57,6 +57,12 @@
         </a>
         <% } %>
       </div>
+      <% if (lockedPaths && lockedPaths.total > 0) { %>
+      <p class="locked-path-summary">
+        This story has <%= lockedPaths.total %> locked paths in it. You have
+        unlocked:<%= lockedPaths.unlocked %>.
+      </p>
+      <% } %>
     </main>
 
     <%- include('../partials/footer') %>
@@ -128,6 +134,12 @@
 
       .cta-button.ghost:hover {
         background: rgba(148, 163, 184, 0.12);
+      }
+
+      .locked-path-summary {
+        margin-top: 2.5rem;
+        font-size: 0.85rem;
+        color: rgba(148, 163, 184, 0.85);
       }
     </style>
   </body>

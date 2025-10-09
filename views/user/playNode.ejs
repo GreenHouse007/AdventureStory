@@ -15,16 +15,54 @@
 
       <p><%= node.text %></p>
 
+      <% if (feedback) { %>
+      <div class="notice notice--<%= feedback.type %>"><%= feedback.message %></div>
+      <% } %>
+
       <div class="choices">
-        <% node.choices.forEach(c => { const isEnding = story.endings.some(e =>
-        e._id === c.nextNodeId); const href = isEnding ?
-        `/u/play/${story._id}/ending/${c.nextNodeId}` :
-        `/u/play/${story._id}/${c.nextNodeId}`; %>
+        <% node.choices.forEach(function (c) { %>
+        <% const isEnding = story.endings.some(function (e) {
+             return e._id === c.nextNodeId;
+           });
+           const href = isEnding
+             ? `/u/play/${story._id}/ending/${c.nextNodeId}`
+             : `/u/play/${story._id}/${c.nextNodeId}`;
+           if (c.isLocked && !c.isUnlocked) {
+             const remaining = Math.max((c.unlockCost || 0) - (currency || 0), 0);
+             const disabled = currency < c.unlockCost;
+        %>
 
-        <a class="cta-button" href="<%= href %>"><%= c.label %></a>
+        <form
+          class="choice-unlock-form"
+          method="POST"
+          action="/u/story/<%= story._id %>/nodes/<%= node._id %>/choices/<%= c._id %>/unlock"
+        >
+          <button type="submit" class="cta-button locked" <%= disabled ? 'disabled' : '' %>>
+            <span class="choice-label">Unlock "<%= c.label %>"</span>
+            <span class="choice-cost">Cost: <%= c.unlockCost %></span>
+          </button>
+          <% if (disabled && c.unlockCost > 0) { %>
+          <p class="unlock-hint">You need <%= remaining %> more currency.</p>
+          <% } %>
+        </form>
 
-        <% }) %>
+        <% } else { %>
+        <a
+          class="cta-button <%= c.isLocked ? 'cta-button-unlocked' : '' %>"
+          href="<%= href %>"
+        >
+          <%= c.isLocked ? 'Unlocked: ' : '' %><%= c.label %>
+        </a>
+        <% } %>
+        <% }); %>
       </div>
+
+      <% if (hasLockedChoices) { %>
+      <div class="currency-readout">
+        <span>Your currency:</span>
+        <strong><%= currency || 0 %></strong>
+      </div>
+      <% } %>
     </main>
 
     <%- include('../partials/footer') %>

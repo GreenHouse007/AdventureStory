@@ -14,6 +14,23 @@ exports.storyLanding = async (req, res) => {
   let continueNodeId = null;
   const totalEndings = Array.isArray(story.endings) ? story.endings.length : 0;
   let foundCount = 0;
+  const totalLockedPaths = story.nodes.reduce((acc, node) => {
+    const choices = Array.isArray(node.choices) ? node.choices : [];
+    return (
+      acc +
+      choices.reduce((count, choice) => count + (choice.locked ? 1 : 0), 0)
+    );
+  }, 0);
+  const lockedChoiceKeys = new Set();
+  story.nodes.forEach((node) => {
+    const nodeChoices = Array.isArray(node.choices) ? node.choices : [];
+    nodeChoices
+      .filter((choice) => choice.locked)
+      .forEach((choice) => {
+        lockedChoiceKeys.add(`${node._id}:${choice._id}`);
+      });
+  });
+  let unlockedLockedPaths = 0;
   if (req.session?.userId) {
     const user = await User.findById(req.session.userId).select("progress");
     const p = user?.progress?.find(
@@ -27,6 +44,11 @@ exports.storyLanding = async (req, res) => {
       const uniqueEndings = new Set(p.endingsFound.map((id) => String(id)));
       foundCount = uniqueEndings.size;
     }
+    if (lockedChoiceKeys.size > 0 && Array.isArray(p?.unlockedChoices)) {
+      unlockedLockedPaths = p.unlockedChoices.filter((key) =>
+        lockedChoiceKeys.has(key)
+      ).length;
+    }
   }
 
   res.render("user/storyLanding", {
@@ -38,6 +60,10 @@ exports.storyLanding = async (req, res) => {
     progress: {
       foundCount,
       totalEndings,
+    },
+    lockedPaths: {
+      total: totalLockedPaths,
+      unlocked: unlockedLockedPaths,
     },
   });
 };
@@ -51,7 +77,15 @@ exports.playNode = async (req, res) => {
   if (!node || node.type === "divider")
     return res.status(404).send("Node not found");
 
-  // Save progress.lastNodeId so "Continue" works
+  const feedback = req.session.choiceUnlockFeedback || null;
+  if (req.session.choiceUnlockFeedback) {
+    delete req.session.choiceUnlockFeedback;
+  }
+
+  let unlockedSet = new Set();
+  let userCurrency = req.user?.currency ?? 0;
+
+  // Save progress.lastNodeId so "Continue" works and gather unlocked choices
   if (req.session?.userId) {
     const user = await User.findById(req.session.userId);
     if (user) {
@@ -65,20 +99,55 @@ exports.playNode = async (req, res) => {
           trueEndingFound: false,
           deathEndingCount: 0,
           lastNodeId: node._id,
+          unlockedChoices: [],
         };
         user.progress.push(p);
       } else {
         p.lastNodeId = node._id;
+        if (!Array.isArray(p.unlockedChoices)) {
+          p.unlockedChoices = [];
+        }
       }
+      unlockedSet = new Set(p.unlockedChoices || []);
       await user.save();
+      userCurrency = user.currency;
+      req.user = user;
+      res.locals.user = user;
     }
   }
+
+  const nodeData = node.toObject ? node.toObject({ depopulate: true }) : JSON.parse(JSON.stringify(node));
+  nodeData.choices = (Array.isArray(nodeData.choices) ? nodeData.choices : []).map(
+    (choice) => {
+      const key = `${node._id}:${choice._id}`;
+      const isLocked = Boolean(choice.locked);
+      const parsedCost = Number(choice.unlockCost);
+      const unlockCost = Number.isFinite(parsedCost) ? Math.max(parsedCost, 0) : 0;
+      const isUnlocked = !isLocked || unlockedSet.has(key);
+      return {
+        ...choice,
+        isLocked,
+        unlockCost,
+        isUnlocked,
+        lockKey: key,
+      };
+    }
+  );
+
+  const showCurrency = nodeData.choices.some(
+    (choice) => choice.isLocked && !choice.isUnlocked
+  );
+  const hasLockedChoices = nodeData.choices.some((choice) => choice.isLocked);
 
   res.render("user/playNode", {
     title: story.title,
     story,
-    node,
+    node: nodeData,
     user: req.user,
+    currency: userCurrency,
+    showCurrency,
+    hasLockedChoices,
+    feedback,
   });
 };
 
@@ -104,10 +173,14 @@ exports.playEnding = async (req, res) => {
           trueEndingFound: false,
           deathEndingCount: 0,
           lastNodeId: null,
+          unlockedChoices: [],
         };
         user.progress.push(p);
       } else {
         p.lastNodeId = null; // <-- key bit: they just hit an END
+        if (!Array.isArray(p.unlockedChoices)) {
+          p.unlockedChoices = [];
+        }
       }
 
       // (Optional) If you already track endingsFound/currency/trophies here,
@@ -123,4 +196,119 @@ exports.playEnding = async (req, res) => {
     ending,
     user: req.user,
   });
+};
+
+exports.unlockChoice = async (req, res) => {
+  const { id, nodeId, choiceId } = req.params;
+  const redirectUrl = `/u/play/${id}/${nodeId}`;
+
+  if (!req.session?.userId) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: "Please sign in to unlock this choice.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  const story = await Story.findById(id);
+  if (!story) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: "Story not found.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  const node = story.nodes.find((n) => n._id === nodeId);
+  if (!node) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: "Passage not found.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  const choice = node.choices.id(choiceId);
+  if (!choice) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: "Choice not found.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  if (!choice.locked) {
+    req.session.choiceUnlockFeedback = {
+      type: "info",
+      message: "This choice is already available.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  const user = await User.findById(req.session.userId);
+  if (!user) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: "User not found.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  let progressEntry = user.progress.find(
+    (pr) => String(pr.story) === String(story._id)
+  );
+  if (!progressEntry) {
+    progressEntry = {
+      story: story._id,
+      endingsFound: [],
+      trueEndingFound: false,
+      deathEndingCount: 0,
+      lastNodeId: node._id,
+      unlockedChoices: [],
+    };
+    user.progress.push(progressEntry);
+  } else {
+    progressEntry.lastNodeId = node._id;
+    if (!Array.isArray(progressEntry.unlockedChoices)) {
+      progressEntry.unlockedChoices = [];
+    }
+  }
+
+  const key = `${node._id}:${choice._id}`;
+  const alreadyUnlocked = progressEntry.unlockedChoices.includes(key);
+  if (alreadyUnlocked) {
+    req.session.choiceUnlockFeedback = {
+      type: "info",
+      message: "You have already unlocked this choice.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  const cost = Math.max(Number(choice.unlockCost) || 0, 0);
+  if (user.currency < cost) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: `You need ${cost} currency to unlock this choice.`,
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  user.currency -= cost;
+  progressEntry.unlockedChoices.push(key);
+
+  await user.save();
+  req.user = user;
+  res.locals.user = user;
+
+  const successMessage =
+    cost > 0
+      ? `Unlocked "${choice.label}" for ${cost} currency!`
+      : `Unlocked "${choice.label}"!`;
+
+  req.session.choiceUnlockFeedback = {
+    type: "success",
+    message: successMessage,
+  };
+
+  return res.redirect(redirectUrl);
 };

@@ -430,6 +430,19 @@
       stroke: rgba(255, 139, 92, 0.7);
     }
 
+    .link.locked {
+      stroke: rgba(250, 204, 21, 0.9);
+      stroke-width: 3.2;
+      stroke-dasharray: 6 4;
+    }
+
+    .link-lock-icon {
+      font-size: 1rem;
+      fill: rgba(250, 204, 21, 0.9);
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
+    }
+
     .entity-editor {
       position: fixed;
       right: 2rem;
@@ -515,12 +528,13 @@
 
     .choice-fields {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.45rem;
       background: rgba(17, 17, 17, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 10px;
       padding: 0.55rem 0.65rem;
+      align-items: end;
     }
 
     .choice-field {
@@ -547,6 +561,31 @@
       color: inherit;
       font: inherit;
       width: 100%;
+    }
+
+    .choice-field--toggle {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .choice-field--toggle span {
+      margin: 0;
+    }
+
+    .choice-field--toggle input[type="checkbox"] {
+      width: auto;
+      accent-color: #facc15;
+      transform: scale(1.05);
+    }
+
+    .choice-field--cost input {
+      text-align: right;
+    }
+
+    .choice-item.locked {
+      border-color: rgba(250, 204, 21, 0.35);
+      box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.12) inset;
     }
 
     .choice-actions {
@@ -749,6 +788,14 @@
               <span>Next</span>
               <select name="nextNodeId" required></select>
             </label>
+            <label class="choice-field choice-field--toggle">
+              <span>Locked</span>
+              <input type="checkbox" name="locked" data-lock-toggle>
+            </label>
+            <label class="choice-field choice-field--cost">
+              <span>Unlock Cost</span>
+              <input type="number" name="unlockCost" min="0" step="1" value="0" data-lock-cost>
+            </label>
           </div>
           <div class="choice-actions">
             <button type="submit" class="btn small">Add Choice</button>
@@ -817,7 +864,26 @@
       const endingForm = document.getElementById("ending-form");
       const choiceList = document.getElementById("choice-list");
       const choiceAddForm = document.getElementById("choice-add-form");
+      const choiceAddLockToggle = choiceAddForm
+        ? choiceAddForm.querySelector("[data-lock-toggle]")
+        : null;
+      const choiceAddCostInput = choiceAddForm
+        ? choiceAddForm.querySelector("[data-lock-cost]")
+        : null;
       const choicesEmptyState = document.getElementById("choicesEmptyState");
+
+      const syncAddLockState = () => {
+        if (!choiceAddCostInput) return;
+        const locked = Boolean(choiceAddLockToggle?.checked);
+        choiceAddCostInput.disabled = !locked;
+        if (!locked) {
+          choiceAddCostInput.value = "0";
+        }
+      };
+      if (choiceAddLockToggle && choiceAddCostInput) {
+        syncAddLockState();
+        choiceAddLockToggle.addEventListener("change", syncAddLockState);
+      }
 
       const nodeEditorBlocks = entityEditor.querySelectorAll('[data-editor="node"]');
       const endingEditorBlocks = entityEditor.querySelectorAll('[data-editor="ending"]');
@@ -1040,6 +1106,9 @@
         node.choices.forEach((choice) => {
           const form = document.createElement("form");
           form.className = "choice-item";
+          if (choice.locked) {
+            form.classList.add("locked");
+          }
 
           const fields = document.createElement("div");
           fields.className = "choice-fields";
@@ -1065,8 +1134,34 @@
           selectField.appendChild(selectSpan);
           selectField.appendChild(select);
 
+          const lockedField = document.createElement("label");
+          lockedField.className = "choice-field choice-field--toggle";
+          const lockedSpan = document.createElement("span");
+          lockedSpan.textContent = "Locked";
+          const lockedInput = document.createElement("input");
+          lockedInput.type = "checkbox";
+          lockedInput.name = "locked";
+          lockedInput.checked = Boolean(choice.locked);
+          lockedField.appendChild(lockedSpan);
+          lockedField.appendChild(lockedInput);
+
+          const costField = document.createElement("label");
+          costField.className = "choice-field choice-field--cost";
+          const costSpan = document.createElement("span");
+          costSpan.textContent = "Unlock Cost";
+          const costInput = document.createElement("input");
+          costInput.type = "number";
+          costInput.name = "unlockCost";
+          costInput.min = "0";
+          costInput.step = "1";
+          costInput.value = Math.max(Number(choice.unlockCost) || 0, 0);
+          costField.appendChild(costSpan);
+          costField.appendChild(costInput);
+
           fields.appendChild(labelField);
           fields.appendChild(selectField);
+          fields.appendChild(lockedField);
+          fields.appendChild(costField);
           form.appendChild(fields);
 
           const actions = document.createElement("div");
@@ -1086,11 +1181,23 @@
 
           form.appendChild(actions);
 
+          const syncLockState = () => {
+            const isLocked = lockedInput.checked;
+            costInput.disabled = !isLocked;
+            form.classList.toggle("locked", isLocked);
+          };
+          syncLockState();
+          lockedInput.addEventListener("change", syncLockState);
+
           form.addEventListener("submit", (event) => {
             event.preventDefault();
             const payload = {
               label: labelInput.value,
               nextNodeId: select.value,
+              locked: lockedInput.checked,
+              unlockCost: lockedInput.checked
+                ? Math.max(Number(costInput.value) || 0, 0)
+                : 0,
             };
             queueTask(async () => {
               await flushPendingChanges(selected ? { ...selected } : null);
@@ -1393,6 +1500,7 @@
             const tx = toEl.offsetLeft + toEl.offsetWidth / 2;
             const ty = toEl.offsetTop + toEl.offsetHeight / 2;
             const midX = (fx + tx) / 2;
+            const midY = (fy + ty) / 2;
             const path = document.createElementNS(ns, "path");
             path.setAttribute("d", `M${fx},${fy} C${midX},${fy} ${midX},${ty} ${tx},${ty}`);
             path.classList.add("link");
@@ -1402,7 +1510,20 @@
             } else {
               path.setAttribute("marker-end", "url(#link-arrow)");
             }
+            if (choice.locked) {
+              path.classList.add("locked");
+            }
             frag.appendChild(path);
+            if (choice.locked) {
+              const lockIcon = document.createElementNS(ns, "text");
+              lockIcon.setAttribute("x", midX);
+              lockIcon.setAttribute("y", midY);
+              lockIcon.setAttribute("text-anchor", "middle");
+              lockIcon.setAttribute("dominant-baseline", "middle");
+              lockIcon.classList.add("link-lock-icon");
+              lockIcon.textContent = "🔒";
+              frag.appendChild(lockIcon);
+            }
           });
         });
         linkLayer.appendChild(frag);
@@ -1700,6 +1821,10 @@
         const payload = {
           label: choiceAddForm.elements.label.value,
           nextNodeId: choiceAddForm.elements.nextNodeId.value,
+          locked: Boolean(choiceAddLockToggle?.checked),
+          unlockCost: Boolean(choiceAddLockToggle?.checked)
+            ? Math.max(Number(choiceAddCostInput?.value) || 0, 0)
+            : 0,
         };
         queueTask(async () => {
           await flushPendingChanges(selected ? { ...selected } : null);
@@ -1710,6 +1835,13 @@
           selected = { type: "node", id: nodeId };
           choiceAddForm.reset();
           populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+          if (choiceAddLockToggle) {
+            choiceAddLockToggle.checked = false;
+          }
+          if (choiceAddCostInput) {
+            choiceAddCostInput.value = "0";
+          }
+          syncAddLockState();
           setStoryData(data.story);
         });
       });
