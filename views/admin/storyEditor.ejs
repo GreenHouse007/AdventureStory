@@ -579,8 +579,17 @@
       transform: scale(1.05);
     }
 
+    .choice-field--label input {
+      max-width: 220px;
+    }
+
     .choice-field--cost input {
       text-align: right;
+      max-width: 120px;
+    }
+
+    .choice-field--cost {
+      justify-self: flex-start;
     }
 
     .choice-item.locked {
@@ -602,6 +611,13 @@
 
     .choice-form .choice-fields {
       background: rgba(17, 17, 17, 0.7);
+    }
+
+    @media (max-width: 640px) {
+      .choice-field--label input,
+      .choice-field--cost input {
+        max-width: 100%;
+      }
     }
 
     .empty-state {
@@ -780,7 +796,7 @@
         <div id="choice-list"></div>
         <form id="choice-add-form" class="choice-form">
           <div class="choice-fields">
-            <label class="choice-field">
+            <label class="choice-field choice-field--label">
               <span>Label</span>
               <input type="text" name="label" placeholder="Choice label" required>
             </label>
@@ -1114,7 +1130,7 @@
           fields.className = "choice-fields";
 
           const labelField = document.createElement("label");
-          labelField.className = "choice-field";
+          labelField.className = "choice-field choice-field--label";
           const labelSpan = document.createElement("span");
           labelSpan.textContent = "Label";
           const labelInput = document.createElement("input");

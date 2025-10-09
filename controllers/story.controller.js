@@ -288,7 +288,7 @@ exports.unlockChoice = async (req, res) => {
   if (user.currency < cost) {
     req.session.choiceUnlockFeedback = {
       type: "error",
-      message: `You need ${cost} currency to unlock this choice.`,
+      message: `You need ${cost} gems to unlock this choice.`,
     };
     return res.redirect(redirectUrl);
   }
@@ -302,7 +302,7 @@ exports.unlockChoice = async (req, res) => {
 
   const successMessage =
     cost > 0
-      ? `Unlocked "${choice.label}" for ${cost} currency!`
+      ? `Unlocked "${choice.label}" for ${cost} gems!`
       : `Unlocked "${choice.label}"!`;
 
   req.session.choiceUnlockFeedback = {

@@ -6,79 +6,140 @@
   <body>
     <%- include('../partials/header', { user }) %>
 
-    <main class="container">
-      <h1 class="title">Player Stats</h1>
-      <p>Welcome, <%= dbUser.username %>!</p>
-
-      <!-- Summary Section -->
-      <section class="stats-summary">
-        <h2>Overview</h2>
-        <p>
-          <strong>Total Endings Found:</strong>
-          <%= dbUser.totalEndingsFound || 0 %>
+    <main class="stats-page">
+      <% const safeUser = dbUser || {}; %>
+      <% const statsOverview = overview || {}; %>
+      <% const trophyList = Array.isArray(trophies) ? trophies : []; %>
+      <% const requirementsList = Array.isArray(trophyRequirements) ? trophyRequirements : []; %>
+      <section class="stats-hero">
+        <h1>
+          Welcome back, <span><%= safeUser.username || "Adventurer" %></span>!
+        </h1>
+        <p class="stats-hero__tagline">
+          Your adventures shape the world. Track your progress, claim trophies,
+          and unlock new paths.
         </p>
-        <p>
-          <strong>Stories Completed:</strong>
-          <%= typeof storiesCompleted !== "undefined" ? storiesCompleted :
-          (dbUser.storiesRead || 0) %>
+        <div class="stats-hero__gems" aria-live="polite">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                fill="currentColor"
+                d="M12 2 3 9l9 13 9-13-9-7zm0 3.2 3.9 3.3H8.1L12 5.2zm0 13.9-5.4-8.1h10.8L12 19.1z"
+              />
+            </svg>
+          </span>
+          <div class="stats-hero__gems-info">
+            <span class="label">Your gems</span>
+            <span class="value"><%= typeof safeUser.currency === "number" ? safeUser.currency : 0 %></span>
+          </div>
+        </div>
+        <p class="stats-hero__hint">
+          Earn more gems by finding endings and earning trophies.
         </p>
-        <p><strong>Currency:</strong> <%= dbUser.currency || 0 %> 🪙</p>
       </section>
 
-      <!-- Medals Section -->
-      <section class="medals">
-        <h2>Medals</h2>
-        <p>
-          <strong>Death Endings Medal:</strong>
-          <%= dbUser.medals?.death ? dbUser.medals.death.toUpperCase() : "None"
-          %>
-        </p>
-        <p>
-          <strong>True Endings Medal:</strong>
-          <%= dbUser.medals?.trueEnding ? dbUser.medals.trueEnding.toUpperCase()
-          : "None" %>
-        </p>
-
-        <!-- Medal Requirements -->
-        <div class="medal-legend">
-          <h3>Medal Requirements</h3>
-          <div class="medal-group">
-            <h4>💀 Death Endings Medal</h4>
-            <ul>
-              <li>Bronze: 1+ death ending found</li>
-              <li>Silver: 5+ death endings</li>
-              <li>Gold: 10+ death endings</li>
-              <li>Platinum: 20+ death endings</li>
-            </ul>
-          </div>
-
-          <div class="medal-group">
-            <h4>✨ True Endings Medal</h4>
-            <ul>
-              <li>Bronze: 1+ story with a true ending</li>
-              <li>Silver: 3+ stories with true endings</li>
-              <li>Gold: 5+ stories with true endings</li>
-              <li>Platinum: 10+ stories with true endings</li>
-            </ul>
-          </div>
+      <section class="stats-section">
+        <div class="section-header">
+          <h2>Overview</h2>
+          <p>Highlights from your journey so far.</p>
+        </div>
+        <div class="overview-grid">
+          <article class="overview-card">
+            <span class="overview-label">Total endings found</span>
+            <span class="overview-value"><%= typeof statsOverview.totalEndingsFound === "number" ? statsOverview.totalEndingsFound : 0 %></span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">Stories started</span>
+            <span class="overview-value"><%= typeof statsOverview.storiesStarted === "number" ? statsOverview.storiesStarted : 0 %></span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">Stories created</span>
+            <span class="overview-value"><%= typeof statsOverview.storiesCreated === "number" ? statsOverview.storiesCreated : 0 %></span>
+            <span class="overview-caption">Tracking coming soon</span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">True endings found</span>
+            <span class="overview-value"><%= typeof statsOverview.trueEndingsFound === "number" ? statsOverview.trueEndingsFound : 0 %></span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">Death endings found</span>
+            <span class="overview-value"><%= typeof statsOverview.deathEndingsFound === "number" ? statsOverview.deathEndingsFound : 0 %></span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">Secret endings found</span>
+            <span class="overview-value"><%= typeof statsOverview.secretEndingsFound === "number" ? statsOverview.secretEndingsFound : 0 %></span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">Paths unlocked</span>
+            <span class="overview-value"><%= typeof statsOverview.pathsUnlocked === "number" ? statsOverview.pathsUnlocked : 0 %></span>
+          </article>
         </div>
       </section>
 
-      <!-- Story Progress Section -->
-      <section class="progress">
-        <h2>Stories Progress</h2>
-        <% if (dbUser && Array.isArray(dbUser.progress) &&
-        dbUser.progress.length) { %>
-        <ul>
-          <% dbUser.progress.forEach(function(p) { %>
+      <section class="stats-section">
+        <div class="section-header">
+          <h2>Trophies</h2>
+          <p>Collect shimmering trophies by mastering different playstyles.</p>
+        </div>
+        <div class="trophy-grid">
+          <% trophyList.forEach(function (trophy) { %>
+          <% const levelClass = trophy.level ? `level-${trophy.level}` : 'level-none'; %>
+          <article class="trophy-card <%= levelClass %>">
+            <div class="trophy-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M20 8h24v6h8a2 2 0 0 1 2 2c0 10.5-7.13 19.24-17 21.53V44h7v6H20v-6h7v-6.47C17.13 35.24 10 26.5 10 16a2 2 0 0 1 2-2h8V8zm-6 8c.3 7.4 4.75 13.73 11 16.08V16H14zm36 0H39v16.08c6.25-2.35 10.7-8.68 11-16.08z"
+                />
+                <rect x="24" y="44" width="16" height="6" fill="currentColor" />
+                <rect x="22" y="50" width="20" height="6" fill="currentColor" />
+              </svg>
+            </div>
+            <h3><%= trophy.label %></h3>
+            <p class="trophy-level"><%= trophy.levelLabel %></p>
+            <p class="trophy-progress"><%= trophy.progressText %></p>
+          </article>
+          <% }) %>
+        </div>
+      </section>
+
+      <section class="stats-section">
+        <div class="section-header">
+          <h2>Trophy Requirements</h2>
+          <p>Level up each trophy by meeting these milestones.</p>
+        </div>
+        <div class="requirements-grid">
+          <% requirementsList.forEach(function (req) { %>
+          <article class="requirement-card">
+            <h3><%= req.label %></h3>
+            <ul>
+              <% req.requirements.forEach(function (line) { %>
+              <li><%= line %></li>
+              <% }) %>
+            </ul>
+          </article>
+          <% }) %>
+        </div>
+      </section>
+
+      <section class="stats-section">
+        <div class="section-header">
+          <h2>Story Progress</h2>
+          <p>See how many endings you've uncovered in each tale.</p>
+        </div>
+        <% if (safeUser && Array.isArray(safeUser.progress) && safeUser.progress.length) { %>
+        <ul class="progress-list">
+          <% safeUser.progress.forEach(function(p) { %>
           <li>
-            <strong>
-              <%= (p.story && p.story.title) ? p.story.title : "Untitled Story"
-              %>
-            </strong>
-            — <%= (Array.isArray(p.endingsFound)) ? p.endingsFound.length : 0 %>
-            / <%= (p.story && Array.isArray(p.story.endings)) ?
-            p.story.endings.length : 0 %> endings found
+            <div class="progress-story">
+              <strong><%= (p.story && p.story.title) ? p.story.title : "Untitled Story" %></strong>
+              <span class="progress-endings">
+                <%= (Array.isArray(p.endingsFound)) ? p.endingsFound.length : 0 %>
+                /
+                <%= (p.story && Array.isArray(p.story.endings)) ? p.story.endings.length : 0 %>
+                endings found
+              </span>
+            </div>
           </li>
           <% }) %>
         </ul>
@@ -91,51 +152,290 @@
     <%- include('../partials/footer') %>
 
     <style>
-      main.container {
-        max-width: 800px;
+      .stats-page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem 3rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
       }
 
-      section {
-        margin-bottom: 2rem;
+      .stats-hero {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(236, 72, 153, 0.2));
+        border: 1px solid rgba(129, 140, 248, 0.35);
+        border-radius: 20px;
+        padding: 2.25rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+        box-shadow: 0 24px 45px rgba(79, 70, 229, 0.2);
       }
 
-      h2,
-      h3,
-      h4 {
-        margin-bottom: 0.5rem;
+      .stats-hero h1 {
+        margin: 0;
+        font-size: 2.4rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
       }
 
-      .stats-summary p,
-      .medals p,
-      .progress p {
+      .stats-hero h1 span {
+        color: #c4b5fd;
+      }
+
+      .stats-hero__tagline {
+        margin: 0;
+        font-size: 1.05rem;
+        color: rgba(226, 232, 240, 0.9);
+        max-width: 560px;
+      }
+
+      .stats-hero__gems {
+        display: inline-flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.85rem 1.2rem;
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        width: fit-content;
+      }
+
+      .stats-hero__gems .icon svg {
+        width: 2.1rem;
+        height: 2.1rem;
+        color: #fcd34d;
+      }
+
+      .stats-hero__gems-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+
+      .stats-hero__gems-info .label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(203, 213, 225, 0.85);
+      }
+
+      .stats-hero__gems-info .value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #fef3c7;
+      }
+
+      .stats-hero__hint {
+        margin: 0;
+        font-size: 0.95rem;
+        color: rgba(226, 232, 240, 0.82);
+      }
+
+      .stats-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .section-header h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        letter-spacing: 0.04em;
+      }
+
+      .section-header p {
+        margin: 0.35rem 0 0;
+        color: rgba(148, 163, 184, 0.85);
+        font-size: 0.95rem;
+      }
+
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+      }
+
+      .overview-card {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 16px;
+        padding: 1.1rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .overview-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(203, 213, 225, 0.75);
+      }
+
+      .overview-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #f8fafc;
+      }
+
+      .overview-caption {
+        font-size: 0.75rem;
+        color: rgba(148, 163, 184, 0.7);
+      }
+
+      .trophy-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .trophy-card {
+        background: rgba(30, 41, 59, 0.65);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 18px;
+        padding: 1.4rem 1.25rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.75rem;
+        transition: transform 0.2s ease;
+      }
+
+      .trophy-card:hover {
+        transform: translateY(-4px);
+      }
+
+      .trophy-icon svg {
+        width: 68px;
+        height: 68px;
+      }
+
+      .trophy-card h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        letter-spacing: 0.02em;
+      }
+
+      .trophy-level {
+        margin: 0;
+        font-size: 0.9rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(226, 232, 240, 0.75);
+      }
+
+      .trophy-progress {
+        margin: 0;
+        font-size: 0.95rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      .trophy-card.level-none .trophy-icon svg {
+        color: rgba(148, 163, 184, 0.5);
+      }
+
+      .trophy-card.level-bronze .trophy-icon svg {
+        color: #cd7f32;
+      }
+
+      .trophy-card.level-silver .trophy-icon svg {
+        color: #c0c0c0;
+      }
+
+      .trophy-card.level-gold .trophy-icon svg {
+        color: #ffd700;
+      }
+
+      .trophy-card.level-platinum .trophy-icon svg {
+        color: #e5e4e2;
+      }
+
+      .requirements-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+      }
+
+      .requirement-card {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 16px;
+        padding: 1.25rem 1.4rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .requirement-card h3 {
+        margin: 0;
+        font-size: 1.05rem;
+        color: #e2e8f0;
+      }
+
+      .requirement-card ul {
+        margin: 0;
+        padding-left: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        color: rgba(203, 213, 225, 0.85);
+      }
+
+      .progress-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .progress-list li {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        padding: 0.85rem 1.1rem;
+      }
+
+      .progress-story {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .progress-story strong {
         font-size: 1rem;
-        margin: 0.3rem 0;
+        letter-spacing: 0.02em;
       }
 
-      .medal-legend {
-        margin-top: 1rem;
-        padding: 1rem;
-        border: 1px solid #555;
-        border-radius: 10px;
-        background: #777;
-      }
-
-      .medal-group {
-        margin-top: 1rem;
-      }
-
-      .medal-group h4 {
-        margin-bottom: 0.3rem;
-      }
-
-      .medal-group ul {
-        list-style: disc;
-        margin-left: 1.5rem;
+      .progress-endings {
+        font-size: 0.9rem;
+        color: rgba(148, 163, 184, 0.85);
       }
 
       .muted {
-        color: #777;
+        color: rgba(148, 163, 184, 0.7);
         font-style: italic;
+      }
+
+      @media (max-width: 720px) {
+        .stats-hero {
+          padding: 1.75rem 1.5rem;
+        }
+
+        .stats-hero h1 {
+          font-size: 2rem;
+        }
+
+        .overview-grid {
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .trophy-grid {
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
       }
     </style>
   </body>
