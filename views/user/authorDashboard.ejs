@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="container author-dashboard">
+      <h1 class="title">My Author Library</h1>
+
+      <% if (flash && flash.message) { %>
+      <div class="flash flash-<%= flash.type === 'error' ? 'error' : 'success' %>">
+        <%= flash.message %>
+      </div>
+      <% } %>
+
+      <div class="author-dashboard__intro">
+        <p>
+          Craft new adventures and manage the stories you've built with the
+          Shadow Paths story builder. Submit drafts for review when you're ready
+          to share them with the community.
+        </p>
+        <a class="cta-button" href="/u/authors/stories/new">+ Create a new story</a>
+      </div>
+
+      <% if (!stories || stories.length === 0) { %>
+      <section class="empty-state">
+        <p>You haven't created any stories yet.</p>
+        <p class="muted">Use the button above to start your first tale.</p>
+      </section>
+      <% } else { %>
+      <section class="author-stories">
+        <% stories.forEach(function (story) { %>
+        <article class="author-story-card">
+          <header class="author-story-card__header">
+            <h2><%= story.title %></h2>
+            <span class="story-status story-status-<%= story.status %>">
+              <%= story.statusLabel %>
+            </span>
+          </header>
+          <dl class="author-story-card__meta">
+            <div>
+              <dt>Last updated</dt>
+              <dd><%= story.updatedAt ? new Date(story.updatedAt).toLocaleString() : '—' %></dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd><%= story.createdAt ? new Date(story.createdAt).toLocaleDateString() : '—' %></dd>
+            </div>
+            <% if (story.submittedAt) { %>
+            <div>
+              <dt>Submitted</dt>
+              <dd><%= new Date(story.submittedAt).toLocaleDateString() %></dd>
+            </div>
+            <% } %>
+            <% if (story.publishedAt) { %>
+            <div>
+              <dt>Published</dt>
+              <dd><%= new Date(story.publishedAt).toLocaleDateString() %></dd>
+            </div>
+            <% } %>
+          </dl>
+          <div class="author-story-card__actions">
+            <a class="cta-button small" href="/u/authors/stories/<%= story._id %>/edit"
+              >Edit draft</a
+            >
+            <a class="cta-button small ghost" href="/u/story/<%= story._id %>"
+              >Preview story</a
+            >
+            <% if (story.isPrivate) { %>
+            <form
+              method="post"
+              action="/u/authors/stories/<%= story._id %>/submit"
+              class="inline-form"
+            >
+              <button type="submit" class="cta-button small">Submit for review</button>
+            </form>
+            <% } %>
+            <% if (story.isPending || story.isUnderReview || story.isPublic) { %>
+            <form
+              method="post"
+              action="/u/authors/stories/<%= story._id %>/private"
+              class="inline-form"
+            >
+              <button type="submit" class="cta-button small ghost">
+                Set to private
+              </button>
+            </form>
+            <% } %>
+          </div>
+        </article>
+        <% }) %>
+      </section>
+      <% } %>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <style>
+      .author-dashboard {
+        padding-bottom: 4rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .author-dashboard__intro {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.5rem;
+        border-radius: 16px;
+        background: rgba(30, 41, 59, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .author-dashboard__intro p {
+        flex: 1 1 260px;
+        margin: 0;
+        color: #cbd5f5;
+      }
+
+      .flash {
+        padding: 0.95rem 1.2rem;
+        border-radius: 14px;
+        font-weight: 600;
+      }
+
+      .flash-success {
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.28);
+        color: #bbf7d0;
+      }
+
+      .flash-error {
+        background: rgba(248, 113, 113, 0.12);
+        border: 1px solid rgba(248, 113, 113, 0.28);
+        color: #fecaca;
+      }
+
+      .author-stories {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .author-story-card {
+        background: rgba(17, 24, 39, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 18px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+      }
+
+      .author-story-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .author-story-card__header h2 {
+        margin: 0;
+        font-size: 1.3rem;
+      }
+
+      .author-story-card__meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem 1.5rem;
+        margin: 0;
+      }
+
+      .author-story-card__meta dt {
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(148, 163, 184, 0.8);
+        margin-bottom: 0.15rem;
+      }
+
+      .author-story-card__meta dd {
+        margin: 0;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .author-story-card__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+      }
+
+      .author-story-card__actions .inline-form {
+        margin: 0;
+      }
+
+      .story-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        color: #e2e8f0;
+        background: rgba(148, 163, 184, 0.12);
+      }
+
+      .story-status-public {
+        background: rgba(34, 197, 94, 0.14);
+        border-color: rgba(34, 197, 94, 0.32);
+        color: #bbf7d0;
+      }
+
+      .story-status-pending,
+      .story-status-coming_soon {
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.32);
+        color: #c7d2fe;
+      }
+
+      .story-status-under_review {
+        background: rgba(244, 114, 182, 0.18);
+        border-color: rgba(244, 114, 182, 0.32);
+        color: #fbcfe8;
+      }
+
+      .story-status-private {
+        background: rgba(148, 163, 184, 0.12);
+        border-color: rgba(148, 163, 184, 0.28);
+        color: #e2e8f0;
+      }
+
+      .empty-state {
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.6);
+        text-align: center;
+      }
+
+      .empty-state p {
+        margin: 0.25rem 0;
+      }
+
+      @media (max-width: 640px) {
+        .author-dashboard__intro {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .author-story-card__header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </body>
+</html>

@@ -9,7 +9,43 @@ const { v2: cloudinary } = require("cloudinary");
 const STORY_CATEGORIES = require("../utils/storyCategories");
 
 const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
-const ALLOWED_STORY_STATUSES = new Set(["public", "coming_soon", "invisible"]);
+const ALLOWED_STORY_STATUSES = new Set([
+  "public",
+  "coming_soon",
+  "invisible",
+  "private",
+  "pending",
+  "under_review",
+]);
+
+const STORY_STATUS_LABELS = {
+  public: "Public",
+  coming_soon: "Coming Soon",
+  invisible: "Hidden",
+  private: "Private",
+  pending: "Pending Review",
+  under_review: "Under Review",
+};
+
+const commitSession = (req) =>
+  new Promise((resolve, reject) => {
+    if (!req.session) return resolve();
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+
+const setAdminFlash = async (req, flash) => {
+  if (!req.session) return;
+  req.session.adminFlash = flash;
+  await commitSession(req);
+};
+
+const popAdminFlash = async (req) => {
+  if (!req.session) return null;
+  const flash = req.session.adminFlash || null;
+  delete req.session.adminFlash;
+  await commitSession(req);
+  return flash;
+};
 
 const STORY_SEED_EXAMPLE = JSON.stringify(
   {
@@ -269,12 +305,41 @@ const parsePosition = (position, fallback = { x: 0, y: 0 }) => {
 /* ------------------ DASHBOARD ------------------ */
 exports.dashboard = async (req, res) => {
   try {
-    const userCount = await User.countDocuments();
-    const storyCount = await Story.countDocuments();
+    const [userCount, storyCount, reviewStories] = await Promise.all([
+      User.countDocuments(),
+      Story.countDocuments(),
+      Story.find({
+        origin: "user",
+        status: { $in: ["pending", "public", "under_review"] },
+      })
+        .populate("author", "username email")
+        .sort({ submittedAt: -1, updatedAt: -1 })
+        .lean(),
+    ]);
+
+    const pendingStories = reviewStories
+      .filter((story) => story.status === "pending")
+      .map((story) => ({
+        ...story,
+        statusLabel: STORY_STATUS_LABELS[story.status] || story.status,
+      }));
+
+    const managedStories = reviewStories
+      .filter((story) => story.status !== "pending")
+      .map((story) => ({
+        ...story,
+        statusLabel: STORY_STATUS_LABELS[story.status] || story.status,
+      }));
+
+    const flash = await popAdminFlash(req);
+
     res.render("admin/dashboard", {
       title: "Admin Dashboard",
       user: req.user,
       stats: { userCount, storyCount },
+      pendingStories,
+      managedStories,
+      flash,
     });
   } catch (err) {
     console.error(err);
@@ -295,7 +360,7 @@ exports.usersList = async (req, res) => {
         }
       : {};
     const users = await User.find(query).select(
-      "username email role createdAt currency"
+      "username email role createdAt currency authorCurrency"
     );
     res.render("admin/users", { title: "Manage Users", users, q });
   } catch (err) {
@@ -326,6 +391,7 @@ exports.userUpdate = async (req, res) => {
       email,
       role,
       currency,
+      authorCurrency,
       totalEndingsFound,
       storiesRead,
       deathMedal,
@@ -338,6 +404,7 @@ exports.userUpdate = async (req, res) => {
     user.email = email;
     user.role = role;
     user.currency = Number(currency) || 0;
+    user.authorCurrency = Number(authorCurrency) || 0;
     user.totalEndingsFound = Number(totalEndingsFound) || 0;
     user.storiesRead = Number(storiesRead) || 0;
     user.medals.death = deathMedal || "none";
@@ -705,6 +772,139 @@ exports.updateStoriesOrder = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: "Error saving order" });
+  }
+};
+
+const ensureUserStory = async (id) => {
+  const story = await Story.findById(id);
+  if (!story || story.origin !== "user") return null;
+  return story;
+};
+
+exports.approveUserStory = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "public";
+    story.publishedAt = new Date();
+    if (!story.submittedAt) {
+      story.submittedAt = new Date();
+    }
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Approved "${story.title}".`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to approve story.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.rejectUserStory = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "private";
+    story.submittedAt = null;
+    story.publishedAt = null;
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Rejected "${story.title}" and returned it to private.`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to reject story.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.markUserStoryUnderReview = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "under_review";
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Marked "${story.title}" as under review.`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to update story status.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.removeUserStory = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "private";
+    story.publishedAt = null;
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Removed "${story.title}" from the public library.`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to remove story.",
+    });
+    res.redirect("/admin");
   }
 };
 

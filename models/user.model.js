@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
 
     // Currency system
     currency: { type: Number, default: 0 },
+    authorCurrency: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

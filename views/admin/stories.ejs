@@ -115,12 +115,38 @@
         color: #cbd5f5;
         font-style: italic;
       }
+
+      .admin-status.status-private {
+        background: rgba(148, 163, 184, 0.12);
+        border-color: rgba(148, 163, 184, 0.32);
+        color: #e2e8f0;
+      }
+
+      .admin-status.status-pending {
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.32);
+        color: #bfdbfe;
+      }
+
+      .admin-status.status-under_review {
+        background: rgba(244, 114, 182, 0.2);
+        border-color: rgba(244, 114, 182, 0.35);
+        color: #fbcfe8;
+      }
     </style>
   </head>
   <body>
     <%- include('../partials/header', { user }) %>
 
     <main class="container">
+      <% const statusLabels = {
+        public: 'Public',
+        coming_soon: 'Coming Soon',
+        invisible: 'Hidden',
+        private: 'Private',
+        pending: 'Pending Review',
+        under_review: 'Under Review'
+      }; %>
       <h1 class="title">Manage Stories</h1>
 
       <div class="stories-toolbar">
@@ -148,11 +174,7 @@
             <div class="story-card__meta">
               <span class="admin-status status-<%= s.status %>">
                 Status:
-                <%= s.status === 'public'
-                  ? 'Public'
-                  : s.status === 'coming_soon'
-                  ? 'Coming Soon'
-                  : 'Invisible' %>
+                <%= statusLabels[s.status] || s.status %>
               </span>
             </div>
 

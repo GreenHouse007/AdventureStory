@@ -242,8 +242,16 @@ nav a:hover {
   height: 1.1rem;
 }
 
-.choice-cost .icon svg {
+.icon-gem {
   color: #fcd34d;
+}
+
+.icon-author-gem {
+  color: #c084fc;
+}
+
+.choice-cost .icon svg {
+  color: inherit;
 }
 
 .choice-cost {
@@ -307,7 +315,7 @@ nav a:hover {
 .currency-readout .icon svg {
   width: 1.35rem;
   height: 1.35rem;
-  color: #fcd34d;
+  color: inherit;
 }
 
 .currency-readout__content {
@@ -510,6 +518,12 @@ nav a:hover {
   gap: 0.55rem;
 }
 
+.story-card__author {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(203, 213, 225, 0.85);
+}
+
 .story-card__actions {
   margin-top: 0.85rem;
   display: flex;
@@ -529,6 +543,93 @@ nav a:hover {
   align-self: flex-start;
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
+}
+
+.library-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.library-nav-links .cta-button {
+  padding: 0.55rem 1.25rem;
+  font-size: 0.95rem;
+}
+
+.story-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+
+.story-status-label {
+  font-weight: 600;
+}
+
+.story-status-public {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.32);
+  color: #bbf7d0;
+}
+
+.story-status-pending,
+.story-status-coming_soon {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.32);
+  color: #bfdbfe;
+}
+
+.story-status-under_review {
+  background: rgba(244, 114, 182, 0.2);
+  border-color: rgba(244, 114, 182, 0.35);
+  color: #fbcfe8;
+}
+
+.story-status-private {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.32);
+  color: #e2e8f0;
+}
+
+.story-status-banner {
+  margin: 1rem 0;
+  padding: 0.85rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.6);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.story-status-banner.story-status-pending,
+.story-status-banner.story-status-coming_soon {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.story-status-banner.story-status-under_review {
+  background: rgba(244, 114, 182, 0.12);
+  border-color: rgba(244, 114, 182, 0.28);
+}
+
+.story-status-message {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.85rem 1.1rem;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .coming-soon {

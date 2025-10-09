@@ -47,8 +47,20 @@ const storySchema = new mongoose.Schema(
     coverImage: String,
     status: {
       type: String,
-      enum: ["public", "coming_soon", "invisible"],
+      enum: [
+        "public",
+        "coming_soon",
+        "invisible",
+        "private",
+        "pending",
+        "under_review",
+      ],
       default: "invisible",
+    },
+    origin: {
+      type: String,
+      enum: ["official", "user"],
+      default: "official",
     },
     startNodeId: { type: String, default: null },
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -62,6 +74,8 @@ const storySchema = new mongoose.Schema(
 
     images: { type: [require("mongoose").Schema.Types.Mixed], default: [] },
     displayOrder: { type: Number, default: 0 },
+    submittedAt: { type: Date },
+    publishedAt: { type: Date },
   },
   { timestamps: true }
 );

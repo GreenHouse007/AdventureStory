@@ -2,6 +2,311 @@ const User = require("../models/user.model");
 const Story = require("../models/story.model");
 const STORY_CATEGORIES = require("../utils/storyCategories");
 
+const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
+
+const STORY_STATUS_LABELS = {
+  public: "Play",
+  coming_soon: "Coming Soon",
+  pending: "Coming Soon",
+  under_review: "Under Review",
+  private: "Private",
+  invisible: "Unavailable",
+};
+
+const normalizeToArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "object") {
+    return Object.keys(value)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((key) => value[key]);
+  }
+  return [value];
+};
+
+const parseCategories = (input) => {
+  if (!input) return [];
+  const raw = Array.isArray(input) ? input : String(input).split(",");
+  const cleaned = raw
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return [...new Set(cleaned)];
+};
+
+const toBoolean = (value) =>
+  value === true ||
+  value === "true" ||
+  value === "on" ||
+  value === "1" ||
+  value === 1;
+
+const getProgressEntry = (user, storyId) => {
+  if (!user || !Array.isArray(user.progress)) return null;
+  return user.progress.find((progress) => {
+    const value = progress.story?._id || progress.story;
+    return value && String(value) === String(storyId);
+  });
+};
+
+const mapStoryForLibrary = (story, user, { includeAuthor = false } = {}) => {
+  const progress = getProgressEntry(user, story._id);
+  const endings = Array.isArray(story.endings) ? story.endings : [];
+  const totalEndings = endings.length;
+  const foundCount = Array.isArray(progress?.endingsFound)
+    ? progress.endingsFound.length
+    : 0;
+  const categories = Array.isArray(story.categories) ? story.categories : [];
+  const status = story.status || "invisible";
+  const actionLabel = STORY_STATUS_LABELS[status] || STORY_STATUS_LABELS.invisible;
+  const actionType = status === "public" ? "play" : "label";
+
+  const payload = {
+    ...story,
+    title: story.title || "Untitled Story",
+    foundCount,
+    totalEndings,
+    categories,
+    actionType,
+    actionLabel,
+  };
+
+  if (includeAuthor) {
+    payload.authorName =
+      story.author?.username ||
+      story.author?.displayName ||
+      (typeof story.author === "string" ? story.author : null);
+  }
+
+  return payload;
+};
+
+const parseStoryPayload = (body = {}) => {
+  const errors = [];
+
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  if (!title) errors.push("Title is required.");
+
+  const description =
+    typeof body.description === "string" ? body.description.trim() : "";
+  const notes = typeof body.notes === "string" ? body.notes.trim() : "";
+  const coverImage =
+    typeof body.coverImage === "string" ? body.coverImage.trim() : "";
+  const categories = parseCategories(body.categoriesRaw || body.categories);
+
+  const rawNodes = normalizeToArray(body.nodes);
+  const nodes = [];
+  const nodeIds = new Set();
+
+  rawNodes.forEach((node, index) => {
+    const id =
+      typeof node?._id === "string" && node._id.trim()
+        ? node._id.trim()
+        : typeof node?.id === "string" && node.id.trim()
+        ? node.id.trim()
+        : "";
+    if (!id) {
+      errors.push(`Node #${index + 1} must include an id.`);
+      return;
+    }
+    if (nodeIds.has(id)) {
+      errors.push(`Duplicate node id "${id}" detected.`);
+      return;
+    }
+    nodeIds.add(id);
+
+    const text = typeof node?.text === "string" ? node.text.trim() : "";
+    if (!text) {
+      errors.push(`Node "${id}" requires passage text.`);
+    }
+
+    const image = typeof node?.image === "string" ? node.image.trim() : "";
+    const nodeNotes = typeof node?.notes === "string" ? node.notes.trim() : "";
+    const color =
+      typeof node?.color === "string" && node.color.trim()
+        ? node.color.trim()
+        : "twilight";
+
+    const rawChoices = normalizeToArray(node?.choices);
+    const choices = [];
+
+    rawChoices.forEach((choice, choiceIndex) => {
+      const label =
+        typeof choice?.label === "string" ? choice.label.trim() : "";
+      const nextNodeId =
+        typeof choice?.nextNodeId === "string"
+          ? choice.nextNodeId.trim()
+          : typeof choice?.next === "string"
+          ? choice.next.trim()
+          : "";
+
+      if (!label || !nextNodeId) {
+        errors.push(
+          `Choice #${choiceIndex + 1} on node "${id}" requires a label and destination.`
+        );
+        return;
+      }
+
+      const locked = toBoolean(choice?.locked);
+      const unlockCostRaw = Number(choice?.unlockCost);
+      const unlockCost = locked
+        ? Number.isFinite(unlockCostRaw)
+          ? Math.max(unlockCostRaw, 0)
+          : 0
+        : 0;
+
+      const choiceDoc = {
+        label,
+        nextNodeId,
+        locked,
+        unlockCost,
+      };
+
+      const existingChoiceId =
+        typeof choice?._id === "string" ? choice._id.trim() : "";
+      if (existingChoiceId) choiceDoc._id = existingChoiceId;
+
+      choices.push(choiceDoc);
+    });
+
+    nodes.push({
+      _id: id,
+      text,
+      image,
+      notes: nodeNotes,
+      color,
+      choices,
+    });
+  });
+
+  const rawEndings = normalizeToArray(body.endings);
+  const endings = [];
+  const endingIds = new Set();
+
+  rawEndings.forEach((ending, index) => {
+    const id =
+      typeof ending?._id === "string" && ending._id.trim()
+        ? ending._id.trim()
+        : typeof ending?.id === "string" && ending.id.trim()
+        ? ending.id.trim()
+        : "";
+    if (!id) {
+      errors.push(`Ending #${index + 1} must include an id.`);
+      return;
+    }
+    if (endingIds.has(id)) {
+      errors.push(`Duplicate ending id "${id}" detected.`);
+      return;
+    }
+    endingIds.add(id);
+
+    const label =
+      typeof ending?.label === "string" && ending.label.trim()
+        ? ending.label.trim()
+        : id;
+    const typeRaw =
+      typeof ending?.type === "string"
+        ? ending.type.trim().toLowerCase()
+        : "other";
+    const type = ALLOWED_ENDING_TYPES.has(typeRaw) ? typeRaw : "other";
+    const text = typeof ending?.text === "string" ? ending.text.trim() : "";
+    const endingNotes =
+      typeof ending?.notes === "string" ? ending.notes.trim() : "";
+
+    endings.push({ _id: id, label, type, text, notes: endingNotes });
+  });
+
+  if (!nodes.length) {
+    errors.push("Add at least one passage to your story.");
+  }
+
+  if (!endings.length) {
+    errors.push("Add at least one ending to your story.");
+  }
+
+  const startNodeIdInput =
+    typeof body.startNodeId === "string" ? body.startNodeId.trim() : "";
+  let startNodeId = null;
+  if (startNodeIdInput && nodeIds.has(startNodeIdInput)) {
+    startNodeId = startNodeIdInput;
+  } else if (nodes.length) {
+    startNodeId = nodes[0]._id;
+  }
+
+  if (!startNodeId) {
+    errors.push("Select a starting passage.");
+  }
+
+  return {
+    errors,
+    storyDoc: {
+      title,
+      description,
+      notes,
+      coverImage: coverImage || undefined,
+      categories,
+      nodes,
+      endings,
+      startNodeId,
+    },
+  };
+};
+
+const prepareStoryFormData = (story = {}) => ({
+  title: story.title || "",
+  description: story.description || "",
+  notes: story.notes || "",
+  coverImage: story.coverImage || "",
+  startNodeId: story.startNodeId || "",
+  categories: Array.isArray(story.categories) ? story.categories : [],
+  nodes: Array.isArray(story.nodes)
+    ? story.nodes.map((node) => ({
+        _id: node._id || "",
+        text: node.text || "",
+        image: node.image || "",
+        notes: node.notes || "",
+        color: node.color || "twilight",
+        choices: Array.isArray(node.choices)
+          ? node.choices.map((choice) => ({
+              _id: choice._id || "",
+              label: choice.label || "",
+              nextNodeId: choice.nextNodeId || "",
+              locked: Boolean(choice.locked),
+              unlockCost: Number(choice.unlockCost) || 0,
+            }))
+          : [],
+      }))
+    : [],
+  endings: Array.isArray(story.endings)
+    ? story.endings.map((ending) => ({
+        _id: ending._id || "",
+        label: ending.label || "",
+        type: ending.type || "other",
+        text: ending.text || "",
+        notes: ending.notes || "",
+      }))
+    : [],
+});
+
+const commitSession = (req) =>
+  new Promise((resolve, reject) => {
+    if (!req.session) return resolve();
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+
+const setAuthorFlash = async (req, flash) => {
+  if (!req.session) return;
+  req.session.authorFlash = flash;
+  await commitSession(req);
+};
+
+const popAuthorFlash = async (req) => {
+  if (!req.session) return null;
+  const flash = req.session.authorFlash || null;
+  delete req.session.authorFlash;
+  await commitSession(req);
+  return flash;
+};
+
 exports.stats = async (req, res) => {
   try {
     const user = await User.findById(req.session.userId).populate(
@@ -70,7 +375,10 @@ exports.stats = async (req, res) => {
 
     user.storiesRead = storiesCompleted; // reuse the field to reflect completions
 
-    const storiesCreated = 0; // placeholder until authoring stats are tracked
+    const storiesCreated = await Story.countDocuments({
+      author: user._id,
+      origin: "user",
+    });
 
     const gradeTrophy = (value, thresholds) => {
       if (value >= thresholds.platinum) return "platinum";
@@ -105,7 +413,12 @@ exports.stats = async (req, res) => {
         gold: 5,
         platinum: 10,
       }),
-      storyBuilder: "none",
+      storyBuilder: gradeTrophy(storiesCreated, {
+        bronze: 1,
+        silver: 3,
+        gold: 5,
+        platinum: 10,
+      }),
       bigSpender: gradeTrophy(pathsUnlocked, {
         bronze: 1,
         silver: 5,
@@ -164,8 +477,11 @@ exports.stats = async (req, res) => {
         key: "storyBuilder",
         label: "Story Builder",
         level: trophyLevels.storyBuilder,
-        levelLabel: "Coming soon",
-        progressText: "Create and publish adventures to earn this trophy.",
+        levelLabel: formatLevel(trophyLevels.storyBuilder),
+        progressText:
+          storiesCreated === 1
+            ? "1 story created"
+            : `${storiesCreated} stories created`,
       },
       {
         key: "bigSpender",
@@ -261,57 +577,362 @@ exports.stats = async (req, res) => {
 exports.library = async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
-    const stories = await Story.find({ status: { $ne: "invisible" } })
+    const stories = await Story.find({
+      status: { $in: ["public", "coming_soon"] },
+      $or: [{ origin: { $exists: false } }, { origin: { $ne: "user" } }],
+    })
       .sort({ displayOrder: 1, createdAt: -1 })
       .select(
-        "title description coverImage endings status displayOrder categories"
+        "title description coverImage endings status displayOrder categories origin"
       )
       .lean();
 
-    const storyData = stories.map((story) => {
-      const progress = user.progress.find((p) => p.story.equals(story._id));
-      const totalEndings = Array.isArray(story.endings)
-        ? story.endings.length
-        : 0;
-      const foundCount = Array.isArray(progress?.endingsFound)
-        ? progress.endingsFound.length
-        : 0;
+    const storyData = stories.map((story) =>
+      mapStoryForLibrary(story, user, { includeAuthor: false })
+    );
 
-      return {
-        ...story,
-        title: story.title || "Untitled Story",
-        foundCount,
-        totalEndings,
-        categories: Array.isArray(story.categories) ? story.categories : [],
-      };
-    });
-
-    // Read & clear trophy popups (session flash)
-    const trophyPopups = Array.isArray(req.session.trophyPopups)
+    const trophyPopups = Array.isArray(req.session?.trophyPopups)
       ? req.session.trophyPopups
       : [];
-    req.session.trophyPopups = [];
 
-    // Persist the clear so popups don't reappear
-    await new Promise((resolve, reject) =>
-      req.session.save((err) => (err ? reject(err) : resolve()))
-    );
+    if (req.session) {
+      req.session.trophyPopups = [];
+      await commitSession(req);
+    }
 
     res.render("user/library", {
       title: "Library",
       stories: storyData,
       trophyPopups,
       categories: STORY_CATEGORIES,
+      libraryType: "official",
+      libraryLinks: [
+        {
+          href: "/u/library/user-stories",
+          label: "Browse User Created Stories",
+        },
+      ],
     });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .render("user/library", {
-        title: "Library",
-        stories: [],
-        trophyPopups: [],
-        categories: STORY_CATEGORIES,
+    res.status(500).render("user/library", {
+      title: "Library",
+      stories: [],
+      trophyPopups: [],
+      categories: STORY_CATEGORIES,
+      libraryType: "official",
+      libraryLinks: [
+        {
+          href: "/u/library/user-stories",
+          label: "Browse User Created Stories",
+        },
+      ],
+    });
+  }
+};
+
+exports.userStoriesLibrary = async (req, res) => {
+  try {
+    const user = await User.findById(req.session.userId);
+    const stories = await Story.find({
+      origin: "user",
+      status: { $in: ["public", "pending", "under_review"] },
+    })
+      .sort({ createdAt: -1 })
+      .select(
+        "title description coverImage endings status categories origin author"
+      )
+      .populate("author", "username")
+      .lean();
+
+    const storyData = stories.map((story) =>
+      mapStoryForLibrary(story, user, { includeAuthor: true })
+    );
+
+    res.render("user/library", {
+      title: "User Created Stories",
+      stories: storyData,
+      trophyPopups: [],
+      categories: STORY_CATEGORIES,
+      libraryType: "user",
+      libraryLinks: [
+        { href: "/u/library", label: "Back to Main Library" },
+        { href: "/u/authors", label: "Go to My Author Dashboard" },
+      ],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).render("user/library", {
+      title: "User Created Stories",
+      stories: [],
+      trophyPopups: [],
+      categories: STORY_CATEGORIES,
+      libraryType: "user",
+      libraryLinks: [
+        { href: "/u/library", label: "Back to Main Library" },
+        { href: "/u/authors", label: "Go to My Author Dashboard" },
+      ],
+    });
+  }
+};
+
+exports.authorDashboard = async (req, res) => {
+  try {
+    const stories = await Story.find({
+      author: req.user._id,
+      origin: "user",
+    })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    const flash = await popAuthorFlash(req);
+
+    const storyCards = stories.map((story) => ({
+      _id: story._id,
+      title: story.title || "Untitled Story",
+      status: story.status || "private",
+      statusLabel:
+        STORY_STATUS_LABELS[story.status] || STORY_STATUS_LABELS.invisible,
+      updatedAt: story.updatedAt,
+      createdAt: story.createdAt,
+      submittedAt: story.submittedAt,
+      publishedAt: story.publishedAt,
+      isPending: story.status === "pending",
+      isPublic: story.status === "public",
+      isPrivate: story.status === "private",
+      isUnderReview: story.status === "under_review",
+    }));
+
+    res.render("user/authorDashboard", {
+      title: "My Author Library",
+      stories: storyCards,
+      flash,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).render("user/authorDashboard", {
+      title: "My Author Library",
+      stories: [],
+      flash: { type: "error", message: "Unable to load your author library." },
+    });
+  }
+};
+
+exports.authorStoryForm = async (req, res) => {
+  try {
+    const storyId = req.params.id || null;
+    let story = null;
+
+    if (storyId) {
+      story = await Story.findOne({
+        _id: storyId,
+        author: req.user._id,
+        origin: "user",
+      }).lean();
+      if (!story) {
+        return res.status(404).render("user/authorDashboard", {
+          title: "My Author Library",
+          stories: [],
+          flash: { type: "error", message: "Story not found." },
+        });
+      }
+    }
+
+    const formData = prepareStoryFormData(story || {});
+
+    res.render("user/storyBuilder", {
+      title: story ? `Edit ${story.title || "Story"}` : "Create a New Story",
+      builderMode: story ? "edit" : "create",
+      storyId,
+      formData,
+      errors: [],
+      availableCategories: STORY_CATEGORIES,
+      storyStatus: story?.status || "private",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).render("user/authorDashboard", {
+      title: "My Author Library",
+      stories: [],
+      flash: { type: "error", message: "Unable to open the story builder." },
+    });
+  }
+};
+
+exports.authorStoryCreate = async (req, res) => {
+  const { errors, storyDoc } = parseStoryPayload(req.body);
+  if (errors.length) {
+    return res.status(400).render("user/storyBuilder", {
+      title: "Create a New Story",
+      builderMode: "create",
+      storyId: null,
+      formData: prepareStoryFormData(storyDoc),
+      errors,
+      availableCategories: STORY_CATEGORIES,
+      storyStatus: "private",
+    });
+  }
+
+  try {
+    const story = new Story({
+      ...storyDoc,
+      author: req.user._id,
+      origin: "user",
+      status: "private",
+    });
+    await story.save();
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: "Story saved as a private draft.",
+    });
+
+    res.redirect("/u/authors");
+  } catch (err) {
+    console.error(err);
+    res.status(500).render("user/storyBuilder", {
+      title: "Create a New Story",
+      builderMode: "create",
+      storyId: null,
+      formData: prepareStoryFormData(storyDoc),
+      errors: ["We couldn't save your story. Please try again."],
+      availableCategories: STORY_CATEGORIES,
+      storyStatus: "private",
+    });
+  }
+};
+
+exports.authorStoryUpdate = async (req, res) => {
+  let storyDoc = null;
+  let story;
+  try {
+    story = await Story.findOne({
+      _id: req.params.id,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      await setAuthorFlash(req, {
+        type: "error",
+        message: "Story not found.",
       });
+      return res.redirect("/u/authors");
+    }
+
+    const parsed = parseStoryPayload(req.body);
+    storyDoc = parsed.storyDoc;
+    if (parsed.errors.length) {
+      return res.status(400).render("user/storyBuilder", {
+        title: `Edit ${story.title || "Story"}`,
+        builderMode: "edit",
+        storyId: String(story._id),
+        formData: prepareStoryFormData({ ...storyDoc, _id: story._id }),
+        errors: parsed.errors,
+        availableCategories: STORY_CATEGORIES,
+        storyStatus: story.status,
+      });
+    }
+
+    story.title = storyDoc.title;
+    story.description = storyDoc.description;
+    story.notes = storyDoc.notes;
+    story.coverImage = storyDoc.coverImage || undefined;
+    story.categories = storyDoc.categories;
+    story.nodes = storyDoc.nodes;
+    story.endings = storyDoc.endings;
+    story.startNodeId = storyDoc.startNodeId;
+
+    await story.save();
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: "Story updated.",
+    });
+
+    res.redirect("/u/authors");
+  } catch (err) {
+    console.error(err);
+    res.status(500).render("user/storyBuilder", {
+      title: story ? `Edit ${story.title || "Story"}` : "Edit Story",
+      builderMode: "edit",
+      storyId: req.params.id,
+      formData: prepareStoryFormData(storyDoc || {}),
+      errors: ["We couldn't update your story. Please try again."],
+      availableCategories: STORY_CATEGORIES,
+      storyStatus: story?.status || "private",
+    });
+  }
+};
+
+exports.authorStorySubmit = async (req, res) => {
+  try {
+    const story = await Story.findOne({
+      _id: req.params.id,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      await setAuthorFlash(req, {
+        type: "error",
+        message: "Story not found.",
+      });
+      return res.redirect("/u/authors");
+    }
+
+    story.status = "pending";
+    story.submittedAt = new Date();
+    await story.save();
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: "Story submitted for review.",
+    });
+
+    res.redirect("/u/authors");
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't submit your story. Please try again.",
+    });
+    res.redirect("/u/authors");
+  }
+};
+
+exports.authorStorySetPrivate = async (req, res) => {
+  try {
+    const story = await Story.findOne({
+      _id: req.params.id,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      await setAuthorFlash(req, {
+        type: "error",
+        message: "Story not found.",
+      });
+      return res.redirect("/u/authors");
+    }
+
+    story.status = "private";
+    story.publishedAt = null;
+    await story.save();
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: "Story moved back to your private library.",
+    });
+
+    res.redirect("/u/authors");
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't update the story status.",
+    });
+    res.redirect("/u/authors");
   }
 };
