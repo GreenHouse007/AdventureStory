@@ -181,6 +181,21 @@
       font-size: 0.82rem;
     }
 
+    .btn.icon-only {
+      padding: 0.35rem;
+      min-width: 2.25rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-weight: 600;
+    }
+
+    .btn.small.icon-only {
+      padding: 0.25rem 0.35rem;
+      font-size: 1.15rem;
+    }
+
     .btn:hover {
       background: rgba(255, 255, 255, 0.14);
     }
@@ -233,6 +248,14 @@
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .map-zoom-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-right: 0.35rem;
     }
 
     .map-viewport {
@@ -264,6 +287,7 @@
       position: relative;
       min-width: 100%;
       min-height: 100%;
+      transform-origin: top left;
     }
 
     .map-links {
@@ -580,7 +604,7 @@
     }
 
     .choice-field--label input {
-      max-width: 220px;
+      max-width: 200px;
     }
 
     .choice-field--cost input {
@@ -738,6 +762,14 @@
       <div class="map-controls">
         <p>Drag passages into place. Connections redraw automatically with arrows indicating their direction.</p>
         <div class="map-controls-right">
+          <div class="map-zoom-controls" role="group" aria-label="Zoom map view">
+            <button type="button" class="btn small ghost icon-only" id="map-zoom-out-btn" aria-label="Zoom out">
+              <span aria-hidden="true">&minus;</span>
+            </button>
+            <button type="button" class="btn small ghost icon-only" id="map-zoom-in-btn" aria-label="Zoom in">
+              <span aria-hidden="true">+</span>
+            </button>
+          </div>
           <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
           <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
           <button type="button" class="btn small ghost" id="center-selection-btn">Center Selection</button>
@@ -866,6 +898,8 @@
       const addNodeBtn = document.getElementById("add-node-btn");
       const addEndingBtn = document.getElementById("add-ending-btn");
       const centerSelectionBtn = document.getElementById("center-selection-btn");
+      const zoomOutBtn = document.getElementById("map-zoom-out-btn");
+      const zoomInBtn = document.getElementById("map-zoom-in-btn");
       const categoryCheckboxes = Array.from(
         storyForm.querySelectorAll('input[name="categories"]')
       );
@@ -906,6 +940,11 @@
       const nodeColorSelect = nodeForm.elements.color;
 
       const elementIndex = new Map();
+      const MIN_MAP_SCALE = 0.6;
+      const MAX_MAP_SCALE = 1.8;
+      const MAP_SCALE_STEP = 0.2;
+
+      let mapScale = 1;
       let selected = null;
       let inspectorVisible = false;
       let drawFrame = null;
@@ -915,6 +954,40 @@
       let nodeDirty = false;
       let endingDirty = false;
       let selectionQueue = Promise.resolve();
+
+      const getViewportWidthInContent = (scale = mapScale) => {
+        if (!mapViewport) return 0;
+        const factor = scale > 0 ? scale : 1;
+        return mapViewport.clientWidth / factor;
+      };
+
+      const getViewportHeightInContent = (scale = mapScale) => {
+        if (!mapViewport) return 0;
+        const factor = scale > 0 ? scale : 1;
+        return mapViewport.clientHeight / factor;
+      };
+
+      const getViewportCenter = (scale = mapScale) => ({
+        x: mapViewport.scrollLeft + getViewportWidthInContent(scale) / 2,
+        y: mapViewport.scrollTop + getViewportHeightInContent(scale) / 2,
+      });
+
+      const applyMapScale = () => {
+        if (!mapCanvas) return;
+        mapCanvas.style.transform = `scale(${mapScale})`;
+      };
+
+      const updateZoomButtons = () => {
+        if (zoomOutBtn) {
+          zoomOutBtn.disabled = mapScale <= MIN_MAP_SCALE + 0.001;
+        }
+        if (zoomInBtn) {
+          zoomInBtn.disabled = mapScale >= MAX_MAP_SCALE - 0.001;
+        }
+      };
+
+      applyMapScale();
+      updateZoomButtons();
 
       const normalizeCollections = (story) => {
         story.nodes = Array.isArray(story.nodes) ? story.nodes : [];
@@ -1456,8 +1529,10 @@
         const entry = elementIndex.get(selected.id);
         if (!entry) return;
         const el = entry.element;
-        const x = el.offsetLeft + el.offsetWidth / 2 - mapViewport.clientWidth / 2;
-        const y = el.offsetTop + el.offsetHeight / 2 - mapViewport.clientHeight / 2;
+        const viewportWidth = getViewportWidthInContent();
+        const viewportHeight = getViewportHeightInContent();
+        const x = el.offsetLeft + el.offsetWidth / 2 - viewportWidth / 2;
+        const y = el.offsetTop + el.offsetHeight / 2 - viewportHeight / 2;
         mapViewport.scrollTo({
           left: Math.max(x, 0),
           top: Math.max(y, 0),
@@ -1471,6 +1546,28 @@
           drawFrame = null;
           drawLinks();
         });
+      };
+
+      const changeMapScale = (delta) => {
+        if (!mapViewport) return;
+        const proposed = Math.round((mapScale + delta) * 100) / 100;
+        const nextScale = Math.min(
+          MAX_MAP_SCALE,
+          Math.max(MIN_MAP_SCALE, proposed)
+        );
+        if (nextScale === mapScale) return;
+        const previousScale = mapScale;
+        const previousCenter = getViewportCenter(previousScale);
+        mapScale = nextScale;
+        applyMapScale();
+        updateZoomButtons();
+        const nextWidth = getViewportWidthInContent();
+        const nextHeight = getViewportHeightInContent();
+        mapViewport.scrollTo({
+          left: Math.max(previousCenter.x - nextWidth / 2, 0),
+          top: Math.max(previousCenter.y - nextHeight / 2, 0),
+        });
+        scheduleDrawLinks();
       };
 
       const drawLinks = () => {
@@ -1669,6 +1766,7 @@
         highlightSelection();
         drawLinks();
         initDrag();
+        applyMapScale();
       };
 
       const setStoryData = (newStory) => {
@@ -1689,8 +1787,10 @@
           listeners: {
             move(event) {
               const target = event.target;
-              const x = (parseFloat(target.dataset.x) || 0) + event.dx;
-              const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+              const deltaX = event.dx / (mapScale || 1);
+              const deltaY = event.dy / (mapScale || 1);
+              const x = (parseFloat(target.dataset.x) || 0) + deltaX;
+              const y = (parseFloat(target.dataset.y) || 0) + deltaY;
               target.dataset.x = x;
               target.dataset.y = y;
               target.style.left = `${x}px`;
@@ -1753,9 +1853,10 @@
       addNodeBtn.addEventListener("click", () => {
         queueTask(async () => {
           await flushPendingChanges(selected ? { ...selected } : null);
+          const center = getViewportCenter();
           const position = {
-            x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-            y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+            x: center.x - 110,
+            y: center.y - 80,
           };
           const data = await postJSON(`/admin/stories/${storyId}/nodes/add`, { position });
           const newNode = data.story.nodes && data.story.nodes[0];
@@ -1772,9 +1873,10 @@
       addEndingBtn.addEventListener("click", () => {
         queueTask(async () => {
           await flushPendingChanges(selected ? { ...selected } : null);
+          const center = getViewportCenter();
           const position = {
-            x: mapViewport.scrollLeft + mapViewport.clientWidth / 2 - 110,
-            y: mapViewport.scrollTop + mapViewport.clientHeight / 2 - 80,
+            x: center.x - 110,
+            y: center.y - 80,
           };
           const data = await postJSON(`/admin/stories/${storyId}/endings/add`, { position });
           const newEnding = data.story.endings && data.story.endings[0];
@@ -1787,6 +1889,18 @@
           }
         });
       });
+
+      if (zoomOutBtn) {
+        zoomOutBtn.addEventListener("click", () => {
+          changeMapScale(-MAP_SCALE_STEP);
+        });
+      }
+
+      if (zoomInBtn) {
+        zoomInBtn.addEventListener("click", () => {
+          changeMapScale(MAP_SCALE_STEP);
+        });
+      }
 
       centerSelectionBtn.addEventListener("click", () => {
         centerOnSelected();

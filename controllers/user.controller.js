@@ -87,6 +87,18 @@ exports.stats = async (req, res) => {
         gold: 5,
         platinum: 10,
       }),
+      trueEndings: gradeTrophy(trueEndingsFound, {
+        bronze: 1,
+        silver: 3,
+        gold: 5,
+        platinum: 10,
+      }),
+      deathEndings: gradeTrophy(deathEndingsFound, {
+        bronze: 1,
+        silver: 5,
+        gold: 10,
+        platinum: 20,
+      }),
       secretEndings: gradeTrophy(secretEndingsFound, {
         bronze: 1,
         silver: 3,
@@ -117,6 +129,26 @@ exports.stats = async (req, res) => {
           storiesCompleted === 1
             ? "1 story finished"
             : `${storiesCompleted} stories finished`,
+      },
+      {
+        key: "trueEndings",
+        label: "True Endings",
+        level: trophyLevels.trueEndings,
+        levelLabel: formatLevel(trophyLevels.trueEndings),
+        progressText:
+          trueEndingsFound === 1
+            ? "1 true ending discovered"
+            : `${trueEndingsFound} true endings discovered`,
+      },
+      {
+        key: "deathEndings",
+        label: "Death Endings",
+        level: trophyLevels.deathEndings,
+        levelLabel: formatLevel(trophyLevels.deathEndings),
+        progressText:
+          deathEndingsFound === 1
+            ? "1 death ending uncovered"
+            : `${deathEndingsFound} death endings uncovered`,
       },
       {
         key: "secretEndings",
@@ -155,6 +187,24 @@ exports.stats = async (req, res) => {
           "Silver: Finish 3 stories",
           "Gold: Finish 5 stories",
           "Platinum: Finish 10 stories",
+        ],
+      },
+      {
+        label: "True Endings Trophy",
+        requirements: [
+          "Bronze: Discover 1 true ending",
+          "Silver: Discover 3 true endings",
+          "Gold: Discover 5 true endings",
+          "Platinum: Discover 10 true endings",
+        ],
+      },
+      {
+        label: "Death Endings Trophy",
+        requirements: [
+          "Bronze: Uncover 1 death ending",
+          "Silver: Uncover 5 death endings",
+          "Gold: Uncover 10 death endings",
+          "Platinum: Uncover 20 death endings",
         ],
       },
       {
