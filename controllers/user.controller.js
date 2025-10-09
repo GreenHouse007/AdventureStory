@@ -146,39 +146,40 @@ const parseStoryPayload = (body = {}) => {
 
   const description =
     typeof body.description === "string" ? body.description.trim() : "";
-  const notes = typeof body.notes === "string" ? body.notes.trim() : "";
   const coverImage =
     typeof body.coverImage === "string" ? body.coverImage.trim() : "";
   const categories = parseCategories(body.categoriesRaw || body.categories);
 
-  const rawNodes = normalizeToArray(body.nodes);
+  const normalizedNodes = normalizeToArray(body.nodes);
   const nodes = [];
   const nodeIds = new Set();
 
-  rawNodes.forEach((node, index) => {
-    const id =
-      typeof node?._id === "string" && node._id.trim()
-        ? node._id.trim()
-        : typeof node?.id === "string" && node.id.trim()
-        ? node.id.trim()
+  const ensureUniqueId = (baseId, existingIds, fallbackPrefix) => {
+    let candidate = baseId && baseId.trim();
+    if (!candidate) {
+      candidate = fallbackPrefix;
+    }
+    let attempt = candidate;
+    let counter = 1;
+    while (existingIds.has(attempt)) {
+      attempt = `${candidate}-${counter}`;
+      counter += 1;
+    }
+    return attempt;
+  };
+
+  normalizedNodes.forEach((node, index) => {
+    const requestedId =
+      typeof node?._id === "string"
+        ? node._id
+        : typeof node?.id === "string"
+        ? node.id
         : "";
-    if (!id) {
-      errors.push(`Node #${index + 1} must include an id.`);
-      return;
-    }
-    if (nodeIds.has(id)) {
-      errors.push(`Duplicate node id "${id}" detected.`);
-      return;
-    }
+    const id = ensureUniqueId(requestedId, nodeIds, `passage-${index + 1}`);
     nodeIds.add(id);
 
     const text = typeof node?.text === "string" ? node.text.trim() : "";
-    if (!text) {
-      errors.push(`Node "${id}" requires passage text.`);
-    }
-
     const image = typeof node?.image === "string" ? node.image.trim() : "";
-    const nodeNotes = typeof node?.notes === "string" ? node.notes.trim() : "";
     const color =
       typeof node?.color === "string" && node.color.trim()
         ? node.color.trim()
@@ -194,7 +195,7 @@ const parseStoryPayload = (body = {}) => {
     const rawChoices = normalizeToArray(node?.choices);
     const choices = [];
 
-    rawChoices.forEach((choice, choiceIndex) => {
+    rawChoices.forEach((choice) => {
       const label =
         typeof choice?.label === "string" ? choice.label.trim() : "";
       const nextNodeId =
@@ -205,9 +206,6 @@ const parseStoryPayload = (body = {}) => {
           : "";
 
       if (!label || !nextNodeId) {
-        errors.push(
-          `Choice #${choiceIndex + 1} on node "${id}" requires a label and destination.`
-        );
         return;
       }
 
@@ -237,32 +235,24 @@ const parseStoryPayload = (body = {}) => {
       _id: id,
       text,
       image,
-      notes: nodeNotes,
       color,
       position,
       choices,
     });
   });
 
-  const rawEndings = normalizeToArray(body.endings);
+  const normalizedEndings = normalizeToArray(body.endings);
   const endings = [];
   const endingIds = new Set();
 
-  rawEndings.forEach((ending, index) => {
-    const id =
-      typeof ending?._id === "string" && ending._id.trim()
-        ? ending._id.trim()
-        : typeof ending?.id === "string" && ending.id.trim()
-        ? ending.id.trim()
+  normalizedEndings.forEach((ending, index) => {
+    const requestedId =
+      typeof ending?._id === "string"
+        ? ending._id
+        : typeof ending?.id === "string"
+        ? ending.id
         : "";
-    if (!id) {
-      errors.push(`Ending #${index + 1} must include an id.`);
-      return;
-    }
-    if (endingIds.has(id)) {
-      errors.push(`Duplicate ending id "${id}" detected.`);
-      return;
-    }
+    const id = ensureUniqueId(requestedId, endingIds, `ending-${index + 1}`);
     endingIds.add(id);
 
     const label =
@@ -275,8 +265,6 @@ const parseStoryPayload = (body = {}) => {
         : "other";
     const type = ALLOWED_ENDING_TYPES.has(typeRaw) ? typeRaw : "other";
     const text = typeof ending?.text === "string" ? ending.text.trim() : "";
-    const endingNotes =
-      typeof ending?.notes === "string" ? ending.notes.trim() : "";
     const image = typeof ending?.image === "string" ? ending.image.trim() : "";
 
     const endPosX = Number(ending?.position?.x ?? ending?.position?.X ?? ending?.posX);
@@ -292,18 +280,9 @@ const parseStoryPayload = (body = {}) => {
       type,
       text,
       image,
-      notes: endingNotes,
       position: endingPosition,
     });
   });
-
-  if (!nodes.length) {
-    errors.push("Add at least one passage to your story.");
-  }
-
-  if (!endings.length) {
-    errors.push("Add at least one ending to your story.");
-  }
 
   const startNodeIdInput =
     typeof body.startNodeId === "string" ? body.startNodeId.trim() : "";
@@ -314,21 +293,16 @@ const parseStoryPayload = (body = {}) => {
     startNodeId = nodes[0]._id;
   }
 
-  if (!startNodeId) {
-    errors.push("Select a starting passage.");
-  }
-
   return {
     errors,
     storyDoc: {
       title,
       description,
-      notes,
       coverImage: coverImage || undefined,
       categories,
       nodes,
       endings,
-      startNodeId,
+      startNodeId: startNodeId || "",
     },
   };
 };
@@ -336,7 +310,6 @@ const parseStoryPayload = (body = {}) => {
 const prepareStoryFormData = (story = {}) => ({
   title: story.title || "",
   description: story.description || "",
-  notes: story.notes || "",
   coverImage: story.coverImage || "",
   startNodeId: story.startNodeId || "",
   categories: Array.isArray(story.categories) ? story.categories : [],
@@ -345,7 +318,6 @@ const prepareStoryFormData = (story = {}) => ({
         _id: node._id || "",
         text: node.text || "",
         image: node.image || "",
-        notes: node.notes || "",
         color: node.color || "twilight",
         position: {
           x: Number(node.position?.x) || 0,
@@ -369,7 +341,6 @@ const prepareStoryFormData = (story = {}) => ({
         type: ending.type || "other",
         text: ending.text || "",
         image: ending.image || "",
-        notes: ending.notes || "",
         position: {
           x: Number(ending.position?.x) || 0,
           y: Number(ending.position?.y) || 0,
@@ -792,6 +763,7 @@ exports.authorDashboard = async (req, res) => {
       isPublic: story.status === "public",
       isPrivate: story.status === "private",
       isUnderReview: story.status === "under_review",
+      coverImage: story.coverImage || "",
     }));
 
     res.render("user/authorDashboard", {
@@ -817,7 +789,6 @@ exports.authorStoryCreateDraft = async (req, res) => {
     const story = await Story.create({
       title,
       description: "",
-      notes: "",
       coverImage: null,
       author: req.user._id,
       origin: "user",
@@ -1117,7 +1088,6 @@ exports.authorStoryUpdate = async (req, res) => {
 
     story.title = storyDoc.title;
     story.description = storyDoc.description;
-    story.notes = storyDoc.notes;
     story.coverImage = storyDoc.coverImage || undefined;
     story.categories = storyDoc.categories;
     story.nodes = storyDoc.nodes;
@@ -1216,6 +1186,45 @@ exports.authorStorySetPrivate = async (req, res) => {
     await setAuthorFlash(req, {
       type: "error",
       message: "We couldn't update the story status.",
+    });
+    res.redirect("/u/authors");
+  }
+};
+
+exports.authorStoryDelete = async (req, res) => {
+  try {
+    const story = await Story.findOne({
+      _id: req.params.id,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      await setAuthorFlash(req, { type: "error", message: "Story not found." });
+      return res.redirect("/u/authors");
+    }
+
+    if (story.status !== "private") {
+      await setAuthorFlash(req, {
+        type: "error",
+        message: "Stories must be set to private before they can be deleted.",
+      });
+      return res.redirect("/u/authors");
+    }
+
+    await story.deleteOne();
+
+    await setAuthorFlash(req, {
+      type: "success",
+      message: "Story deleted.",
+    });
+
+    res.redirect("/u/authors");
+  } catch (err) {
+    console.error(err);
+    await setAuthorFlash(req, {
+      type: "error",
+      message: "We couldn't delete that story. Please try again.",
     });
     res.redirect("/u/authors");
   }

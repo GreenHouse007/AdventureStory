@@ -33,63 +33,86 @@
       </section>
       <% } else { %>
       <section class="author-stories">
-        <% stories.forEach(function (story) { %>
+        <% stories.forEach(function (story) { const coverSrc = story.coverImage || '/images/default-cover.svg'; %>
         <article class="author-story-card">
-          <header class="author-story-card__header">
-            <h2><%= story.title %></h2>
-            <span class="story-status story-status-<%= story.status %>">
-              <%= story.statusLabel %>
-            </span>
-          </header>
-          <dl class="author-story-card__meta">
-            <div>
-              <dt>Last updated</dt>
-              <dd><%= story.updatedAt ? new Date(story.updatedAt).toLocaleString() : '—' %></dd>
+          <div class="author-story-card__media">
+            <img
+              src="<%= coverSrc %>"
+              alt="Cover art for <%= story.title %>"
+              loading="lazy"
+            />
+          </div>
+          <div class="author-story-card__content">
+            <header class="author-story-card__header">
+              <div>
+                <h2><%= story.title %></h2>
+                <p class="author-story-card__status">
+                  <span class="story-status story-status-<%= story.status %>">
+                    <%= story.statusLabel %>
+                  </span>
+                </p>
+              </div>
+            </header>
+            <dl class="author-story-card__meta">
+              <div>
+                <dt>Last updated</dt>
+                <dd><%= story.updatedAt ? new Date(story.updatedAt).toLocaleString() : '—' %></dd>
+              </div>
+              <div>
+                <dt>Created</dt>
+                <dd><%= story.createdAt ? new Date(story.createdAt).toLocaleDateString() : '—' %></dd>
+              </div>
+              <% if (story.submittedAt) { %>
+              <div>
+                <dt>Submitted</dt>
+                <dd><%= new Date(story.submittedAt).toLocaleDateString() %></dd>
+              </div>
+              <% } %>
+              <% if (story.publishedAt) { %>
+              <div>
+                <dt>Published</dt>
+                <dd><%= new Date(story.publishedAt).toLocaleDateString() %></dd>
+              </div>
+              <% } %>
+            </dl>
+            <div class="author-story-card__actions">
+              <a class="cta-button small" href="/u/authors/stories/<%= story._id %>/edit"
+                >Edit draft</a
+              >
+              <a class="cta-button small ghost" href="/u/story/<%= story._id %>"
+                >Preview story</a
+              >
+              <% if (story.isPrivate) { %>
+              <form
+                method="post"
+                action="/u/authors/stories/<%= story._id %>/submit"
+                class="inline-form"
+              >
+                <button type="submit" class="cta-button small">Submit for review</button>
+              </form>
+              <% } %>
+              <% if (story.isPending || story.isUnderReview || story.isPublic) { %>
+              <form
+                method="post"
+                action="/u/authors/stories/<%= story._id %>/private"
+                class="inline-form"
+              >
+                <button type="submit" class="cta-button small ghost">
+                  Set to private
+                </button>
+              </form>
+              <% } %>
+              <% if (story.isPrivate) { %>
+              <form
+                method="post"
+                action="/u/authors/stories/<%= story._id %>/delete"
+                class="inline-form"
+                onsubmit="return confirm('Delete this story? This cannot be undone.');"
+              >
+                <button type="submit" class="cta-button small danger">Delete story</button>
+              </form>
+              <% } %>
             </div>
-            <div>
-              <dt>Created</dt>
-              <dd><%= story.createdAt ? new Date(story.createdAt).toLocaleDateString() : '—' %></dd>
-            </div>
-            <% if (story.submittedAt) { %>
-            <div>
-              <dt>Submitted</dt>
-              <dd><%= new Date(story.submittedAt).toLocaleDateString() %></dd>
-            </div>
-            <% } %>
-            <% if (story.publishedAt) { %>
-            <div>
-              <dt>Published</dt>
-              <dd><%= new Date(story.publishedAt).toLocaleDateString() %></dd>
-            </div>
-            <% } %>
-          </dl>
-          <div class="author-story-card__actions">
-            <a class="cta-button small" href="/u/authors/stories/<%= story._id %>/edit"
-              >Edit draft</a
-            >
-            <a class="cta-button small ghost" href="/u/story/<%= story._id %>"
-              >Preview story</a
-            >
-            <% if (story.isPrivate) { %>
-            <form
-              method="post"
-              action="/u/authors/stories/<%= story._id %>/submit"
-              class="inline-form"
-            >
-              <button type="submit" class="cta-button small">Submit for review</button>
-            </form>
-            <% } %>
-            <% if (story.isPending || story.isUnderReview || story.isPublic) { %>
-            <form
-              method="post"
-              action="/u/authors/stories/<%= story._id %>/private"
-              class="inline-form"
-            >
-              <button type="submit" class="cta-button small ghost">
-                Set to private
-              </button>
-            </form>
-            <% } %>
           </div>
         </article>
         <% }) %>
@@ -156,15 +179,38 @@
         background: rgba(17, 24, 39, 0.85);
         border: 1px solid rgba(148, 163, 184, 0.15);
         border-radius: 18px;
-        padding: 1.5rem;
+        padding: 1.25rem 1.5rem;
+        display: grid;
+        grid-template-columns: minmax(140px, 180px) 1fr;
+        gap: 1.5rem;
+        align-items: stretch;
+      }
+
+      .author-story-card__media {
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(15, 23, 42, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .author-story-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .author-story-card__content {
         display: flex;
         flex-direction: column;
-        gap: 1.2rem;
+        gap: 1rem;
       }
 
       .author-story-card__header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 1rem;
       }
@@ -172,6 +218,10 @@
       .author-story-card__header h2 {
         margin: 0;
         font-size: 1.3rem;
+      }
+
+      .author-story-card__status {
+        margin: 0.35rem 0 0;
       }
 
       .author-story-card__meta {
@@ -200,6 +250,16 @@
         flex-wrap: wrap;
         gap: 0.65rem;
         align-items: center;
+      }
+
+      .cta-button.danger {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(248, 113, 113, 0.45);
+        color: #fecaca;
+      }
+
+      .cta-button.danger:hover {
+        background: rgba(239, 68, 68, 0.28);
       }
 
       .author-story-card__actions .inline-form {
@@ -263,9 +323,8 @@
           align-items: stretch;
         }
 
-        .author-story-card__header {
-          flex-direction: column;
-          align-items: flex-start;
+        .author-story-card {
+          grid-template-columns: 1fr;
         }
       }
     </style>

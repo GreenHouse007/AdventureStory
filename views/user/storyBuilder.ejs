@@ -49,7 +49,6 @@
         action="<%= builderMode === 'edit' ? `/u/authors/stories/${storyId}` : '/u/authors/stories' %>"
       >
         <section class="panel story-details-panel">
-          <h2>Story Details</h2>
           <div class="story-details-grid">
             <label class="field">
               <span>Title</span>
@@ -71,14 +70,6 @@
                 Upload images once your draft is created.
                 <% } %>
               </span>
-            </label>
-            <label class="field">
-              <span>Author Notes (private)</span>
-              <textarea
-                name="notes"
-                rows="4"
-                placeholder="Keep track of reminders or drafting notes"
-              ><%= formData.notes || '' %></textarea>
             </label>
             <label class="field field--wide field--multiline">
               <span>Description (public)</span>
@@ -112,8 +103,8 @@
         <section class="map-panel">
           <div class="map-controls">
             <p>
-              Drag passages into place, select a node to edit it, and add choices to
-              build your branching story.
+              Drag passages into place. Double-click a node or ending to open its
+              editor.
             </p>
             <div class="map-controls-right">
               <div class="map-zoom-controls" role="group" aria-label="Zoom map view">
@@ -187,10 +178,6 @@
             <span>Story Text</span>
             <textarea name="text" rows="10" class="monospace"></textarea>
           </label>
-          <label class="field field--multiline">
-            <span>Author Notes</span>
-            <textarea name="notes" rows="5" placeholder="Optional notes just for you"></textarea>
-          </label>
           <div class="form-actions">
             <button type="submit" class="btn small">Save Passage</button>
           </div>
@@ -201,10 +188,6 @@
           <div id="choice-list"></div>
           <form id="choice-add-form" class="choice-form">
             <div class="choice-fields">
-              <label class="choice-field">
-                <span>Choice ID (optional)</span>
-                <input type="text" name="_id" placeholder="auto-generated" />
-              </label>
               <label class="choice-field choice-field--label">
                 <span>Label</span>
                 <input type="text" name="label" placeholder="Choice label" required />
@@ -254,10 +237,6 @@
             <span>Ending Text</span>
             <textarea name="text" rows="10" class="monospace"></textarea>
           </label>
-          <label class="field field--multiline">
-            <span>Author Notes</span>
-            <textarea name="notes" rows="5" placeholder="Optional notes"></textarea>
-          </label>
           <div class="form-actions">
             <button type="submit" class="btn small">Save Ending</button>
           </div>
@@ -270,7 +249,6 @@
     <script id="builder-data" type="application/json"><%- JSON.stringify({
       title: formData.title || '',
       description: formData.description || '',
-      notes: formData.notes || '',
       coverImage: formData.coverImage || '',
       categories: formData.categories || [],
       startNodeId: formData.startNodeId || '',

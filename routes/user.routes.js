@@ -15,6 +15,7 @@ const {
   authorStoryUpdate,
   authorStorySubmit,
   authorStorySetPrivate,
+  authorStoryDelete,
   authorStoryImages,
   authorStoryImageUpload,
   authorStoryImageDelete,
@@ -76,6 +77,7 @@ router.post("/authors/stories", authorStoryCreate);
 router.post("/authors/stories/:id", authorStoryUpdate);
 router.post("/authors/stories/:id/submit", authorStorySubmit);
 router.post("/authors/stories/:id/private", authorStorySetPrivate);
+router.post("/authors/stories/:id/delete", authorStoryDelete);
 router.get("/authors/stories/:id/images", authorStoryImages);
 router.post(
   "/authors/stories/:id/images/upload",

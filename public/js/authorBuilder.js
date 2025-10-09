@@ -29,7 +29,7 @@
   const choiceAddLockToggle = choiceAddForm?.querySelector('[data-lock-toggle]');
   const choiceAddCostInput = choiceAddForm?.querySelector('[data-lock-cost]');
 
-  if (!storyForm || !hiddenInputs || !builderDataEl) {
+  if (!storyForm || !hiddenInputs || !builderDataEl || !nodeForm || !endingForm) {
     return;
   }
 
@@ -57,7 +57,6 @@
       {
         title: "",
         description: "",
-        notes: "",
         coverImage: "",
         categories: [],
         startNodeId: "",
@@ -91,32 +90,80 @@
           })
           .filter(Boolean)
       : [];
-    story.nodes = story.nodes.map((node) => ({
-      _id: node._id || "",
-      text: node.text || "",
-      image: node.image || "",
-      notes: node.notes || "",
-      color: COLOR_OPTIONS.includes(node.color) ? node.color : "twilight",
-      position: node.position || null,
-      choices: Array.isArray(node.choices)
-        ? node.choices.map((choice) => ({
-            _id: choice?._id || "",
-            label: choice?.label || "",
-            nextNodeId: choice?.nextNodeId || "",
-            locked: Boolean(choice?.locked),
-            unlockCost: Math.max(Number(choice?.unlockCost) || 0, 0),
-          }))
-        : [],
-    }));
-    story.endings = story.endings.map((ending) => ({
-      _id: ending._id || "",
-      label: ending.label || ending._id || "",
-      type: ENDING_TYPES.includes(ending.type) ? ending.type : "other",
-      text: ending.text || "",
-      notes: ending.notes || "",
-      image: ending.image || "",
-      position: ending.position || null,
-    }));
+
+    const usedNodeIds = new Set();
+    story.nodes = story.nodes.map((node, index) => {
+      const requestedId =
+        typeof node?._id === "string" && node._id.trim()
+          ? node._id.trim()
+          : typeof node?.id === "string" && node.id.trim()
+          ? node.id.trim()
+          : "";
+      let id = requestedId || `passage-${index + 1}`;
+      let counter = 1;
+      while (usedNodeIds.has(id)) {
+        id = `${requestedId || `passage-${index + 1}`}-${counter}`;
+        counter += 1;
+      }
+      usedNodeIds.add(id);
+
+      return {
+        _id: id,
+        text: node.text || "",
+        image: node.image || "",
+        color: COLOR_OPTIONS.includes(node.color) ? node.color : "twilight",
+        position: node.position || null,
+        choices: Array.isArray(node.choices)
+          ? node.choices.map((choice) => ({
+              _id: choice?._id || "",
+              label: choice?.label || "",
+              nextNodeId: choice?.nextNodeId || "",
+              locked: Boolean(choice?.locked),
+              unlockCost: Math.max(Number(choice?.unlockCost) || 0, 0),
+            }))
+          : [],
+      };
+    });
+
+    const usedEndingIds = new Set();
+    story.endings = story.endings.map((ending, index) => {
+      const requestedId =
+        typeof ending?._id === "string" && ending._id.trim()
+          ? ending._id.trim()
+          : typeof ending?.id === "string" && ending.id.trim()
+          ? ending.id.trim()
+          : "";
+      let id = requestedId || `ending-${index + 1}`;
+      let counter = 1;
+      while (usedEndingIds.has(id)) {
+        id = `${requestedId || `ending-${index + 1}`}-${counter}`;
+        counter += 1;
+      }
+      usedEndingIds.add(id);
+
+      const type = ENDING_TYPES.includes(ending.type) ? ending.type : "other";
+
+      return {
+        _id: id,
+        label: ending.label || id,
+        type,
+        text: ending.text || "",
+        image: ending.image || "",
+        position: ending.position || null,
+      };
+    });
+
+    if (story.nodes.length) {
+      const hasStart = story.startNodeId
+        ? story.nodes.some((node) => node._id === story.startNodeId)
+        : false;
+      if (!hasStart) {
+        story.startNodeId = story.nodes[0]._id;
+      }
+    } else {
+      story.startNodeId = "";
+    }
+
     return story;
   };
 
@@ -374,17 +421,6 @@
       const fields = document.createElement("div");
       fields.className = "choice-fields";
 
-      const idField = document.createElement("label");
-      idField.className = "choice-field";
-      const idSpan = document.createElement("span");
-      idSpan.textContent = "Choice ID";
-      const idInput = document.createElement("input");
-      idInput.type = "text";
-      idInput.value = choice._id || "";
-      idInput.placeholder = "optional";
-      idField.appendChild(idSpan);
-      idField.appendChild(idInput);
-
       const labelField = document.createElement("label");
       labelField.className = "choice-field choice-field--label";
       const labelSpan = document.createElement("span");
@@ -426,7 +462,6 @@
       costField.appendChild(costSpan);
       costField.appendChild(costInput);
 
-      fields.appendChild(idField);
       fields.appendChild(labelField);
       fields.appendChild(selectField);
       fields.appendChild(lockedField);
@@ -449,9 +484,6 @@
       };
       syncLockState();
 
-      idInput.addEventListener("input", () => {
-        choice._id = idInput.value.trim();
-      });
       labelInput.addEventListener("input", () => {
         choice.label = labelInput.value;
       });
@@ -491,9 +523,6 @@
     nodeForm.elements.color.value = COLOR_OPTIONS.includes(node.color) ? node.color : "twilight";
     populateImageSelect(nodeForm.elements.image, node.image || "");
     nodeForm.elements.text.value = node.text || "";
-    if (nodeForm.elements.notes) {
-      nodeForm.elements.notes.value = node.notes || "";
-    }
   };
 
   const fillEndingForm = (ending) => {
@@ -504,9 +533,6 @@
     endingForm.elements.type.value = ENDING_TYPES.includes(ending.type) ? ending.type : "other";
     populateImageSelect(endingForm.elements.image, ending.image || "");
     endingForm.elements.text.value = ending.text || "";
-    if (endingForm.elements.notes) {
-      endingForm.elements.notes.value = ending.notes || "";
-    }
   };
 
   const refreshInspector = () => {
@@ -626,7 +652,7 @@
 
       const snippet = document.createElement("p");
       snippet.className = "node-snippet";
-      const textSource = (entity.text || entity.notes || "")
+      const textSource = (entity.text || "")
         .replace(/\s+/g, " ")
         .trim();
       if (textSource) {
@@ -787,7 +813,6 @@
     const node = {
       _id: newId,
       text: "",
-      notes: "",
       image: "",
       color: "twilight",
       position: { x: center.x - 110, y: center.y - 80 },
@@ -810,7 +835,6 @@
       label: newId,
       type: "other",
       text: "",
-      notes: "",
       image: "",
       position: { x: center.x - 110, y: center.y - 80 },
     };
@@ -829,9 +853,6 @@
     node.color = nodeForm.elements.color.value;
     node.image = nodeForm.elements.image.value.trim();
     node.text = nodeForm.elements.text.value;
-    if (nodeForm.elements.notes) {
-      node.notes = nodeForm.elements.notes.value;
-    }
     if (previousId !== node._id) {
       if (storyData.startNodeId === previousId) {
         storyData.startNodeId = node._id;
@@ -864,9 +885,6 @@
     ending.type = endingForm.elements.type.value;
     ending.image = endingForm.elements.image.value.trim();
     ending.text = endingForm.elements.text.value;
-    if (endingForm.elements.notes) {
-      ending.notes = endingForm.elements.notes.value;
-    }
     if (previousId !== ending._id) {
       storyData.nodes.forEach((node) => {
         node.choices.forEach((choice) => {
@@ -884,6 +902,27 @@
     renderMap();
     selectEntity("ending", ending._id, { focusInspector: false });
   });
+
+  const ensureNodeIdOnBlur = () => {
+    if (!selected || selected.type !== "node") return;
+    const input = nodeForm.elements._id;
+    if (!input) return;
+    if (input.value && input.value.trim()) return;
+    input.value = generateUniqueId("passage");
+    nodeForm.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  const ensureEndingIdOnBlur = () => {
+    if (!selected || selected.type !== "ending") return;
+    const input = endingForm.elements._id;
+    if (!input) return;
+    if (input.value && input.value.trim()) return;
+    input.value = generateUniqueId("ending");
+    endingForm.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  nodeForm.elements._id?.addEventListener("blur", ensureNodeIdOnBlur);
+  endingForm.elements._id?.addEventListener("blur", ensureEndingIdOnBlur);
 
   nodeForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -909,7 +948,6 @@
     const node = storyData.nodes.find((n) => n._id === selected.id);
     if (!node) return;
     const choice = {
-      _id: (choiceAddForm.elements._id.value || "").trim(),
       label: choiceAddForm.elements.label.value.trim(),
       nextNodeId: choiceAddForm.elements.nextNodeId.value,
       locked: Boolean(choiceAddLockToggle?.checked),
@@ -924,6 +962,7 @@
     }
     if (choiceAddLockToggle) {
       choiceAddLockToggle.checked = false;
+      syncAddLockState();
     }
     renderChoices(node);
     scheduleDrawLinks();
@@ -988,40 +1027,57 @@
     const nodeIds = new Set();
     storyData.nodes.forEach((node, index) => {
       if (!node._id) {
-        errors.push(`Passage #${index + 1} needs an id.`);
-      } else if (nodeIds.has(node._id)) {
-        errors.push(`Duplicate passage id "${node._id}".`);
-      } else {
-        nodeIds.add(node._id);
+        node._id = generateUniqueId("passage");
       }
-      node.choices.forEach((choice, cIndex) => {
-        if (!choice.label) {
-          errors.push(`Choice #${cIndex + 1} in passage "${node._id}" needs a label.`);
+      if (nodeIds.has(node._id)) {
+        const reassignedId = generateUniqueId("passage");
+        node._id = reassignedId;
+      }
+      nodeIds.add(node._id);
+      node.choices = node.choices.filter((choice) => {
+        if (!choice) return false;
+        const hasLabel = typeof choice.label === "string" && choice.label.trim();
+        const hasNext = typeof choice.nextNodeId === "string" && choice.nextNodeId.trim();
+        if (!hasLabel || !hasNext) {
+          return false;
         }
-        if (!choice.nextNodeId) {
-          errors.push(`Choice #${cIndex + 1} in passage "${node._id}" needs a destination.`);
-        }
+        choice.label = choice.label.trim();
+        choice.nextNodeId = choice.nextNodeId.trim();
+        choice.unlockCost = choice.locked ? Math.max(Number(choice.unlockCost) || 0, 0) : 0;
+        return true;
       });
     });
+
     const endingIds = new Set();
     storyData.endings.forEach((ending, index) => {
       if (!ending._id) {
-        errors.push(`Ending #${index + 1} needs an id.`);
-      } else if (endingIds.has(ending._id)) {
-        errors.push(`Duplicate ending id "${ending._id}".`);
-      } else {
-        endingIds.add(ending._id);
+        ending._id = generateUniqueId("ending");
+      }
+      if (endingIds.has(ending._id)) {
+        const reassignedId = generateUniqueId("ending");
+        ending._id = reassignedId;
+      }
+      endingIds.add(ending._id);
+      if (!ending.label || !ending.label.trim()) {
+        ending.label = ending._id;
       }
     });
-    if (!storyData.nodes.length) {
-      errors.push("Add at least one passage.");
+
+    if (storyData.nodes.length) {
+      const hasValidStart = storyData.nodes.some((node) => node._id === storyData.startNodeId);
+      if (!hasValidStart) {
+        storyData.startNodeId = storyData.nodes[0]._id;
+        if (startNodeSelect) {
+          startNodeSelect.value = storyData.startNodeId;
+        }
+      }
+    } else {
+      storyData.startNodeId = "";
+      if (startNodeSelect) {
+        startNodeSelect.value = "";
+      }
     }
-    if (!storyData.endings.length) {
-      errors.push("Add at least one ending.");
-    }
-    if (!storyData.startNodeId) {
-      errors.push("Select a starting passage.");
-    }
+
     return errors;
   };
 
@@ -1039,7 +1095,6 @@
       hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][_id]`, node._id));
       hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][text]`, node.text));
       hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][image]`, node.image));
-      hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][notes]`, node.notes || ""));
       hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][color]`, node.color));
       hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][position][x]`, node.position?.x ?? 0));
       hiddenInputs.appendChild(createHiddenInput(`nodes[${index}][position][y]`, node.position?.y ?? 0));
@@ -1077,7 +1132,6 @@
       hiddenInputs.appendChild(createHiddenInput(`endings[${index}][type]`, ending.type));
       hiddenInputs.appendChild(createHiddenInput(`endings[${index}][image]`, ending.image || ""));
       hiddenInputs.appendChild(createHiddenInput(`endings[${index}][text]`, ending.text || ""));
-      hiddenInputs.appendChild(createHiddenInput(`endings[${index}][notes]`, ending.notes || ""));
       hiddenInputs.appendChild(createHiddenInput(`endings[${index}][position][x]`, ending.position?.x ?? 0));
       hiddenInputs.appendChild(createHiddenInput(`endings[${index}][position][y]`, ending.position?.y ?? 0));
     });
