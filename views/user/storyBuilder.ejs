@@ -2,92 +2,94 @@
 <html lang="en">
   <head>
     <%- include('../partials/head') %>
+    <link rel="stylesheet" href="/css/authorBuilder.css" />
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
   </head>
   <body>
     <%- include('../partials/header', { user }) %>
 
-    <main class="container story-builder">
-      <h1 class="title">
-        <%= builderMode === 'edit' ? 'Edit Story' : 'Create a New Story' %>
-      </h1>
-
-      <% if (storyStatus && builderMode === 'edit') { %>
-      <div class="story-status story-status-<%= storyStatus %>">
-        Current status: <strong><%= storyStatus %></strong>
-      </div>
-      <% } %>
+    <main class="story-editor-shell">
+      <section class="panel editor-toolbar">
+        <div class="toolbar-heading">
+          <h1>
+            <%= builderMode === 'edit' ? 'Edit Story' : 'Create a New Story' %>
+          </h1>
+          <% if (storyStatus) { %>
+          <span class="story-status story-status-<%= storyStatus %>">
+            Status: <strong><%= storyStatus %></strong>
+          </span>
+          <% } %>
+        </div>
+        <div class="toolbar-group">
+          <a href="/u/authors" class="btn ghost">Back to Author Library</a>
+          <button type="submit" form="authorStoryForm" class="btn primary">
+            <%= builderMode === 'edit' ? 'Save Changes' : 'Save Draft' %>
+          </button>
+        </div>
+      </section>
 
       <% if (errors && errors.length) { %>
-      <div class="flash flash-error">
+      <section class="panel flash flash-error">
         <p>We found a few issues with your story:</p>
         <ul>
-          <% errors.forEach(function(err) { %>
+          <% errors.forEach(function (err) { %>
           <li><%= err %></li>
           <% }) %>
         </ul>
-      </div>
+      </section>
       <% } %>
 
       <form
         id="authorStoryForm"
-        class="builder-form"
+        class="story-builder-form"
         method="post"
         action="<%= builderMode === 'edit' ? `/u/authors/stories/${storyId}` : '/u/authors/stories' %>"
       >
-        <section class="builder-panel">
-          <h2>Story details</h2>
-          <div class="builder-grid">
-            <label>
+        <section class="panel story-details-panel">
+          <h2>Story Details</h2>
+          <div class="story-details-grid">
+            <label class="field">
               <span>Title</span>
-              <input
-                type="text"
-                name="title"
-                value="<%= formData.title || '' %>"
-                required
-              />
+              <input type="text" name="title" value="<%= formData.title || '' %>" required />
             </label>
-            <label>
-              <span>Start node</span>
-              <select name="startNodeId" id="startNodeId">
-                <option value="">Select after adding nodes</option>
+            <label class="field">
+              <span>Start Passage</span>
+              <select name="startNodeId" id="story-start-node">
+                <option value="">-- Select --</option>
               </select>
             </label>
+            <label class="field">
+              <span>Cover Image URL</span>
+              <input
+                type="text"
+                name="coverImage"
+                value="<%= formData.coverImage || '' %>"
+                placeholder="https://example.com/cover.jpg"
+              />
+            </label>
+            <label class="field">
+              <span>Author Notes (private)</span>
+              <textarea
+                name="notes"
+                rows="4"
+                placeholder="Keep track of reminders or drafting notes"
+              ><%= formData.notes || '' %></textarea>
+            </label>
+            <label class="field field--wide field--multiline">
+              <span>Description (public)</span>
+              <textarea
+                name="description"
+                rows="5"
+                placeholder="Give readers a sense of what to expect"
+              ><%= formData.description || '' %></textarea>
+            </label>
           </div>
-
-          <label>
-            <span>Description</span>
-            <textarea
-              name="description"
-              rows="3"
-              placeholder="A quick overview for readers"
-            ><%= formData.description || '' %></textarea>
-          </label>
-
-          <label>
-            <span>Cover image URL</span>
-            <input
-              type="text"
-              name="coverImage"
-              value="<%= formData.coverImage || '' %>"
-              placeholder="https://example.com/cover.jpg"
-            />
-          </label>
-
-          <label>
-            <span>Author notes (optional)</span>
-            <textarea
-              name="notes"
-              rows="3"
-              placeholder="Keep track of ideas or drafting notes"
-            ><%= formData.notes || '' %></textarea>
-          </label>
-
           <% if (Array.isArray(availableCategories) && availableCategories.length) { %>
-          <fieldset class="category-fieldset">
-            <legend>Categories</legend>
-            <div class="category-grid">
+          <div class="field field--wide field--tags">
+            <span>Categories</span>
+            <div class="tag-options">
               <% availableCategories.forEach(function (cat) { %>
-              <label class="category-option">
+              <label class="tag-option">
                 <input
                   type="checkbox"
                   name="categories"
@@ -98,559 +100,172 @@
               </label>
               <% }) %>
             </div>
-          </fieldset>
+          </div>
           <% } %>
         </section>
 
-        <section class="builder-panel">
-          <header class="panel-header">
-            <h2>Passages</h2>
-            <button type="button" class="cta-button small" id="addNodeBtn">
-              + Add passage
-            </button>
-          </header>
-          <p class="muted">
-            Each passage needs a unique ID. Choices link to other passages or
-            endings using those IDs.
-          </p>
-          <div id="nodesContainer" class="builder-stack"></div>
+        <section class="map-panel">
+          <div class="map-controls">
+            <p>
+              Drag passages into place, select a node to edit it, and add choices to
+              build your branching story.
+            </p>
+            <div class="map-controls-right">
+              <div class="map-zoom-controls" role="group" aria-label="Zoom map view">
+                <button type="button" class="btn small ghost icon-only" id="map-zoom-out-btn" aria-label="Zoom out">
+                  <span aria-hidden="true">&minus;</span>
+                </button>
+                <button type="button" class="btn small ghost icon-only" id="map-zoom-in-btn" aria-label="Zoom in">
+                  <span aria-hidden="true">+</span>
+                </button>
+              </div>
+              <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
+              <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
+              <button type="button" class="btn small ghost" id="center-selection-btn">Center Selection</button>
+            </div>
+          </div>
+          <div class="map-viewport" id="mapViewport">
+            <div class="map-canvas" id="mapCanvas">
+              <svg class="map-links" id="linkLayer"></svg>
+            </div>
+          </div>
         </section>
 
-        <section class="builder-panel">
-          <header class="panel-header">
-            <h2>Endings</h2>
-            <button type="button" class="cta-button small" id="addEndingBtn">
-              + Add ending
-            </button>
-          </header>
-          <div id="endingsContainer" class="builder-stack"></div>
-        </section>
+        <div id="builderDataInputs" class="sr-only" aria-hidden="true"></div>
 
         <div class="builder-actions">
-          <button type="submit" class="cta-button">
-            <%= builderMode === 'edit' ? 'Save changes' : 'Save draft' %>
+          <button type="submit" class="btn primary">
+            <%= builderMode === 'edit' ? 'Save Changes' : 'Save Draft' %>
           </button>
           <p class="muted">
-            Submit your story for review from the Author Library when you're
-            ready to share it.
+            Submit your story for review from your Author Library when you're ready
+            to share it. Stories are private until approved.
           </p>
         </div>
       </form>
     </main>
 
-    <%- include('../partials/footer') %>
-
-    <template id="nodeTemplate">
-      <div class="builder-card" data-node>
-        <div class="builder-card__header">
-          <h3>Passage</h3>
-          <button type="button" class="link remove-node">Remove</button>
+    <div class="entity-editor collapsed hidden" id="entityEditor">
+      <div class="entity-editor__header">
+        <div>
+          <h2 id="entityEditorTitle">Passage</h2>
+          <p class="entity-editor__subtitle" id="entityEditorSubtitle"></p>
         </div>
-        <div class="builder-grid">
-          <label>
-            <span>Node ID</span>
-            <input type="text" data-field="_id" required />
-          </label>
-          <label>
-            <span>Display color</span>
-            <input type="text" data-field="color" placeholder="twilight" />
-          </label>
+        <div class="entity-editor__actions">
+          <button type="button" class="btn small ghost" id="editorCollapseBtn" aria-expanded="false">Expand</button>
+          <button type="button" class="btn small danger hidden" id="node-delete">Delete Passage</button>
+          <button type="button" class="btn small danger hidden" id="ending-delete">Delete Ending</button>
         </div>
-        <label>
-          <span>Passage text</span>
-          <textarea data-field="text" rows="4" required></textarea>
-        </label>
-        <label>
-          <span>Image URL</span>
-          <input type="text" data-field="image" />
-        </label>
-        <label>
-          <span>Notes</span>
-          <textarea data-field="notes" rows="2"></textarea>
-        </label>
-        <div class="choice-list" data-choices></div>
-        <button type="button" class="link add-choice">+ Add choice</button>
       </div>
-    </template>
-
-    <template id="choiceTemplate">
-      <div class="choice-card" data-choice>
-        <div class="builder-grid">
-          <label>
-            <span>Choice label</span>
-            <input type="text" data-choice-field="label" required />
+      <div class="entity-editor__body">
+        <form id="node-form" class="stack hidden" data-editor="node">
+          <label class="field">
+            <span>Passage ID</span>
+            <input type="text" name="_id" required />
           </label>
-          <label>
-            <span>Leads to (node or ending ID)</span>
-            <input type="text" data-choice-field="nextNodeId" required />
-          </label>
-        </div>
-        <div class="choice-options">
-          <label class="choice-lock">
-            <input type="checkbox" data-choice-field="locked" />
-            Locked choice
-          </label>
-          <label class="choice-cost">
-            <span>Unlock cost</span>
-            <input type="number" min="0" data-choice-field="unlockCost" value="0" />
-          </label>
-        </div>
-        <button type="button" class="link remove-choice">Remove choice</button>
-        <input type="hidden" data-choice-field="_id" />
-      </div>
-    </template>
-
-    <template id="endingTemplate">
-      <div class="builder-card" data-ending>
-        <div class="builder-card__header">
-          <h3>Ending</h3>
-          <button type="button" class="link remove-ending">Remove</button>
-        </div>
-        <div class="builder-grid">
-          <label>
-            <span>Ending ID</span>
-            <input type="text" data-ending-field="_id" required />
-          </label>
-          <label>
-            <span>Label</span>
-            <input type="text" data-ending-field="label" required />
-          </label>
-          <label>
-            <span>Type</span>
-            <select data-ending-field="type">
-              <option value="true">True</option>
-              <option value="death">Death</option>
-              <option value="secret">Secret</option>
-              <option value="other" selected>Other</option>
+          <label class="field">
+            <span>Border Color</span>
+            <select name="color">
+              <option value="twilight">Twilight Violet</option>
+              <option value="ember">Ember Orange</option>
+              <option value="moss">Moss Green</option>
+              <option value="dusk">Dusk Blue</option>
+              <option value="rose">Rose Magenta</option>
+              <option value="slate">Slate Gray</option>
             </select>
           </label>
+          <label class="field">
+            <span>Image URL</span>
+            <input type="text" name="image" placeholder="https://example.com/image.jpg" />
+          </label>
+          <label class="field field--multiline">
+            <span>Story Text</span>
+            <textarea name="text" rows="10" class="monospace"></textarea>
+          </label>
+          <label class="field field--multiline">
+            <span>Author Notes</span>
+            <textarea name="notes" rows="5" placeholder="Optional notes just for you"></textarea>
+          </label>
+        </form>
+
+        <div class="choices-block hidden" data-editor="node">
+          <div class="empty-state" id="choicesEmptyState">No choices yet.</div>
+          <div id="choice-list"></div>
+          <form id="choice-add-form" class="choice-form">
+            <div class="choice-fields">
+              <label class="choice-field">
+                <span>Choice ID (optional)</span>
+                <input type="text" name="_id" placeholder="auto-generated" />
+              </label>
+              <label class="choice-field choice-field--label">
+                <span>Label</span>
+                <input type="text" name="label" placeholder="Choice label" required />
+              </label>
+              <label class="choice-field">
+                <span>Next</span>
+                <select name="nextNodeId" required></select>
+              </label>
+              <label class="choice-field choice-field--toggle">
+                <span>Locked</span>
+                <input type="checkbox" name="locked" data-lock-toggle />
+              </label>
+              <label class="choice-field choice-field--cost">
+                <span>Unlock Cost</span>
+                <input type="number" name="unlockCost" min="0" step="1" value="0" data-lock-cost />
+              </label>
+            </div>
+            <div class="choice-actions">
+              <button type="submit" class="btn small">Add Choice</button>
+            </div>
+          </form>
         </div>
-        <label>
-          <span>Ending text</span>
-          <textarea data-ending-field="text" rows="3"></textarea>
-        </label>
-        <label>
-          <span>Notes</span>
-          <textarea data-ending-field="notes" rows="2"></textarea>
-        </label>
+
+        <form id="ending-form" class="stack hidden" data-editor="ending">
+          <label class="field">
+            <span>Ending ID</span>
+            <input type="text" name="_id" required />
+          </label>
+          <label class="field">
+            <span>Ending Label</span>
+            <input type="text" name="label" placeholder="Displayed title" />
+          </label>
+          <label class="field">
+            <span>Ending Type</span>
+            <select name="type">
+              <option value="true">True Ending</option>
+              <option value="death">Death</option>
+              <option value="secret">Secret</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Image URL</span>
+            <input type="text" name="image" placeholder="https://example.com/image.jpg" />
+          </label>
+          <label class="field field--multiline">
+            <span>Ending Text</span>
+            <textarea name="text" rows="10" class="monospace"></textarea>
+          </label>
+          <label class="field field--multiline">
+            <span>Author Notes</span>
+            <textarea name="notes" rows="5" placeholder="Optional notes"></textarea>
+          </label>
+        </form>
       </div>
-    </template>
+    </div>
 
-    <script>
-      window.initialStoryData = <%- JSON.stringify(formData || {}) %>;
-    </script>
-    <script>
-      (function () {
-        const data = window.initialStoryData || {};
-        const nodesContainer = document.getElementById('nodesContainer');
-        const endingsContainer = document.getElementById('endingsContainer');
-        const addNodeBtn = document.getElementById('addNodeBtn');
-        const addEndingBtn = document.getElementById('addEndingBtn');
-        const nodeTemplate = document.getElementById('nodeTemplate');
-        const choiceTemplate = document.getElementById('choiceTemplate');
-        const endingTemplate = document.getElementById('endingTemplate');
-        const startNodeSelect = document.getElementById('startNodeId');
+    <%- include('../partials/footer') %>
 
-        function updateStartNodeOptions() {
-          const current = startNodeSelect.value;
-          startNodeSelect.innerHTML = '';
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = 'Select after adding nodes';
-          startNodeSelect.appendChild(placeholder);
-
-          const nodeIds = [];
-          nodesContainer.querySelectorAll('[data-node]').forEach((nodeEl) => {
-            const idInput = nodeEl.querySelector('[data-field="_id"]');
-            if (idInput && idInput.value.trim()) {
-              nodeIds.push(idInput.value.trim());
-            }
-          });
-
-          nodeIds.forEach((id) => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = id;
-            if (id === current) {
-              option.selected = true;
-            }
-            startNodeSelect.appendChild(option);
-          });
-
-          if (!startNodeSelect.value && nodeIds.length > 0) {
-            startNodeSelect.value = nodeIds[0];
-          }
-        }
-
-        function syncNodeNames() {
-          nodesContainer.querySelectorAll('[data-node]').forEach((nodeEl, nodeIndex) => {
-            nodeEl.querySelectorAll('[data-field]').forEach((input) => {
-              const field = input.dataset.field;
-              input.name = `nodes[${nodeIndex}][${field}]`;
-            });
-
-            nodeEl.querySelectorAll('[data-choice]').forEach((choiceEl, choiceIndex) => {
-              choiceEl.querySelectorAll('[data-choice-field]').forEach((input) => {
-                const field = input.dataset.choiceField;
-                input.name = `nodes[${nodeIndex}][choices][${choiceIndex}][${field}]`;
-              });
-
-              const lockCheckbox = choiceEl.querySelector('[data-choice-field="locked"]');
-              const costField = choiceEl.querySelector('[data-choice-field="unlockCost"]');
-              if (costField) {
-                costField.disabled = !(lockCheckbox && lockCheckbox.checked);
-              }
-            });
-          });
-
-          updateStartNodeOptions();
-        }
-
-        function syncEndingNames() {
-          endingsContainer.querySelectorAll('[data-ending]').forEach((endingEl, endingIndex) => {
-            endingEl.querySelectorAll('[data-ending-field]').forEach((input) => {
-              const field = input.dataset.endingField;
-              input.name = `endings[${endingIndex}][${field}]`;
-            });
-          });
-        }
-
-        function createChoice(choice = {}) {
-          const clone = choiceTemplate.content.firstElementChild.cloneNode(true);
-          clone.querySelectorAll('[data-choice-field]').forEach((input) => {
-            const field = input.dataset.choiceField;
-            if (field === '_id' && choice._id) {
-              input.value = choice._id;
-            }
-            if (field === 'label') input.value = choice.label || '';
-            if (field === 'nextNodeId') input.value = choice.nextNodeId || '';
-            if (field === 'locked') input.checked = Boolean(choice.locked);
-            if (field === 'unlockCost') input.value = Number(choice.unlockCost || 0);
-          });
-          clone.querySelector('.remove-choice').addEventListener('click', () => {
-            clone.remove();
-            syncNodeNames();
-          });
-          const lockCheckbox = clone.querySelector('[data-choice-field="locked"]');
-          const costField = clone.querySelector('[data-choice-field="unlockCost"]');
-          if (lockCheckbox && costField) {
-            lockCheckbox.addEventListener('change', () => {
-              costField.disabled = !lockCheckbox.checked;
-              if (!lockCheckbox.checked) {
-                costField.value = 0;
-              }
-            });
-            costField.disabled = !lockCheckbox.checked;
-          }
-          return clone;
-        }
-
-        function createNode(node = {}) {
-          const clone = nodeTemplate.content.firstElementChild.cloneNode(true);
-          clone.querySelectorAll('[data-field]').forEach((input) => {
-            const field = input.dataset.field;
-            if (field === '_id') input.value = node._id || '';
-            if (field === 'text') input.value = node.text || '';
-            if (field === 'image') input.value = node.image || '';
-            if (field === 'notes') input.value = node.notes || '';
-            if (field === 'color') input.value = node.color || '';
-          });
-
-          const choicesContainer = clone.querySelector('[data-choices]');
-          const nodeChoices = Array.isArray(node.choices) ? node.choices : [];
-          if (nodeChoices.length === 0) {
-            choicesContainer.appendChild(createChoice());
-          } else {
-            nodeChoices.forEach((choice) => {
-              choicesContainer.appendChild(createChoice(choice));
-            });
-          }
-
-          clone.querySelector('.add-choice').addEventListener('click', () => {
-            choicesContainer.appendChild(createChoice());
-            syncNodeNames();
-          });
-
-          clone.querySelector('.remove-node').addEventListener('click', () => {
-            clone.remove();
-            syncNodeNames();
-          });
-
-          return clone;
-        }
-
-        function createEnding(ending = {}) {
-          const clone = endingTemplate.content.firstElementChild.cloneNode(true);
-          clone.querySelectorAll('[data-ending-field]').forEach((input) => {
-            const field = input.dataset.endingField;
-            if (field === '_id') input.value = ending._id || '';
-            if (field === 'label') input.value = ending.label || '';
-            if (field === 'type') input.value = ending.type || 'other';
-            if (field === 'text') input.value = ending.text || '';
-            if (field === 'notes') input.value = ending.notes || '';
-          });
-          clone.querySelector('.remove-ending').addEventListener('click', () => {
-            clone.remove();
-            syncEndingNames();
-          });
-          return clone;
-        }
-
-        addNodeBtn.addEventListener('click', () => {
-          nodesContainer.appendChild(createNode());
-          syncNodeNames();
-        });
-
-        addEndingBtn.addEventListener('click', () => {
-          endingsContainer.appendChild(createEnding());
-          syncEndingNames();
-        });
-
-        const initialNodes = Array.isArray(data.nodes) ? data.nodes : [];
-        if (initialNodes.length === 0) {
-          nodesContainer.appendChild(createNode());
-        } else {
-          initialNodes.forEach((node) => {
-            nodesContainer.appendChild(createNode(node));
-          });
-        }
-
-        const initialEndings = Array.isArray(data.endings) ? data.endings : [];
-        if (initialEndings.length === 0) {
-          endingsContainer.appendChild(createEnding());
-        } else {
-          initialEndings.forEach((ending) => {
-            endingsContainer.appendChild(createEnding(ending));
-          });
-        }
-
-        syncNodeNames();
-        syncEndingNames();
-
-        if (data.startNodeId) {
-          startNodeSelect.value = data.startNodeId;
-        }
-      })();
-    </script>
-
-    <style>
-      .story-builder {
-        padding-bottom: 4rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1.75rem;
-      }
-
-      .builder-form {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-      }
-
-      .builder-panel {
-        padding: 1.75rem;
-        border-radius: 18px;
-        background: rgba(17, 24, 39, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.35);
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-      }
-
-      .panel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-      }
-
-      .builder-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-      }
-
-      .builder-grid label,
-      .builder-panel label,
-      .builder-panel textarea,
-      .builder-panel input {
-        width: 100%;
-      }
-
-      label span,
-      legend {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: rgba(148, 163, 184, 0.85);
-        display: block;
-        margin-bottom: 0.35rem;
-      }
-
-      input[type='text'],
-      input[type='number'],
-      select,
-      textarea {
-        border-radius: 12px;
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        background: rgba(15, 23, 42, 0.85);
-        color: #e2e8f0;
-        padding: 0.65rem 0.8rem;
-        font-size: 0.95rem;
-      }
-
-      textarea {
-        min-height: 120px;
-      }
-
-      .builder-stack {
-        display: grid;
-        gap: 1rem;
-      }
-
-      .builder-card {
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        background: rgba(30, 41, 59, 0.6);
-        border-radius: 16px;
-        padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .builder-card__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-      }
-
-      .builder-card__header h3 {
-        margin: 0;
-        font-size: 1.1rem;
-      }
-
-      .choice-card {
-        border: 1px dashed rgba(148, 163, 184, 0.35);
-        border-radius: 14px;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        background: rgba(15, 23, 42, 0.55);
-      }
-
-      .choice-options {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 1rem;
-      }
-
-      .choice-lock {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.9rem;
-      }
-
-      .choice-cost {
-        flex: 1 1 120px;
-      }
-
-      .choice-cost input {
-        width: 100%;
-      }
-
-      .category-fieldset {
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        border-radius: 14px;
-        padding: 1rem 1.25rem;
-      }
-
-      .category-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 0.5rem 1rem;
-      }
-
-      .category-option {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        font-size: 0.9rem;
-      }
-
-      .builder-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        align-items: flex-start;
-      }
-
-      .flash {
-        padding: 1rem 1.25rem;
-        border-radius: 14px;
-      }
-
-      .flash-error {
-        border: 1px solid rgba(248, 113, 113, 0.35);
-        background: rgba(248, 113, 113, 0.12);
-        color: #fecaca;
-      }
-
-      .link {
-        background: none;
-        border: none;
-        color: #93c5fd;
-        cursor: pointer;
-        font-size: 0.9rem;
-        text-decoration: underline;
-      }
-
-      .story-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.35rem 0.85rem;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        color: #e2e8f0;
-        background: rgba(148, 163, 184, 0.12);
-        width: fit-content;
-      }
-
-      .story-status-public {
-        background: rgba(34, 197, 94, 0.18);
-        border-color: rgba(34, 197, 94, 0.32);
-        color: #bbf7d0;
-      }
-
-      .story-status-pending,
-      .story-status-coming_soon {
-        background: rgba(59, 130, 246, 0.18);
-        border-color: rgba(59, 130, 246, 0.32);
-        color: #c7d2fe;
-      }
-
-      .story-status-under_review {
-        background: rgba(244, 114, 182, 0.18);
-        border-color: rgba(244, 114, 182, 0.32);
-        color: #fbcfe8;
-      }
-
-      @media (max-width: 720px) {
-        .builder-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .choice-options {
-          flex-direction: column;
-          align-items: stretch;
-        }
-      }
-    </style>
+    <script id="builder-data" type="application/json"><%- JSON.stringify({
+      title: formData.title || '',
+      description: formData.description || '',
+      notes: formData.notes || '',
+      coverImage: formData.coverImage || '',
+      categories: formData.categories || [],
+      startNodeId: formData.startNodeId || '',
+      nodes: formData.nodes || [],
+      endings: formData.endings || []
+    }) %></script>
+    <script src="/js/authorBuilder.js"></script>
   </body>
 </html>

@@ -126,6 +126,13 @@ const parseStoryPayload = (body = {}) => {
         ? node.color.trim()
         : "twilight";
 
+    const positionX = Number(node?.position?.x ?? node?.position?.X ?? node?.posX);
+    const positionY = Number(node?.position?.y ?? node?.position?.Y ?? node?.posY);
+    const position = {
+      x: Number.isFinite(positionX) ? positionX : 0,
+      y: Number.isFinite(positionY) ? positionY : 0,
+    };
+
     const rawChoices = normalizeToArray(node?.choices);
     const choices = [];
 
@@ -174,6 +181,7 @@ const parseStoryPayload = (body = {}) => {
       image,
       notes: nodeNotes,
       color,
+      position,
       choices,
     });
   });
@@ -212,7 +220,21 @@ const parseStoryPayload = (body = {}) => {
     const endingNotes =
       typeof ending?.notes === "string" ? ending.notes.trim() : "";
 
-    endings.push({ _id: id, label, type, text, notes: endingNotes });
+    const endPosX = Number(ending?.position?.x ?? ending?.position?.X ?? ending?.posX);
+    const endPosY = Number(ending?.position?.y ?? ending?.position?.Y ?? ending?.posY);
+    const endingPosition = {
+      x: Number.isFinite(endPosX) ? endPosX : 0,
+      y: Number.isFinite(endPosY) ? endPosY : 0,
+    };
+
+    endings.push({
+      _id: id,
+      label,
+      type,
+      text,
+      notes: endingNotes,
+      position: endingPosition,
+    });
   });
 
   if (!nodes.length) {
@@ -265,6 +287,10 @@ const prepareStoryFormData = (story = {}) => ({
         image: node.image || "",
         notes: node.notes || "",
         color: node.color || "twilight",
+        position: {
+          x: Number(node.position?.x) || 0,
+          y: Number(node.position?.y) || 0,
+        },
         choices: Array.isArray(node.choices)
           ? node.choices.map((choice) => ({
               _id: choice._id || "",
@@ -283,6 +309,10 @@ const prepareStoryFormData = (story = {}) => ({
         type: ending.type || "other",
         text: ending.text || "",
         notes: ending.notes || "",
+        position: {
+          x: Number(ending.position?.x) || 0,
+          y: Number(ending.position?.y) || 0,
+        },
       }))
     : [],
 });
