@@ -2,6 +2,7 @@ const Story = require("../models/story.model");
 const User = require("../models/user.model");
 const { updateUserMedals } = require("../utils/updateMedals");
 const { getReturnPath } = require("../utils/navigation");
+const { updateCommunityReaderTrophy, ensurePopupQueue } = require("../utils/authorRewards");
 
 const STORY_STATUS_DISPLAY = {
   public: "Public",
@@ -100,6 +101,22 @@ exports.storyLanding = async (req, res) => {
   const statusLabel =
     STORY_STATUS_DISPLAY[story.status] || STORY_STATUS_DISPLAY.invisible;
 
+  const adminPreview = req.query.adminPreview === "1" || req.query.from === "admin";
+  let adminReturnUrl = "/admin";
+  if (adminPreview && typeof req.query.return === "string") {
+    try {
+      const decoded = decodeURIComponent(req.query.return);
+      if (decoded.startsWith("/admin")) {
+        adminReturnUrl = decoded;
+      }
+    } catch (err) {
+      adminReturnUrl = "/admin";
+    }
+  }
+  if (!adminReturnUrl.startsWith("/admin")) {
+    adminReturnUrl = "/admin";
+  }
+
   let continueNodeId = null;
   const totalEndings = Array.isArray(story.endings) ? story.endings.length : 0;
   let foundCount = 0;
@@ -166,6 +183,9 @@ exports.storyLanding = async (req, res) => {
       statusLabel,
       isUserStory: isUserStory(story),
     },
+    adminPreview: adminPreview && isAdminUser(req.user),
+    adminReturnUrl:
+      adminPreview && isAdminUser(req.user) ? adminReturnUrl : null,
   });
 };
 
@@ -202,6 +222,7 @@ exports.playNode = async (req, res) => {
       let p = user.progress.find(
         (pr) => String(pr.story) === String(story._id)
       );
+      let createdProgress = false;
       if (!p) {
         p = {
           story: story._id,
@@ -212,6 +233,7 @@ exports.playNode = async (req, res) => {
           unlockedChoices: [],
         };
         user.progress.push(p);
+        createdProgress = true;
       } else {
         p.lastNodeId = node._id;
         if (!Array.isArray(p.unlockedChoices)) {
@@ -220,6 +242,14 @@ exports.playNode = async (req, res) => {
       }
       unlockedSet = new Set(p.unlockedChoices || []);
       await user.save();
+      if (createdProgress && story.origin === "user") {
+        const trophyResult = await updateCommunityReaderTrophy(user, {
+          session: req.session,
+        });
+        if (trophyResult.changed) {
+          await user.save();
+        }
+      }
       currencyMeta = getCurrencyInfo(story, user);
       userCurrency = currencyMeta.balance;
       req.user = user;
@@ -304,10 +334,39 @@ exports.playEnding = async (req, res) => {
         }
       }
 
-      // (Optional) If you already track endingsFound/currency/trophies here,
-      // keep your existing logic alongside this. The crucial part is clearing lastNodeId.
+      const endingId = String(ending._id);
+      if (!Array.isArray(p.endingsFound)) {
+        p.endingsFound = [];
+      }
+      const alreadyFound = p.endingsFound.some((id) => String(id) === endingId);
+      if (!alreadyFound) {
+        p.endingsFound.push(endingId);
+        user.totalEndingsFound = (Number(user.totalEndingsFound) || 0) + 1;
+        if (ending.type === "true") {
+          p.trueEndingFound = true;
+        }
+        if (ending.type === "death") {
+          p.deathEndingCount = (Number(p.deathEndingCount) || 0) + 1;
+        }
+        if (story.origin === "user") {
+          const reward = 5;
+          user.authorCurrency = (Number(user.authorCurrency) || 0) + reward;
+          const queue = ensurePopupQueue(req.session);
+          if (queue) {
+            queue.push({
+              message: "You earned author gems for discovering a new ending!",
+              amount: reward,
+              currencyLabel: "author gems",
+            });
+          }
+        }
+      }
+
+      updateUserMedals(user);
 
       await user.save();
+      req.user = user;
+      res.locals.user = user;
     }
   }
 

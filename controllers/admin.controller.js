@@ -7,6 +7,9 @@ const { randomUUID } = require("node:crypto"); // built-in UUID
 const { updateUserMedals } = require("../utils/updateMedals");
 const { v2: cloudinary } = require("cloudinary");
 const STORY_CATEGORIES = require("../utils/storyCategories");
+const {
+  updatePublishedAuthorTrophy,
+} = require("../utils/authorRewards");
 
 const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
 const ALLOWED_STORY_STATUSES = new Set([
@@ -283,6 +286,37 @@ const normalizeCategories = (input) => {
   return unique.filter((cat) => allowed.has(cat));
 };
 
+const parseSearchTerm = (value) => {
+  if (!value || typeof value !== "string") return "";
+  return value.trim();
+};
+
+const matchesSearchFilter = (story, term) => {
+  if (!term) return true;
+  const haystack = `${story.title || ""} ${story.authorName || ""}`.toLowerCase();
+  return haystack.includes(term.toLowerCase());
+};
+
+const matchesCategoryFilter = (story, categories) => {
+  if (!Array.isArray(categories) || categories.length === 0) return true;
+  const storyCategories = Array.isArray(story.categories) ? story.categories : [];
+  return storyCategories.some((cat) => categories.includes(cat));
+};
+
+const sanitizeAdminReturnPath = (value, fallback = "/admin") => {
+  if (!value || typeof value !== "string") return fallback;
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch (err) {
+    decoded = value;
+  }
+  if (!decoded.startsWith("/admin")) {
+    return fallback;
+  }
+  return decoded;
+};
+
 const respondError = (req, res, statusCode, message) => {
   if (wantsJSON(req)) {
     return res.status(statusCode).json({ success: false, error: message });
@@ -317,29 +351,74 @@ exports.dashboard = async (req, res) => {
         .lean(),
     ]);
 
-    const pendingStories = reviewStories
-      .filter((story) => story.status === "pending")
-      .map((story) => ({
-        ...story,
-        statusLabel: STORY_STATUS_LABELS[story.status] || story.status,
-      }));
+    const filters = {
+      pending: {
+        search: parseSearchTerm(req.query.pendingSearch),
+        categories: normalizeCategories(req.query.pendingCategories),
+      },
+      underReview: {
+        search: parseSearchTerm(req.query.underReviewSearch),
+        categories: normalizeCategories(req.query.underReviewCategories),
+      },
+      published: {
+        search: parseSearchTerm(req.query.publishedSearch),
+        categories: normalizeCategories(req.query.publishedCategories),
+      },
+    };
 
-    const managedStories = reviewStories
-      .filter((story) => story.status !== "pending")
-      .map((story) => ({
+    const mappedStories = reviewStories.map((story) => {
+      const status = story.status || "pending";
+      const categories = Array.isArray(story.categories) ? story.categories : [];
+      const authorName =
+        story.author?.username ||
+        story.author?.email ||
+        (typeof story.author === "string" ? story.author : "Unknown author");
+      return {
         ...story,
-        statusLabel: STORY_STATUS_LABELS[story.status] || story.status,
-      }));
+        categories,
+        status,
+        statusLabel: STORY_STATUS_LABELS[status] || status,
+        authorName,
+        reviewNote: story.reviewNote || "",
+      };
+    });
+
+    const applyFilters = (list, filter) =>
+      list.filter(
+        (story) =>
+          matchesSearchFilter(story, filter.search) &&
+          matchesCategoryFilter(story, filter.categories)
+      );
+
+    const pendingStories = applyFilters(
+      mappedStories.filter((story) => story.status === "pending"),
+      filters.pending
+    );
+    const underReviewStories = applyFilters(
+      mappedStories.filter((story) => story.status === "under_review"),
+      filters.underReview
+    );
+    const publishedStories = applyFilters(
+      mappedStories.filter((story) => story.status === "public"),
+      filters.published
+    );
 
     const flash = await popAdminFlash(req);
+    const currentQuery = req.originalUrl || "/admin";
+    const encodedReturnTo = encodeURIComponent(currentQuery);
 
     res.render("admin/dashboard", {
       title: "Admin Dashboard",
       user: req.user,
       stats: { userCount, storyCount },
       pendingStories,
-      managedStories,
+      underReviewStories,
+      publishedStories,
+      filters,
+      categories: STORY_CATEGORIES,
       flash,
+      currentQuery,
+      encodedReturnTo,
     });
   } catch (err) {
     console.error(err);
@@ -407,14 +486,20 @@ exports.userAuthorLibrary = async (req, res) => {
         isPending: status === "pending",
         isUnderReview: status === "under_review",
         isPublic: status === "public",
+        reviewNote: story.reviewNote || "",
       };
     });
+
+    const currentQuery = req.originalUrl || `/admin/users/${author._id}/library`;
+    const encodedReturnTo = encodeURIComponent(currentQuery);
 
     res.render("admin/userLibrary", {
       title: `${author.username}'s Author Library`,
       author,
       stories: mappedStories,
       adminUser: req.user,
+      currentQuery,
+      encodedReturnTo,
     });
   } catch (err) {
     console.error(err);
@@ -840,6 +925,16 @@ exports.approveUserStory = async (req, res) => {
     }
     await story.save();
 
+    if (story.author) {
+      const authorUser = await User.findById(story.author);
+      if (authorUser) {
+        const trophyResult = await updatePublishedAuthorTrophy(authorUser);
+        if (trophyResult.changed) {
+          await authorUser.save();
+        }
+      }
+    }
+
     await setAdminFlash(req, {
       type: "success",
       message: `Approved "${story.title}".`,
@@ -946,6 +1041,41 @@ exports.removeUserStory = async (req, res) => {
       message: "Unable to remove story.",
     });
     res.redirect("/admin");
+  }
+};
+
+exports.updateUserStoryNote = async (req, res) => {
+  const redirectTarget = sanitizeAdminReturnPath(req.body.returnTo);
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect(redirectTarget);
+    }
+
+    const clearNote = Boolean(req.body.clearNote);
+    const rawNote = typeof req.body.reviewNote === "string" ? req.body.reviewNote : "";
+    story.reviewNote = clearNote ? "" : rawNote.trim();
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: story.reviewNote
+        ? `Saved review note for "${story.title}".`
+        : `Removed the review note for "${story.title}".`,
+    });
+
+    res.redirect(redirectTarget);
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to update the review note.",
+    });
+    res.redirect(redirectTarget);
   }
 };
 

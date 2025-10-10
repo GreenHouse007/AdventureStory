@@ -58,6 +58,7 @@ router.post(
   controller.markUserStoryUnderReview
 );
 router.post("/user-stories/:id/remove", controller.removeUserStory);
+router.post("/user-stories/:id/note", controller.updateUserStoryNote);
 
 /* ---------------- Stories ---------------- */
 router.get("/stories", controller.storiesList);

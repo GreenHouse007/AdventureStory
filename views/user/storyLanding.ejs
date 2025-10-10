@@ -8,6 +8,13 @@
     <%- include('../partials/header', { user }) %>
 
     <main class="container">
+      <% if (adminPreview && storyAccess && storyAccess.isAdmin) { %>
+      <div class="admin-preview-banner">
+        <a href="<%= adminReturnUrl || '/admin' %>" class="cta-button ghost"
+          >&larr; Back to Dashboard</a
+        >
+      </div>
+      <% } %>
       <% const access = storyAccess || {}; %>
       <h1><%= story?.title || 'Untitled Story' %></h1>
       <img
@@ -167,6 +174,16 @@
         margin-top: 2.5rem;
         font-size: 0.85rem;
         color: rgba(148, 163, 184, 0.85);
+      }
+
+      .admin-preview-banner {
+        margin: 1rem 0 1.5rem;
+      }
+
+      .admin-preview-banner .cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
       }
     </style>
   </body>

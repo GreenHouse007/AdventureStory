@@ -171,7 +171,8 @@
           <%= trophyPopups[0].message %>
         </div>
         <div class="trophy-coins" id="trophy-modal-coins">
-          +<%= trophyPopups[0].amount %> coins
+          +<%= trophyPopups[0].amount %>
+          <%= trophyPopups[0].currencyLabel || 'coins' %>
         </div>
 
         <div class="trophy-actions">
@@ -211,7 +212,8 @@
             const item = queue[i];
             if (!item) { return closeModal(); }
             message.textContent = item.message || 'Achievement unlocked!';
-            coinsEl.textContent = `+${Number(item.amount || 0)} coins`;
+            const label = item.currencyLabel || 'coins';
+            coinsEl.textContent = `+${Number(item.amount || 0)} ${label}`;
             btn.textContent = (i < queue.length - 1) ? 'Next' : 'Got it';
             overlay.classList.remove('hide');
             modal.classList.remove('hide');

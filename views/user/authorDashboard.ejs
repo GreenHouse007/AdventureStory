@@ -113,6 +113,12 @@
               </form>
               <% } %>
             </div>
+            <% if (story.reviewNote) { %>
+            <div class="author-story-card__note">
+              <strong>Admin note:</strong>
+              <p><%= story.reviewNote %></p>
+            </div>
+            <% } %>
           </div>
         </article>
         <% }) %>
@@ -264,6 +270,30 @@
 
       .author-story-card__actions .inline-form {
         margin: 0;
+      }
+
+      .author-story-card__note {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(244, 114, 182, 0.25);
+        background: rgba(244, 114, 182, 0.08);
+        color: #f8fafc;
+      }
+
+      .author-story-card__note strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(244, 114, 182, 0.9);
+      }
+
+      .author-story-card__note p {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.4;
       }
 
       .story-status {

@@ -66,6 +66,7 @@ const storySchema = new mongoose.Schema(
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     notes: String,
+    reviewNote: { type: String, default: "" },
 
     categories: { type: [String], default: [] },
 

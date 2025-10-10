@@ -73,6 +73,24 @@
             <span class="overview-caption">Create more tales from the Authors tab.</span>
           </article>
           <article class="overview-card">
+            <span class="overview-label">Community stories started</span>
+            <span class="overview-value">
+              <%= typeof statsOverview.communityStoriesStarted === "number"
+                ? statsOverview.communityStoriesStarted
+                : 0 %>
+            </span>
+            <span class="overview-caption">Discover adventures crafted by other authors.</span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-label">Stories published</span>
+            <span class="overview-value">
+              <%= typeof statsOverview.publishedStories === "number"
+                ? statsOverview.publishedStories
+                : 0 %>
+            </span>
+            <span class="overview-caption">Share your worlds with the community.</span>
+          </article>
+          <article class="overview-card">
             <span class="overview-label">True endings found</span>
             <span class="overview-value"><%= typeof statsOverview.trueEndingsFound === "number" ? statsOverview.trueEndingsFound : 0 %></span>
           </article>

@@ -41,17 +41,7 @@
   let autosavePending = false;
   let autosaveInFlight = false;
 
-  const sanitizeEntityId = (value) => {
-    if (typeof value !== "string") return "";
-    return value
-      .replace(/\u00a0/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .replace(/^\s+/, "")
-      .replace(/\s+$/, "");
-  };
-
   const serializeStoryForRequest = () => {
-    validateStory();
     return {
       title: storyData.title || "",
       description: storyData.description || "",
@@ -157,6 +147,8 @@
   let mapScale = 1;
   let storyData = {};
   let selected = null;
+  let activeNodeRef = null;
+  let activeEndingRef = null;
   let drawFrame = null;
   const elementIndex = new Map();
 
@@ -645,6 +637,8 @@
     nodeForm.elements.color.value = COLOR_OPTIONS.includes(node.color) ? node.color : "twilight";
     populateImageSelect(nodeForm.elements.image, node.image || "");
     nodeForm.elements.text.value = node.text || "";
+    activeNodeRef = node;
+    activeEndingRef = null;
   };
 
   const fillEndingForm = (ending) => {
@@ -654,6 +648,8 @@
     endingForm.elements.type.value = ENDING_TYPES.includes(ending.type) ? ending.type : "other";
     populateImageSelect(endingForm.elements.image, ending.image || "");
     endingForm.elements.text.value = ending.text || "";
+    activeEndingRef = ending;
+    activeNodeRef = null;
   };
 
   const refreshInspector = () => {
@@ -665,6 +661,8 @@
       nodeDeleteBtn.classList.add("hidden");
       endingDeleteBtn.classList.add("hidden");
       editorSubtitle.textContent = "";
+      activeNodeRef = null;
+      activeEndingRef = null;
       return;
     }
     if (selected.type === "node") {
@@ -982,17 +980,14 @@
 
   nodeForm.addEventListener("input", () => {
     if (!selected || selected.type !== "node") return;
-    const node = storyData.nodes.find((n) => n._id === nodeForm.dataset.originalId);
+    const node = activeNodeRef || storyData.nodes.find((n) => n._id === nodeForm.dataset.originalId);
     if (!node) return;
     const idInput = nodeForm.elements._id;
-    const sanitizedId = sanitizeEntityId(idInput.value || "");
-    if (idInput.value !== sanitizedId) {
-      idInput.value = sanitizedId;
-    }
+    const rawId = typeof idInput.value === "string" ? idInput.value : "";
     const previousId = node._id;
-    node._id = sanitizedId;
+    node._id = rawId;
     node.color = nodeForm.elements.color.value;
-    node.image = nodeForm.elements.image.value.trim();
+    node.image = nodeForm.elements.image.value;
     node.text = nodeForm.elements.text.value;
     if (previousId !== node._id) {
       if (storyData.startNodeId === previousId) {
@@ -1009,30 +1004,32 @@
         selected.id = node._id;
       }
       nodeForm.dataset.originalId = node._id;
+      editorSubtitle.textContent = node._id || "Unnamed passage";
+      if (choiceAddForm) {
+        choiceAddForm.dataset.nodeId = node._id;
+      }
     }
     updateStartNodeOptions();
-    populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+    if (choiceAddForm?.elements?.nextNodeId) {
+      populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+    }
     renderMap();
-    selectEntity("node", node._id, { focusInspector: false });
     scheduleAutosave();
   });
 
   endingForm.addEventListener("input", () => {
     if (!selected || selected.type !== "ending") return;
     const currentOriginalId = endingForm.dataset.originalId;
-    const ending = storyData.endings.find((e) => e._id === currentOriginalId);
+    const ending = activeEndingRef || storyData.endings.find((e) => e._id === currentOriginalId);
     if (!ending) return;
 
     const idInput = endingForm.elements._id;
-    const sanitizedId = sanitizeEntityId(idInput.value || "");
-    if (idInput.value !== sanitizedId) {
-      idInput.value = sanitizedId;
-    }
+    const rawId = typeof idInput.value === "string" ? idInput.value : "";
 
     const previousId = ending._id;
-    ending._id = sanitizedId;
+    ending._id = rawId;
     ending.type = endingForm.elements.type.value;
-    ending.image = endingForm.elements.image.value.trim();
+    ending.image = endingForm.elements.image.value;
     ending.text = endingForm.elements.text.value;
 
     if (!ending.label || ending.label === previousId) {
@@ -1054,7 +1051,9 @@
     }
 
     editorSubtitle.textContent = ending._id || "Unnamed ending";
-    populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+    if (choiceAddForm?.elements?.nextNodeId) {
+      populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
+    }
     renderMap();
     scheduleAutosave();
   });
@@ -1227,6 +1226,9 @@
       if (!node._id) {
         node._id = generateUniqueId("passage");
       }
+      if (typeof node.image === "string") {
+        node.image = node.image.trim();
+      }
       if (nodeIds.has(node._id)) {
         const reassignedId = generateUniqueId("passage");
         node._id = reassignedId;
@@ -1252,6 +1254,9 @@
       const rawLabel = typeof ending.label === "string" ? ending.label : "";
       const trimmedLabel = rawLabel.trim();
       ending._id = typeof ending._id === "string" ? ending._id.trim() : "";
+      if (typeof ending.image === "string") {
+        ending.image = ending.image.trim();
+      }
       if (!ending._id) {
         ending._id = generateUniqueId("ending");
       }

@@ -2,6 +2,11 @@ const { v2: cloudinary } = require("cloudinary");
 const User = require("../models/user.model");
 const Story = require("../models/story.model");
 const STORY_CATEGORIES = require("../utils/storyCategories");
+const {
+  TROPHY_CONFIG,
+  computeLevel: computeTrophyLevel,
+  updateStoryBuilderTrophy,
+} = require("../utils/authorRewards");
 
 const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
 
@@ -441,6 +446,18 @@ exports.stats = async (req, res) => {
       author: user._id,
       origin: "user",
     });
+    const publishedStories = await Story.countDocuments({
+      author: user._id,
+      origin: "user",
+      status: "public",
+    });
+
+    const communityStoriesStarted = Array.from(storyMap.values()).filter((story) => {
+      if (!story || story.origin !== "user") return false;
+      const authorId = story.author?._id || story.author || null;
+      if (!authorId) return true;
+      return String(authorId) !== String(user._id);
+    }).length;
 
     const gradeTrophy = (value, thresholds) => {
       if (value >= thresholds.platinum) return "platinum";
@@ -475,12 +492,18 @@ exports.stats = async (req, res) => {
         gold: 5,
         platinum: 10,
       }),
-      storyBuilder: gradeTrophy(storiesCreated, {
-        bronze: 1,
-        silver: 3,
-        gold: 5,
-        platinum: 10,
-      }),
+      storyBuilder: computeTrophyLevel(
+        storiesCreated,
+        TROPHY_CONFIG.storyBuilder.thresholds
+      ),
+      publishedAuthor: computeTrophyLevel(
+        publishedStories,
+        TROPHY_CONFIG.publishedAuthor.thresholds
+      ),
+      communityReader: computeTrophyLevel(
+        communityStoriesStarted,
+        TROPHY_CONFIG.communityReader.thresholds
+      ),
       bigSpender: gradeTrophy(pathsUnlocked, {
         bronze: 1,
         silver: 5,
@@ -546,6 +569,26 @@ exports.stats = async (req, res) => {
             : `${storiesCreated} stories created`,
       },
       {
+        key: "publishedAuthor",
+        label: "Published Author",
+        level: trophyLevels.publishedAuthor,
+        levelLabel: formatLevel(trophyLevels.publishedAuthor),
+        progressText:
+          publishedStories === 1
+            ? "1 story published to the community library"
+            : `${publishedStories} stories published to the community library`,
+      },
+      {
+        key: "communityReader",
+        label: "Community Reader",
+        level: trophyLevels.communityReader,
+        levelLabel: formatLevel(trophyLevels.communityReader),
+        progressText:
+          communityStoriesStarted === 1
+            ? "Started 1 community story"
+            : `Started ${communityStoriesStarted} community stories`,
+      },
+      {
         key: "bigSpender",
         label: "Big Spender",
         level: trophyLevels.bigSpender,
@@ -597,10 +640,28 @@ exports.stats = async (req, res) => {
       {
         label: "Story Builder Trophy",
         requirements: [
-          "Bronze: Publish your first story (coming soon)",
-          "Silver: Publish 3 stories (coming soon)",
-          "Gold: Publish 5 stories (coming soon)",
-          "Platinum: Publish 10 stories (coming soon)",
+          "Bronze: Create 1 story (+25 author gems)",
+          "Silver: Create 3 stories (+50 author gems)",
+          "Gold: Create 5 stories (+100 author gems)",
+          "Platinum: Create 10 stories (+200 author gems)",
+        ],
+      },
+      {
+        label: "Published Author Trophy",
+        requirements: [
+          "Bronze: Publish 1 story to the community (+40 author gems)",
+          "Silver: Publish 3 community stories (+80 author gems)",
+          "Gold: Publish 5 community stories (+160 author gems)",
+          "Platinum: Publish 10 community stories (+300 author gems)",
+        ],
+      },
+      {
+        label: "Community Reader Trophy",
+        requirements: [
+          "Bronze: Start 3 community stories (+15 author gems)",
+          "Silver: Start 6 community stories (+30 author gems)",
+          "Gold: Start 10 community stories (+75 author gems)",
+          "Platinum: Start 20 community stories (+150 author gems)",
         ],
       },
       {
@@ -622,6 +683,8 @@ exports.stats = async (req, res) => {
         totalEndingsFound,
         storiesStarted,
         storiesCreated,
+        publishedStories,
+        communityStoriesStarted,
         trueEndingsFound,
         deathEndingsFound,
         secretEndingsFound,
@@ -764,6 +827,7 @@ exports.authorDashboard = async (req, res) => {
       isPrivate: story.status === "private",
       isUnderReview: story.status === "under_review",
       coverImage: story.coverImage || "",
+      reviewNote: story.reviewNote || "",
     }));
 
     res.render("user/authorDashboard", {
@@ -799,6 +863,20 @@ exports.authorStoryCreateDraft = async (req, res) => {
       startNodeId: null,
       images: [],
     });
+
+    const authorUser = await User.findById(req.user._id);
+    if (authorUser) {
+      const trophyResult = await updateStoryBuilderTrophy(authorUser, {
+        session: req.session,
+      });
+      if (trophyResult.changed) {
+        await authorUser.save();
+        if (req.user) {
+          req.user.authorCurrency = authorUser.authorCurrency;
+          req.user.trophies = authorUser.trophies;
+        }
+      }
+    }
 
     await setAuthorFlash(req, {
       type: "success",
