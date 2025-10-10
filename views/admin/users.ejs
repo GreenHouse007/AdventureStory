@@ -48,6 +48,9 @@
             <td><%= u.currency || 0 %></td>
             <td><%= u.authorCurrency || 0 %></td>
             <td class="actions">
+              <a href="/admin/users/<%= u._id %>/library" class="cta-button small ghost"
+                >Author Library</a
+              >
               <a href="/admin/users/<%= u._id %>" class="cta-button small"
                 >View</a
               >

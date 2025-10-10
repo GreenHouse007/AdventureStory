@@ -13,6 +13,7 @@ const {
   authorStoryForm,
   authorStoryCreate,
   authorStoryUpdate,
+  authorStoryAutosave,
   authorStorySubmit,
   authorStorySetPrivate,
   authorStoryDelete,
@@ -75,6 +76,7 @@ router.post("/authors/stories/new", authorStoryCreateDraft);
 router.get("/authors/stories/:id/edit", authorStoryForm);
 router.post("/authors/stories", authorStoryCreate);
 router.post("/authors/stories/:id", authorStoryUpdate);
+router.post("/authors/stories/:id/autosave", authorStoryAutosave);
 router.post("/authors/stories/:id/submit", authorStorySubmit);
 router.post("/authors/stories/:id/private", authorStorySetPrivate);
 router.post("/authors/stories/:id/delete", authorStoryDelete);

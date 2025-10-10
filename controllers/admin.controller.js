@@ -384,6 +384,44 @@ exports.userDetail = async (req, res) => {
   }
 };
 
+exports.userAuthorLibrary = async (req, res) => {
+  try {
+    const author = await User.findById(req.params.id).select("username email");
+    if (!author) return res.status(404).send("User not found");
+
+    const stories = await Story.find({
+      author: author._id,
+      origin: "user",
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
+
+    const mappedStories = stories.map((story) => {
+      const status = story.status || "private";
+      return {
+        ...story,
+        status,
+        coverImage: story.coverImage || "",
+        statusLabel: STORY_STATUS_LABELS[status] || status,
+        isPrivate: status === "private",
+        isPending: status === "pending",
+        isUnderReview: status === "under_review",
+        isPublic: status === "public",
+      };
+    });
+
+    res.render("admin/userLibrary", {
+      title: `${author.username}'s Author Library`,
+      author,
+      stories: mappedStories,
+      adminUser: req.user,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error loading author library");
+  }
+};
+
 exports.userUpdate = async (req, res) => {
   try {
     const {
@@ -520,7 +558,10 @@ async function recomputeUserDerived(user) {
 exports.storiesList = async (req, res) => {
   try {
     const q = req.query.q || "";
-    const query = q ? { title: { $regex: q, $options: "i" } } : {};
+    const query = { origin: { $ne: "user" } };
+    if (q) {
+      query.title = { $regex: q, $options: "i" };
+    }
     const stories = await Story.find(query)
       .sort({ displayOrder: 1, createdAt: -1 })
       .select("title description coverImage status displayOrder");

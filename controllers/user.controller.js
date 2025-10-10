@@ -1119,6 +1119,49 @@ exports.authorStoryUpdate = async (req, res) => {
   }
 };
 
+exports.authorStoryAutosave = async (req, res) => {
+  try {
+    const story = await Story.findOne({
+      _id: req.params.id,
+      author: req.user._id,
+      origin: "user",
+    });
+
+    if (!story) {
+      return res.status(404).json({ ok: false, error: "Story not found." });
+    }
+
+    const { errors, storyDoc } = parseStoryPayload(req.body || {});
+    if (errors.length) {
+      return res.status(400).json({ ok: false, errors });
+    }
+
+    story.title = storyDoc.title;
+    story.description = storyDoc.description;
+    story.coverImage = storyDoc.coverImage || undefined;
+    story.categories = storyDoc.categories;
+    story.nodes = storyDoc.nodes;
+    story.endings = storyDoc.endings;
+    story.startNodeId = storyDoc.startNodeId;
+
+    await story.save();
+
+    return res.json({
+      ok: true,
+      story: {
+        _id: String(story._id),
+        title: story.title,
+        status: story.status,
+        startNodeId: story.startNodeId,
+        updatedAt: story.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ ok: false, error: "Autosave failed." });
+  }
+};
+
 exports.authorStorySubmit = async (req, res) => {
   try {
     const story = await Story.findOne({

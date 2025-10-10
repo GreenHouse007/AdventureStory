@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body>
+    <%- include('../partials/header', { user: adminUser }) %>
+
+    <main class="container admin-author-library">
+      <div class="top-actions">
+        <a href="/admin/users" class="back-link">&larr; Back to Users</a>
+      </div>
+
+      <h1 class="title"><%= author.username %>'s Author Library</h1>
+      <p class="muted intro">
+        Review the drafts and published stories that belong to this author. Use
+        the admin dashboard to approve, reject, or remove submissions.
+      </p>
+
+      <% if (!stories || stories.length === 0) { %>
+      <section class="empty-state">
+        <p>This author hasn't created any stories yet.</p>
+        <p class="muted">Stories will appear here once they start building.</p>
+      </section>
+      <% } else { %>
+      <section class="story-grid">
+        <% stories.forEach(function (story) { const coverSrc = story.coverImage || '/images/default-cover.svg'; %>
+        <article class="story-card">
+          <div class="story-card__media">
+            <img src="<%= coverSrc %>" alt="Cover for <%= story.title %>" loading="lazy" />
+          </div>
+          <div class="story-card__body">
+            <header class="story-card__header">
+              <h2><%= story.title %></h2>
+              <span class="story-status story-status-<%= story.status %>">
+                <%= story.statusLabel %>
+              </span>
+            </header>
+            <dl class="story-card__meta">
+              <div>
+                <dt>Updated</dt>
+                <dd><%= story.updatedAt ? new Date(story.updatedAt).toLocaleString() : '—' %></dd>
+              </div>
+              <div>
+                <dt>Created</dt>
+                <dd><%= story.createdAt ? new Date(story.createdAt).toLocaleDateString() : '—' %></dd>
+              </div>
+              <% if (story.submittedAt) { %>
+              <div>
+                <dt>Submitted</dt>
+                <dd><%= new Date(story.submittedAt).toLocaleDateString() %></dd>
+              </div>
+              <% } %>
+              <% if (story.publishedAt) { %>
+              <div>
+                <dt>Published</dt>
+                <dd><%= new Date(story.publishedAt).toLocaleDateString() %></dd>
+              </div>
+              <% } %>
+            </dl>
+            <div class="story-card__actions">
+              <a class="cta-button small ghost" href="/u/story/<%= story._id %>"
+                >Preview Story</a
+              >
+              <% if (story.isPending || story.isUnderReview) { %>
+              <span class="review-note">Awaiting admin review</span>
+              <% } %>
+              <% if (story.isPublic) { %>
+              <span class="review-note">Live in public library</span>
+              <% } %>
+            </div>
+          </div>
+        </article>
+        <% }) %>
+      </section>
+      <% } %>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <style>
+      .admin-author-library {
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+        padding-bottom: 3rem;
+      }
+
+      .top-actions {
+        margin-top: 1rem;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        color: #e5e7eb;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: background 0.2s ease, color 0.2s ease;
+        background: rgba(148, 163, 184, 0.12);
+      }
+
+      .back-link:hover {
+        background: rgba(148, 163, 184, 0.22);
+      }
+
+      .intro {
+        max-width: 640px;
+      }
+
+      .story-grid {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .story-card {
+        display: grid;
+        grid-template-columns: minmax(140px, 180px) 1fr;
+        gap: 1.5rem;
+        padding: 1.25rem 1.5rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.86);
+      }
+
+      .story-card__media {
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(15, 23, 42, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .story-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .story-card__body {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .story-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .story-card__header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+
+      .story-card__meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem 1.25rem;
+        margin: 0;
+      }
+
+      .story-card__meta dt {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(203, 213, 225, 0.8);
+      }
+
+      .story-card__meta dd {
+        margin: 0.15rem 0 0;
+        font-size: 0.95rem;
+      }
+
+      .story-card__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .review-note {
+        font-size: 0.8rem;
+        color: rgba(148, 163, 184, 0.9);
+        background: rgba(30, 41, 59, 0.6);
+        border-radius: 999px;
+        padding: 0.25rem 0.75rem;
+      }
+
+      .empty-state {
+        padding: 2rem;
+        border-radius: 18px;
+        border: 1px dashed rgba(148, 163, 184, 0.3);
+        text-align: center;
+        background: rgba(15, 23, 42, 0.7);
+      }
+    </style>
+  </body>
+</html>

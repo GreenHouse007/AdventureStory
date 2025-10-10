@@ -29,6 +29,123 @@
   const choiceAddLockToggle = choiceAddForm?.querySelector('[data-lock-toggle]');
   const choiceAddCostInput = choiceAddForm?.querySelector('[data-lock-cost]');
 
+  const storyId = storyForm.dataset.storyId || "";
+  const titleInput = storyForm.elements?.title || null;
+  const descriptionInput = storyForm.elements?.description || null;
+  const categoryInputs = Array.from(
+    storyForm.querySelectorAll('input[name="categories"]') || []
+  );
+
+  const canAutosave = Boolean(storyId);
+  let autosaveTimer = null;
+  let autosavePending = false;
+  let autosaveInFlight = false;
+
+  const sanitizeEntityId = (value) => {
+    if (typeof value !== "string") return "";
+    return value
+      .replace(/\u00a0/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .replace(/^\s+/, "")
+      .replace(/\s+$/, "");
+  };
+
+  const serializeStoryForRequest = () => {
+    validateStory();
+    return {
+      title: storyData.title || "",
+      description: storyData.description || "",
+      coverImage: storyData.coverImage || "",
+      categories: Array.isArray(storyData.categories) ? storyData.categories : [],
+      startNodeId: storyData.startNodeId || "",
+      nodes: storyData.nodes.map((node) => ({
+        _id: node._id || "",
+        text: node.text || "",
+        image: node.image || "",
+        color: COLOR_OPTIONS.includes(node.color) ? node.color : "twilight",
+        position: {
+          x: Number(node.position?.x ?? 0),
+          y: Number(node.position?.y ?? 0),
+        },
+        choices: (Array.isArray(node.choices) ? node.choices : []).map((choice) => ({
+          _id: choice._id || "",
+          label: choice.label || "",
+          nextNodeId: choice.nextNodeId || "",
+          locked: Boolean(choice.locked),
+          unlockCost: Math.max(Number(choice.unlockCost) || 0, 0),
+        })),
+      })),
+      endings: storyData.endings.map((ending) => ({
+        _id: ending._id || "",
+        label: ending.label || "",
+        type: ENDING_TYPES.includes(ending.type) ? ending.type : "other",
+        text: ending.text || "",
+        image: ending.image || "",
+        position: {
+          x: Number(ending.position?.x ?? 0),
+          y: Number(ending.position?.y ?? 0),
+        },
+      })),
+    };
+  };
+
+  const triggerAutosave = async () => {
+    if (!canAutosave) return;
+    if (autosaveInFlight) {
+      autosavePending = true;
+      return;
+    }
+
+    autosavePending = false;
+    autosaveInFlight = true;
+
+    const payload = serializeStoryForRequest();
+
+    try {
+      const response = await fetch(`/u/authors/stories/${storyId}/autosave`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        console.error("Autosave failed", response.status, errorBody);
+      }
+    } catch (err) {
+      console.error("Autosave error", err);
+    } finally {
+      autosaveInFlight = false;
+      if (autosavePending) {
+        autosavePending = false;
+        triggerAutosave();
+      }
+    }
+  };
+
+  const scheduleAutosave = ({ flush = false } = {}) => {
+    if (!canAutosave) return;
+    if (flush) {
+      if (autosaveTimer) {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+      }
+      autosavePending = true;
+      triggerAutosave();
+      return;
+    }
+
+    autosavePending = true;
+    if (autosaveTimer) return;
+    autosaveTimer = setTimeout(() => {
+      autosaveTimer = null;
+      triggerAutosave();
+    }, 800);
+  };
+
   if (!storyForm || !hiddenInputs || !builderDataEl || !nodeForm || !endingForm) {
     return;
   }
@@ -486,10 +603,12 @@
 
       labelInput.addEventListener("input", () => {
         choice.label = labelInput.value;
+        scheduleAutosave();
       });
       select.addEventListener("change", () => {
         choice.nextNodeId = select.value;
         scheduleDrawLinks();
+        scheduleAutosave({ flush: true });
       });
       lockedInput.addEventListener("change", () => {
         choice.locked = lockedInput.checked;
@@ -499,17 +618,20 @@
         }
         syncLockState();
         scheduleDrawLinks();
+        scheduleAutosave({ flush: true });
       });
       costInput.addEventListener("input", () => {
         const value = Math.max(Number(costInput.value) || 0, 0);
         choice.unlockCost = value;
         costInput.value = String(value);
+        scheduleAutosave();
       });
 
       removeBtn.addEventListener("click", () => {
         node.choices.splice(index, 1);
         renderChoices(node);
         scheduleDrawLinks();
+        scheduleAutosave({ flush: true });
       });
 
       choiceList.appendChild(item);
@@ -555,6 +677,7 @@
       nodeForm.classList.remove("hidden");
       endingForm.classList.add("hidden");
       document.querySelectorAll('[data-editor="node"]').forEach((el) => el.classList.remove("hidden"));
+      choiceAddForm.classList.remove("hidden");
       choiceAddForm.dataset.nodeId = node._id;
       populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
       fillNodeForm(node);
@@ -569,15 +692,20 @@
       document.querySelectorAll('[data-editor="node"]').forEach((el) => el.classList.add("hidden"));
       nodeForm.classList.add("hidden");
       endingForm.classList.remove("hidden");
+      choiceAddForm.classList.add("hidden");
       fillEndingForm(ending);
     }
   };
   const selectEntity = (type, id, { focusInspector = true } = {}) => {
+    const previousSelection = selected ? { ...selected } : null;
     if (!type || !id) {
       selected = null;
       highlightSelection();
       refreshInspector();
       updateEntityEditorVisibility();
+      if (previousSelection) {
+        scheduleAutosave({ flush: true });
+      }
       return;
     }
     selected = { type, id };
@@ -588,6 +716,12 @@
       entityEditor.classList.remove("collapsed");
       collapseBtn.textContent = "Collapse";
       collapseBtn.setAttribute("aria-expanded", "true");
+    }
+    if (
+      previousSelection &&
+      (previousSelection.type !== selected.type || previousSelection.id !== selected.id)
+    ) {
+      scheduleAutosave({ flush: true });
     }
   };
 
@@ -734,6 +868,7 @@
             ending.position = { x, y };
           }
         }
+        scheduleAutosave({ flush: true });
       },
     },
     inertia: false,
@@ -824,6 +959,7 @@
     renderMap();
     updateStartNodeOptions();
     selectEntity("node", node._id);
+    scheduleAutosave({ flush: true });
   });
 
   addEndingBtn?.addEventListener("click", () => {
@@ -841,14 +977,20 @@
     renderMap();
     updateStartNodeOptions();
     selectEntity("ending", ending._id);
+    scheduleAutosave({ flush: true });
   });
 
   nodeForm.addEventListener("input", () => {
     if (!selected || selected.type !== "node") return;
     const node = storyData.nodes.find((n) => n._id === nodeForm.dataset.originalId);
     if (!node) return;
+    const idInput = nodeForm.elements._id;
+    const sanitizedId = sanitizeEntityId(idInput.value || "");
+    if (idInput.value !== sanitizedId) {
+      idInput.value = sanitizedId;
+    }
     const previousId = node._id;
-    node._id = nodeForm.elements._id.value.trim();
+    node._id = sanitizedId;
     node.color = nodeForm.elements.color.value;
     node.image = nodeForm.elements.image.value.trim();
     node.text = nodeForm.elements.text.value;
@@ -872,6 +1014,7 @@
     populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
     renderMap();
     selectEntity("node", node._id, { focusInspector: false });
+    scheduleAutosave();
   });
 
   endingForm.addEventListener("input", () => {
@@ -881,8 +1024,7 @@
     if (!ending) return;
 
     const idInput = endingForm.elements._id;
-    const rawId = (idInput.value || "").replace(/\u00a0/g, " ");
-    const sanitizedId = rawId.replace(/\s{2,}/g, " ").replace(/^\s+/, "");
+    const sanitizedId = sanitizeEntityId(idInput.value || "");
     if (idInput.value !== sanitizedId) {
       idInput.value = sanitizedId;
     }
@@ -914,6 +1056,7 @@
     editorSubtitle.textContent = ending._id || "Unnamed ending";
     populateDestinationSelect(choiceAddForm.elements.nextNodeId, "");
     renderMap();
+    scheduleAutosave();
   });
 
   const ensureNodeIdOnBlur = () => {
@@ -979,6 +1122,7 @@
     }
     renderChoices(node);
     scheduleDrawLinks();
+    scheduleAutosave({ flush: true });
   });
 
   const syncAddLockState = () => {
@@ -992,6 +1136,44 @@
   if (choiceAddLockToggle) {
     choiceAddLockToggle.addEventListener("change", syncAddLockState);
     syncAddLockState();
+  }
+
+  const syncCategoriesFromForm = () => {
+    storyData.categories = categoryInputs
+      .filter((input) => input.checked)
+      .map((input) => input.value);
+  };
+
+  if (titleInput) {
+    titleInput.addEventListener("input", () => {
+      storyData.title = titleInput.value;
+      scheduleAutosave();
+    });
+    titleInput.addEventListener("blur", () => {
+      storyData.title = titleInput.value;
+      scheduleAutosave({ flush: true });
+    });
+  }
+
+  if (descriptionInput) {
+    descriptionInput.addEventListener("input", () => {
+      storyData.description = descriptionInput.value;
+      scheduleAutosave();
+    });
+    descriptionInput.addEventListener("blur", () => {
+      storyData.description = descriptionInput.value;
+      scheduleAutosave({ flush: true });
+    });
+  }
+
+  if (categoryInputs.length) {
+    categoryInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        syncCategoriesFromForm();
+        scheduleAutosave({ flush: true });
+      });
+    });
+    syncCategoriesFromForm();
   }
 
   nodeDeleteBtn.addEventListener("click", () => {
@@ -1010,6 +1192,7 @@
     renderMap();
     updateStartNodeOptions();
     selectEntity(null, null);
+    scheduleAutosave({ flush: true });
   });
 
   endingDeleteBtn.addEventListener("click", () => {
@@ -1029,11 +1212,13 @@
     renderMap();
     updateStartNodeOptions();
     selectEntity(null, null);
+    scheduleAutosave({ flush: true });
   });
 
   startNodeSelect?.addEventListener("change", () => {
     storyData.startNodeId = startNodeSelect.value;
     renderMap();
+    scheduleAutosave({ flush: true });
   });
   const validateStory = () => {
     const errors = [];
@@ -1158,6 +1343,7 @@
 
   coverImageSelect?.addEventListener("change", (event) => {
     storyData.coverImage = event.target.value;
+    scheduleAutosave({ flush: true });
   });
 
   storyForm.addEventListener("submit", (event) => {

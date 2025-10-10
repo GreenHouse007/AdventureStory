@@ -46,6 +46,7 @@
         id="authorStoryForm"
         class="story-builder-form"
         method="post"
+        data-story-id="<%= builderMode === 'edit' ? storyId : '' %>"
         action="<%= builderMode === 'edit' ? `/u/authors/stories/${storyId}` : '/u/authors/stories' %>"
       >
         <section class="panel story-details-panel">
@@ -186,7 +187,7 @@
         <div class="choices-block hidden" data-editor="node">
           <div class="empty-state" id="choicesEmptyState">No choices yet.</div>
           <div id="choice-list"></div>
-          <form id="choice-add-form" class="choice-form">
+          <form id="choice-add-form" class="choice-form" data-editor="node">
             <div class="choice-fields">
               <label class="choice-field choice-field--label">
                 <span>Label</span>

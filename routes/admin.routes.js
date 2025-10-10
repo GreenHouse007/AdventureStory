@@ -75,6 +75,7 @@ router.get("/users", controller.usersList);
 router.get("/users/add", controller.userAddForm);
 router.post("/users/add", controller.userAddPost);
 router.get("/users/:id", controller.userDetail);
+router.get("/users/:id/library", controller.userAuthorLibrary);
 router.post("/users/:id", controller.userUpdate);
 router.post("/users/:id/reset-password", controller.userResetPassword);
 router.post("/users/:id/delete", controller.userDelete);
