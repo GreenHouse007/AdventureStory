@@ -520,6 +520,61 @@ nav a:hover {
   height: 1px;
   background: #333;
 }
+
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #ffffff;
+  color: #101828;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.25);
+}
+
+.google-button:hover {
+  transform: translateY(-1px);
+  background: #f8fafc;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.3);
+}
+
+.google-button:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.24);
+}
+
+.google-button:focus-visible {
+  outline: 3px solid rgba(66, 133, 244, 0.45);
+  outline-offset: 2px;
+}
+
+.google-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(60, 64, 67, 0.3);
+}
+
+.google-button__icon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.google-button__label {
+  white-space: nowrap;
+}
 .link {
   color: var(--text-light);
   text-decoration: underline;
