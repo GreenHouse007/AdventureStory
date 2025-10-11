@@ -1542,3 +1542,210 @@ nav a:hover {
     font-size: 0.8rem;
   }
 }
+
+/* About Page Redesign */
+.about-body {
+  background: radial-gradient(circle at 15% 20%, rgba(91, 33, 182, 0.32), transparent 48%),
+    radial-gradient(circle at 85% 15%, rgba(14, 116, 144, 0.28), transparent 52%),
+    radial-gradient(circle at 50% 85%, rgba(180, 83, 9, 0.18), transparent 58%),
+    linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-deeper) 100%);
+  color: var(--text-light);
+}
+
+.about-page {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3rem, 6vw, 6rem);
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1.5rem, 6vw, 5rem) clamp(4rem, 10vw, 7rem);
+  overflow: hidden;
+}
+
+.about-hero {
+  position: relative;
+  min-height: clamp(28rem, 75vh, 44rem);
+  padding: clamp(2rem, 4vw, 4rem);
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  border-radius: 32px;
+  overflow: hidden;
+  background: rgba(10, 10, 24, 0.72);
+  border: 1px solid rgba(103, 78, 167, 0.22);
+  box-shadow: var(--shadow-soft), var(--shadow-glow);
+}
+
+.about-hero__content {
+  max-width: 640px;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.about-hero__content h1 {
+  font-family: "Cinzel", serif;
+  font-size: clamp(2.75rem, 6vw, 4.25rem);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.about-hero__content .lead {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+.about-section {
+  position: relative;
+  display: flex;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.about-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 4vw, 3.5rem);
+  width: 100%;
+}
+
+.about-copy,
+.about-visual {
+  padding: clamp(2rem, 4vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.about-copy h2 {
+  font-family: "Cinzel", serif;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  margin: 0;
+}
+
+.about-copy p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+
+.about-copy .cta-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.about-visual {
+  position: relative;
+  align-items: center;
+  min-height: 18rem;
+}
+
+.about-visual .image-placeholder {
+  width: 100%;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px dashed rgba(160, 130, 255, 0.4);
+  border-radius: 20px;
+  background: rgba(17, 12, 40, 0.55);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.about-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.about-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.about-list li::before {
+  content: "✦";
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  color: rgba(251, 191, 36, 0.8);
+}
+
+.about-collab {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(2rem, 4vw, 3rem);
+}
+
+.collab-links {
+  display: grid;
+  gap: 1rem;
+}
+
+.collab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 16px;
+  background: rgba(40, 24, 64, 0.55);
+  border: 1px solid rgba(120, 92, 196, 0.3);
+  color: var(--text-light);
+  text-decoration: none;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.collab-link:hover,
+.collab-link:focus-visible {
+  border-color: rgba(236, 196, 94, 0.65);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 960px) {
+  .about-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .about-visual {
+    min-height: 16rem;
+  }
+
+  .about-copy,
+  .about-visual {
+    align-items: center;
+    text-align: center;
+  }
+
+  .about-copy .cta-buttons {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .about-page {
+    padding: 2rem 1.25rem 3.5rem;
+  }
+
+  .about-hero {
+    padding: 2rem 1.5rem;
+  }
+
+  .about-hero__content {
+    gap: 1.25rem;
+  }
+
+  .collab-link {
+    justify-content: center;
+  }
+}
