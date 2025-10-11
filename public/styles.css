@@ -34,6 +34,41 @@ header h1 {
   color: var(--accent-red);
 }
 
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.menu-toggle__bar {
+  display: block;
+  width: 1.5rem;
+  height: 2px;
+  background: currentColor;
+  margin: 0.25rem 0;
+  transition: background 0.3s;
+}
+
+.menu-toggle:focus-visible {
+  outline: 2px solid var(--accent-purple);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 nav a {
   margin-left: 1.5rem;
   text-decoration: none;
@@ -72,6 +107,55 @@ nav a:hover {
 
 .logout-form {
   display: inline; /* keeps button inline like links */
+}
+
+@media (max-width: 800px) {
+  header {
+    flex-wrap: wrap;
+    row-gap: 0.75rem;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .top-nav {
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .top-nav[data-visible="true"] {
+    display: flex;
+  }
+
+  nav a {
+    margin-left: 0;
+  }
+
+  .top-nav a,
+  .top-nav button {
+    width: 100%;
+    text-align: left;
+    padding: 0.25rem 0;
+  }
+
+  .logout-form {
+    width: 100%;
+  }
+
+  .logout-form button {
+    width: 100%;
+    text-align: left;
+  }
 }
 
 .hero {
