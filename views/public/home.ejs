@@ -3,28 +3,191 @@
   <head>
     <%- include('../partials/head') %>
   </head>
-  <body>
-    <%- include('../partials/header', { user }); %>
+  <body class="home-body">
+    <% const headerConfig = typeof firebaseConfig !== 'undefined' ? firebaseConfig : null; %>
+    <%- include('../partials/header', { user, firebaseConfig: headerConfig }); %>
+    <main class="home-page" id="top">
+      <div class="ambient-particles" aria-hidden="true"></div>
 
-    <!--<div class="banner">
-    <img src="/images/banner.jpg" alt="Shadow Paths Banner" />
-    </div>-->
+      <section class="home-hero" data-motion="fade-up">
+        <div class="hero-atmosphere" aria-hidden="true">
+          <div class="hero-fog-layer"></div>
+          <div class="hero-lantern-stream"></div>
+          <div
+            class="hero-overlay-image"
+            role="img"
+            aria-label="Glowing lanterns mark a path through a shadowed forest."
+          >
+            <span class="overlay-placeholder">
+              Placeholder — Transparent PNG prompt:
+              “Glowing lantern-lit forest path, misty, dark fantasy, cinematic lighting, transparent background.”
+            </span>
+          </div>
+        </div>
+        <div class="hero-content glass-panel">
+          <p class="eyebrow">Shadow Paths</p>
+          <h2>Every choice leads deeper into the dark.</h2>
+          <p class="hero-subtext">
+            Shadow Paths is an interactive storytelling platform where players explore branching tales — and creators forge their own.
+          </p>
+          <div class="hero-buttons">
+            <a class="btn btn-primary" href="/u/library">Play a Story</a>
+            <a class="btn btn-secondary" href="/u/authors">Build a Story</a>
+            <a class="btn btn-ghost" href="#discover">Learn More</a>
+          </div>
+        </div>
+        <div class="hero-scroll-hint" aria-hidden="true">
+          <span>Scroll</span>
+          <div class="scroll-line"></div>
+        </div>
+      </section>
 
-    <!-- Hero -->
-    <section class="hero">
-      <h2>Every Choice Shapes Your Fate</h2>
-      <p>
-        Step into dark forests, cursed ruins, and twisted realms. Choose wisely,
-        for your path may lead to glory... or ruin.
-      </p>
-      <button class="cta-button">Begin Your Journey</button>
+      <section class="feature-highlights" id="discover" data-motion="fade-up">
+        <h3 class="section-title">Discover What Awaits</h3>
+        <div class="feature-grid">
+          <article class="feature-card glass-panel" data-motion="fade-up">
+            <div class="feature-icon">🧩</div>
+            <h4>Node Story Builder</h4>
+            <p>Craft branching adventures with an elegant Twine-style grid editor.</p>
+          </article>
+          <article class="feature-card glass-panel" data-motion="fade-up">
+            <div class="feature-icon">🌐</div>
+            <h4>Story Libraries</h4>
+            <p>Curate public, community, or private collections tailored to every traveler.</p>
+          </article>
+          <article class="feature-card glass-panel" data-motion="fade-up">
+            <div class="feature-icon">🧙</div>
+            <h4>Player Profiles</h4>
+            <p>Track endings discovered, stats earned, and medals claimed across realms.</p>
+          </article>
+          <article class="feature-card glass-panel" data-motion="fade-up">
+            <div class="feature-icon">📜</div>
+            <h4>Dynamic Choices</h4>
+            <p>Continue the journey or restart anew once the final page turns.</p>
+          </article>
+        </div>
+      </section>
 
-      <!-- Teaser Image -->
-      <div class="teaser">
-        <img src="/images/bookMagic.png" alt="Teaser Art" />
-      </div>
-    </section>
+      <section class="earn-section" data-motion="fade-up">
+        <div class="section-header">
+          <h3 class="section-title">Earn, Collect, Unlock</h3>
+          <p class="section-subtext">
+            Find secret endings, earn shimmering trophies, and gather gems to unlock new story paths.
+          </p>
+        </div>
+        <div class="earn-grid">
+          <div class="earn-card glass-panel" data-motion="fade-up">
+            <h4>Trophies</h4>
+            <div class="image-placeholder" aria-hidden="true">
+              <span>
+                Placeholder — Prompt: “Transparent PNG of bronze, silver, gold, platinum trophies glowing softly.”
+              </span>
+            </div>
+            <p>Claim luminous accolades for completing legendary feats and hidden objectives.</p>
+          </div>
+          <div class="earn-card glass-panel" data-motion="fade-up">
+            <h4>Stats</h4>
+            <div class="image-placeholder" aria-hidden="true">
+              <span>
+                Placeholder — Prompt: “Stylized mockup of Shadow Paths stats dashboard (1080p).”
+              </span>
+            </div>
+            <p>Visualize endings reached, branching choices, and time spent unraveling mysteries.</p>
+          </div>
+          <div class="earn-card glass-panel" data-motion="fade-up">
+            <h4>Gems</h4>
+            <div class="image-placeholder" aria-hidden="true">
+              <span>
+                Placeholder — Prompt: “Transparent PNG of glowing gem cluster (purple, blue, gold hues).”
+              </span>
+            </div>
+            <p>Gather ethereal gems to unlock premium chapters and shimmering side quests.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="builder-showcase" data-motion="fade-up">
+        <div class="showcase-text glass-panel">
+          <h3>Build immersive branching stories with our visual grid editor.</h3>
+          <p>
+            Lay out narrative nodes, weave shimmering connections, and preview every timeline before publishing to eager adventurers.
+          </p>
+          <a class="btn btn-secondary" href="/u/authors">Open the Builder</a>
+        </div>
+        <div class="showcase-visual glass-panel" data-motion="fade-up">
+          <div class="image-placeholder">
+            <span>
+              Placeholder — Prompt: “1920×1080 transparent PNG of glowing story nodes connected by silver lines on a dark grid.”
+            </span>
+          </div>
+          <div class="node-pulse" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="library-community" data-motion="fade-up">
+        <div class="section-header">
+          <h3 class="section-title">Explore a living library of adventures created by players around the world.</h3>
+          <p class="section-subtext">
+            Discover curated collections, rotating spotlights, and community crafted sagas.
+          </p>
+        </div>
+        <div class="story-carousel">
+          <button class="carousel-control" type="button" data-carousel="prev" aria-label="Previous stories">&#10094;</button>
+          <div class="story-carousel-track" role="list">
+            <article class="story-card glass-panel" data-motion="fade-up" role="listitem">
+              <h4>Lanternfall</h4>
+              <p>Navigate mist-cloaked ruins where every lantern hides a riddle.</p>
+            </article>
+            <article class="story-card glass-panel" data-motion="fade-up" role="listitem">
+              <h4>Echoes in the Vale</h4>
+              <p>Unearth ancestral whispers guiding you through branching destinies.</p>
+            </article>
+            <article class="story-card glass-panel" data-motion="fade-up" role="listitem">
+              <h4>Keeper of Cinders</h4>
+              <p>Balance embers of power before the final flame fades to black.</p>
+            </article>
+            <article class="story-card glass-panel locked" data-motion="fade-up" role="listitem">
+              <div class="lock-overlay">
+                <span>Requires 10 Gems</span>
+              </div>
+              <h4>Secrets of the Obsidian Tome</h4>
+              <p>Awaiting the worthy — unlock this saga with gathered gems.</p>
+              <div class="image-placeholder" aria-hidden="true">
+                <span>
+                  Placeholder — Prompt: “Transparent PNG of a glowing storybook with a lock symbol.”
+                </span>
+              </div>
+            </article>
+          </div>
+          <button class="carousel-control" type="button" data-carousel="next" aria-label="Next stories">&#10095;</button>
+        </div>
+      </section>
+
+      <section class="tech-stack" data-motion="fade-up">
+        <h3 class="section-title">Built with Node.js · Express · MongoDB · Firebase Auth · Cloudinary · Resend API</h3>
+        <div class="tech-orbs" aria-hidden="true">
+          <span>Node.js</span>
+          <span>Express</span>
+          <span>MongoDB</span>
+          <span>Firebase</span>
+          <span>Cloudinary</span>
+          <span>Resend</span>
+        </div>
+      </section>
+
+      <section class="cta-section" data-motion="fade-up">
+        <h3>Your story begins here. Will you read… or will you write?</h3>
+        <div class="cta-buttons">
+          <a class="btn btn-primary" href="/u/library">Play a Story</a>
+          <a class="btn btn-secondary" href="/u/authors">Create Your Own</a>
+          <a class="btn btn-ghost" href="https://github.com/GreenHouse007/AdventureStory" target="_blank" rel="noreferrer">View GitHub</a>
+        </div>
+      </section>
+    </main>
 
     <%- include('../partials/footer') %>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-ApEc/WSavwg+IpYzfsHDyH5c5jMxo/nMB7alfg7K2NuHgZIBt1WvE5wkgh0Mz6/TJPZ2iEs8M0hCWc0sYjC7iA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/js/home-animations.js" type="module"></script>
   </body>
 </html>
