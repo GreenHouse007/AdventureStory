@@ -12,12 +12,19 @@
         <p class="muted">Log in to continue your adventure.</p>
 
         <% if (typeof error !== 'undefined' && error) { %>
-        <div class="alert error"><%= error %></div>
-        <% } %> <% if (typeof success !== 'undefined' && success) { %>
-        <div class="alert success"><%= success %></div>
+        <div class="alert error" data-auth-message="error"><%= error %></div>
+        <% } else { %>
+        <div class="alert error" data-auth-message="error" hidden></div>
         <% } %>
+        <div class="alert success" data-auth-message="success" hidden></div>
 
-        <form action="/login" method="post" class="stack" novalidate>
+        <form
+          action="/login"
+          method="post"
+          class="stack"
+          novalidate
+          data-auth-form="login"
+        >
           <!-- CSRF token if you enable it -->
           <% if (locals.csrfToken) { %>
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
@@ -61,18 +68,27 @@
         </form>
 
         <div class="auth-links">
-          <a class="link" href="/forgot-password">Forgot password?</a>
+          <a class="link" href="/forgot-password" data-reset-password
+            >Forgot password?</a
+          >
           <span>·</span>
           <a class="link" href="/signup">Create an account</a>
         </div>
 
-        <!-- Optional: Social logins (hide until wired up) -->
-        <!--
-      <div class="divider"><span>or</span></div>
-      <a class="button ghost" href="/auth/google">Continue with Google</a>
-      --></section>
+        <div class="divider" aria-hidden="true"><span>or</span></div>
+        <button class="button ghost" type="button" data-google-sign-in>
+          Continue with Google
+        </button>
+      </section>
     </main>
 
     <%- include('../partials/footer') %>
+    <script>
+      window.firebaseAuthPage = {
+        config: <%- JSON.stringify(firebaseConfig || {}) %>,
+        mode: "login",
+      };
+    </script>
+    <script type="module" src="/js/firebase-auth.js"></script>
   </body>
 </html>

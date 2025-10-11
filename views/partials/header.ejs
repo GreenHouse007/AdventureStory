@@ -55,3 +55,41 @@
     });
   })();
 </script>
+<% if (firebaseConfig && firebaseConfig.apiKey) { %>
+<script type="module">
+  import {
+    initializeApp,
+    getApps,
+    getApp,
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+  const config = <%- JSON.stringify(firebaseConfig) %>;
+  if (config.apiKey) {
+    const app = getApps().length ? getApp() : initializeApp(config);
+    const auth = getAuth(app);
+
+    document.querySelectorAll("form.logout-form").forEach((form) => {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.warn("Firebase sign-out failed", error);
+        }
+
+        try {
+          await fetch(form.action || "/logout", {
+            method: "POST",
+            credentials: "same-origin",
+          });
+        } catch (error) {
+          console.warn("Logout request failed", error);
+        }
+
+        window.location.assign("/");
+      });
+    });
+  }
+</script>
+<% } %>
