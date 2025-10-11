@@ -1,93 +1,96 @@
-# 🌒 Shadow Paths — A Choose Your Own Adventure Platform
+# 🌒 Shadow Paths — A Full-Stack Interactive Storytelling Platform
 
-**Shadow Paths** is a web-based interactive storytelling platform inspired by _D&D_, _dark fantasy_, and _spooky adventure tales_.  
-Players can create accounts, explore branching stories, and unlock multiple endings — while their progress, stats, and discoveries are saved automatically.  
-Admins can manage users, upload story images, and build stories with flexible node-based structures.
-
-🔗 **Live Demo:** [https://adventurestory.onrender.com/](https://adventurestory.onrender.com/)
+Shadow Paths is a portfolio-grade, MERN-inspired choose-your-own-adventure engine that blends a Twine-style authoring experience with a production-ready player portal. Built with Node.js, Express, MongoDB, and rich client-side motion, it lets players dive into branching tales while creators craft elaborate storylines backed by real-time persistence and cloud integrations.
 
 ---
 
-## ✨ Features
+## 🧭 Platform Overview
 
-### 🧍 Player Experience
+### Player Experience
+- **Firebase Authentication** with email/password, Google sign-in, password resets, and email verification.
+- **Progression Tracking** that records endings found, medals earned, and stories created or published per account.
+- **Trophies & Dual Currencies** featuring Gems and Author Gems for unlocking premium story branches.
+- **Unlockable Paths** that gate secret nodes or finales behind earned currency requirements.
 
-- **User Accounts**
+### Creator Tools
+- **Node Story Builder** delivering a Twine-style grid editor for branching narratives.
+- **Cloudinary-Powered Media** uploads for cover art, scene imagery, and atmospheric assets.
+- **Real-Time MongoDB Saving** so story drafts, node changes, and metadata persist instantly.
 
-  - Sign up, log in, and log out securely
-  - Session persistence using Express Sessions + MongoDB
-  - Profile stats showing total endings, medals, and story progress
-
-- **Story Library**
-
-  - Browse all available stories with cover art and descriptions
-  - Stories display discovered vs total endings
-  - Automatically offers **“Continue where you left off”** if a player hasn’t finished
-  - **“Start from Beginning”** appears only once a story is completed or reset
-  - Stories maintain admin-defined display order
-
-- **Game Progression**
-  - Stories feature multiple endings (true, death, secret, etc.)
-  - In-game currency awarded for completing endings and earning medals
-  - Tracks total endings, medals, and story completion across all adventures
+### Admin Tools
+- **User & Library Management** dashboards for moderating accounts and curating story libraries.
+- **Content Oversight** to approve community stories and surface featured adventures.
+- **Resend-Powered Inbox** for handling contact forms, support escalations, and platform updates.
 
 ---
 
-### ⚙️ Admin Tools
+## 🛠️ Tech Stack
 
-- **Story Management**
-
-  - Create and edit story entries and branching nodes
-  - Add, reorder, and delete story images
-  - Integrated **Cloudinary** upload system (secure `.env` keys)
-  - Story library reflects admin-defined display order
-
-- **User Management**
-  - View all users and toggle admin status
-  - See user progress and endings completed
-
----
-
-## 🧩 Tech Stack
-
-| Layer             | Technology                               |
-| ----------------- | ---------------------------------------- |
-| **Frontend**      | EJS templating • HTML • CSS              |
-| **Backend**       | Node.js • Express                        |
-| **Database**      | MongoDB • Mongoose                       |
-| **Auth**          | express-session • connect-mongo • bcrypt |
-| **Cloud Storage** | Cloudinary (image hosting + management)  |
-| **Dev Tools**     | nodemon • dotenv • seed scripts          |
+| Layer          | Technology                                                |
+| -------------- | --------------------------------------------------------- |
+| **Frontend**   | EJS • HTML • CSS • JavaScript                              |
+| **Backend**    | Node.js • Express                                         |
+| **Database**   | MongoDB + Mongoose                                        |
+| **Auth**       | Firebase Auth • bcrypt • express-session                   |
+| **Cloud Storage** | Cloudinary                                             |
+| **Email**      | Resend API                                                |
+| **Hosting**    | Render.com                                                |
+| **Dev Tools**  | Nodemon • dotenv • GitHub CI/CD                           |
+| **AI**         | OpenAI Codex                                              |
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/GreenHouse007/AdventureStory.git
+   cd AdventureStory
+   ```
 
-- Node.js 18+
-- MongoDB (local or Atlas)
-- Cloudinary account (for image hosting)
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### Installation
+3. **Configure environment variables**
+   Create a `.env` file in the project root with the following keys:
+   ```env
+   MONGODB_URI=<your-mongodb-connection-string>
+   SESSION_SECRET=<random-session-secret>
+   CLOUDINARY_CLOUD_NAME=<cloudinary-cloud-name>
+   CLOUDINARY_API_KEY=<cloudinary-api-key>
+   CLOUDINARY_API_SECRET=<cloudinary-api-secret>
+   RESEND_API_KEY=<resend-api-key>
+   FIREBASE_PROJECT_ID=<firebase-project-id>
+   FIREBASE_CLIENT_EMAIL=<firebase-service-account-client-email>
+   FIREBASE_PRIVATE_KEY="<firebase-service-account-private-key>"
+   FIREBASE_API_KEY=<firebase-web-api-key>
+   FIREBASE_AUTH_DOMAIN=<firebase-auth-domain>
+   FIREBASE_STORAGE_BUCKET=<firebase-storage-bucket>
+   FIREBASE_MESSAGING_SENDER_ID=<firebase-messaging-sender-id>
+   FIREBASE_APP_ID=<firebase-app-id>
+   FIREBASE_MEASUREMENT_ID=<firebase-measurement-id>
+   ```
 
-```bash
-git clone https://github.com/yourusername/shadow-paths.git
-cd shadow-paths
-npm install
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+   The app boots with nodemon, hot-reloading server changes and serving the latest assets.
 
-```
+---
 
-## 🧠 Roadmap
+## 🗺️ Roadmap
+- Trophy progression refinements with rarity tiers and seasonal challenges.
+- Expanded currency unlocks for branching finales and author monetization.
+- Immersive audio narration and adaptive ambient soundscapes.
+- Collectible badges and profile showcases for completions.
+- REST/GraphQL API for importing and exporting story blueprints.
+- Competitive leaderboards tracking speed-runs, endings, and creative output.
 
-Player progress reset option
+---
 
-Visual branching editor for story nodes
+## 💡 Developer Notes
 
-Achievements and collectible badges
-
-Audio narration and ambient sound system
-
-Premium story unlocks using earned currency
-
-API for importing/exporting stories
+Shadow Paths has grown from a simple choose-your-own-adventure prototype into a feature-rich storytelling engine that fuses database persistence, cloud media management, email automation, and Firebase-authenticated sessions. Iterative enhancements—many assisted by OpenAI Codex—have layered in responsive UI, cinematic motion, and professional tooling to produce a platform ready for production use or collaborative expansion.
