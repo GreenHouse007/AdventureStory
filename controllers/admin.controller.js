@@ -7,9 +7,48 @@ const { randomUUID } = require("node:crypto"); // built-in UUID
 const { updateUserMedals } = require("../utils/updateMedals");
 const { v2: cloudinary } = require("cloudinary");
 const STORY_CATEGORIES = require("../utils/storyCategories");
+const {
+  updatePublishedAuthorTrophy,
+} = require("../utils/authorRewards");
 
 const ALLOWED_ENDING_TYPES = new Set(["true", "death", "other", "secret"]);
-const ALLOWED_STORY_STATUSES = new Set(["public", "coming_soon", "invisible"]);
+const ALLOWED_STORY_STATUSES = new Set([
+  "public",
+  "coming_soon",
+  "invisible",
+  "private",
+  "pending",
+  "under_review",
+]);
+
+const STORY_STATUS_LABELS = {
+  public: "Public",
+  coming_soon: "Coming Soon",
+  invisible: "Hidden",
+  private: "Private",
+  pending: "Pending Review",
+  under_review: "Under Review",
+};
+
+const commitSession = (req) =>
+  new Promise((resolve, reject) => {
+    if (!req.session) return resolve();
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+
+const setAdminFlash = async (req, flash) => {
+  if (!req.session) return;
+  req.session.adminFlash = flash;
+  await commitSession(req);
+};
+
+const popAdminFlash = async (req) => {
+  if (!req.session) return null;
+  const flash = req.session.adminFlash || null;
+  delete req.session.adminFlash;
+  await commitSession(req);
+  return flash;
+};
 
 const STORY_SEED_EXAMPLE = JSON.stringify(
   {
@@ -247,6 +286,37 @@ const normalizeCategories = (input) => {
   return unique.filter((cat) => allowed.has(cat));
 };
 
+const parseSearchTerm = (value) => {
+  if (!value || typeof value !== "string") return "";
+  return value.trim();
+};
+
+const matchesSearchFilter = (story, term) => {
+  if (!term) return true;
+  const haystack = `${story.title || ""} ${story.authorName || ""}`.toLowerCase();
+  return haystack.includes(term.toLowerCase());
+};
+
+const matchesCategoryFilter = (story, categories) => {
+  if (!Array.isArray(categories) || categories.length === 0) return true;
+  const storyCategories = Array.isArray(story.categories) ? story.categories : [];
+  return storyCategories.some((cat) => categories.includes(cat));
+};
+
+const sanitizeAdminReturnPath = (value, fallback = "/admin") => {
+  if (!value || typeof value !== "string") return fallback;
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch (err) {
+    decoded = value;
+  }
+  if (!decoded.startsWith("/admin")) {
+    return fallback;
+  }
+  return decoded;
+};
+
 const respondError = (req, res, statusCode, message) => {
   if (wantsJSON(req)) {
     return res.status(statusCode).json({ success: false, error: message });
@@ -269,12 +339,86 @@ const parsePosition = (position, fallback = { x: 0, y: 0 }) => {
 /* ------------------ DASHBOARD ------------------ */
 exports.dashboard = async (req, res) => {
   try {
-    const userCount = await User.countDocuments();
-    const storyCount = await Story.countDocuments();
+    const [userCount, storyCount, reviewStories] = await Promise.all([
+      User.countDocuments(),
+      Story.countDocuments(),
+      Story.find({
+        origin: "user",
+        status: { $in: ["pending", "public", "under_review"] },
+      })
+        .populate("author", "username email")
+        .sort({ submittedAt: -1, updatedAt: -1 })
+        .lean(),
+    ]);
+
+    const filters = {
+      pending: {
+        search: parseSearchTerm(req.query.pendingSearch),
+        categories: normalizeCategories(req.query.pendingCategories),
+      },
+      underReview: {
+        search: parseSearchTerm(req.query.underReviewSearch),
+        categories: normalizeCategories(req.query.underReviewCategories),
+      },
+      published: {
+        search: parseSearchTerm(req.query.publishedSearch),
+        categories: normalizeCategories(req.query.publishedCategories),
+      },
+    };
+
+    const mappedStories = reviewStories.map((story) => {
+      const status = story.status || "pending";
+      const categories = Array.isArray(story.categories) ? story.categories : [];
+      const authorName =
+        story.author?.username ||
+        story.author?.email ||
+        (typeof story.author === "string" ? story.author : "Unknown author");
+      return {
+        ...story,
+        categories,
+        status,
+        statusLabel: STORY_STATUS_LABELS[status] || status,
+        authorName,
+        reviewNote: story.reviewNote || "",
+      };
+    });
+
+    const applyFilters = (list, filter) =>
+      list.filter(
+        (story) =>
+          matchesSearchFilter(story, filter.search) &&
+          matchesCategoryFilter(story, filter.categories)
+      );
+
+    const pendingStories = applyFilters(
+      mappedStories.filter((story) => story.status === "pending"),
+      filters.pending
+    );
+    const underReviewStories = applyFilters(
+      mappedStories.filter((story) => story.status === "under_review"),
+      filters.underReview
+    );
+    const publishedStories = applyFilters(
+      mappedStories.filter((story) => story.status === "public"),
+      filters.published
+    );
+
+    const flash = await popAdminFlash(req);
+    const currentQuery = req.originalUrl || "/admin";
+    const encodedReturnTo = encodeURIComponent(currentQuery);
+
     res.render("admin/dashboard", {
       title: "Admin Dashboard",
       user: req.user,
       stats: { userCount, storyCount },
+      pendingStories,
+      underReviewStories,
+      publishedStories,
+      filters,
+      categories: STORY_CATEGORIES,
+      flash,
+      currentQuery,
+      encodedReturnTo,
     });
   } catch (err) {
     console.error(err);
@@ -295,7 +439,7 @@ exports.usersList = async (req, res) => {
         }
       : {};
     const users = await User.find(query).select(
-      "username email role createdAt currency"
+      "username email role createdAt currency authorCurrency"
     );
     res.render("admin/users", { title: "Manage Users", users, q });
   } catch (err) {
@@ -319,6 +463,50 @@ exports.userDetail = async (req, res) => {
   }
 };
 
+exports.userAuthorLibrary = async (req, res) => {
+  try {
+    const author = await User.findById(req.params.id).select("username email");
+    if (!author) return res.status(404).send("User not found");
+
+    const stories = await Story.find({
+      author: author._id,
+      origin: "user",
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
+
+    const mappedStories = stories.map((story) => {
+      const status = story.status || "private";
+      return {
+        ...story,
+        status,
+        coverImage: story.coverImage || "",
+        statusLabel: STORY_STATUS_LABELS[status] || status,
+        isPrivate: status === "private",
+        isPending: status === "pending",
+        isUnderReview: status === "under_review",
+        isPublic: status === "public",
+        reviewNote: story.reviewNote || "",
+      };
+    });
+
+    const currentQuery = req.originalUrl || `/admin/users/${author._id}/library`;
+    const encodedReturnTo = encodeURIComponent(currentQuery);
+
+    res.render("admin/userLibrary", {
+      title: `${author.username}'s Author Library`,
+      author,
+      stories: mappedStories,
+      adminUser: req.user,
+      currentQuery,
+      encodedReturnTo,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error loading author library");
+  }
+};
+
 exports.userUpdate = async (req, res) => {
   try {
     const {
@@ -326,6 +514,7 @@ exports.userUpdate = async (req, res) => {
       email,
       role,
       currency,
+      authorCurrency,
       totalEndingsFound,
       storiesRead,
       deathMedal,
@@ -338,6 +527,7 @@ exports.userUpdate = async (req, res) => {
     user.email = email;
     user.role = role;
     user.currency = Number(currency) || 0;
+    user.authorCurrency = Number(authorCurrency) || 0;
     user.totalEndingsFound = Number(totalEndingsFound) || 0;
     user.storiesRead = Number(storiesRead) || 0;
     user.medals.death = deathMedal || "none";
@@ -453,7 +643,10 @@ async function recomputeUserDerived(user) {
 exports.storiesList = async (req, res) => {
   try {
     const q = req.query.q || "";
-    const query = q ? { title: { $regex: q, $options: "i" } } : {};
+    const query = { origin: { $ne: "user" } };
+    if (q) {
+      query.title = { $regex: q, $options: "i" };
+    }
     const stories = await Story.find(query)
       .sort({ displayOrder: 1, createdAt: -1 })
       .select("title description coverImage status displayOrder");
@@ -705,6 +898,184 @@ exports.updateStoriesOrder = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: "Error saving order" });
+  }
+};
+
+const ensureUserStory = async (id) => {
+  const story = await Story.findById(id);
+  if (!story || story.origin !== "user") return null;
+  return story;
+};
+
+exports.approveUserStory = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "public";
+    story.publishedAt = new Date();
+    if (!story.submittedAt) {
+      story.submittedAt = new Date();
+    }
+    await story.save();
+
+    if (story.author) {
+      const authorUser = await User.findById(story.author);
+      if (authorUser) {
+        const trophyResult = await updatePublishedAuthorTrophy(authorUser);
+        if (trophyResult.changed) {
+          await authorUser.save();
+        }
+      }
+    }
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Approved "${story.title}".`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to approve story.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.rejectUserStory = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "private";
+    story.submittedAt = null;
+    story.publishedAt = null;
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Rejected "${story.title}" and returned it to private.`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to reject story.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.markUserStoryUnderReview = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "under_review";
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Marked "${story.title}" as under review.`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to update story status.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.removeUserStory = async (req, res) => {
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect("/admin");
+    }
+
+    story.status = "private";
+    story.publishedAt = null;
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: `Removed "${story.title}" from the public library.`,
+    });
+
+    res.redirect("/admin");
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to remove story.",
+    });
+    res.redirect("/admin");
+  }
+};
+
+exports.updateUserStoryNote = async (req, res) => {
+  const redirectTarget = sanitizeAdminReturnPath(req.body.returnTo);
+  try {
+    const story = await ensureUserStory(req.params.id);
+    if (!story) {
+      await setAdminFlash(req, {
+        type: "error",
+        message: "User story not found.",
+      });
+      return res.redirect(redirectTarget);
+    }
+
+    const clearNote = Boolean(req.body.clearNote);
+    const rawNote = typeof req.body.reviewNote === "string" ? req.body.reviewNote : "";
+    story.reviewNote = clearNote ? "" : rawNote.trim();
+    await story.save();
+
+    await setAdminFlash(req, {
+      type: "success",
+      message: story.reviewNote
+        ? `Saved review note for "${story.title}".`
+        : `Removed the review note for "${story.title}".`,
+    });
+
+    res.redirect(redirectTarget);
+  } catch (err) {
+    console.error(err);
+    await setAdminFlash(req, {
+      type: "error",
+      message: "Unable to update the review note.",
+    });
+    res.redirect(redirectTarget);
   }
 };
 

@@ -7,6 +7,11 @@
     <%- include('../partials/header', { user }) %>
 
     <main class="container">
+      <% const meta = currencyMeta || {}; %>
+      <% const currencyIconClass = meta.iconClass || 'icon-gem'; %>
+      <% const currencyLabelText = meta.label || 'Your gems'; %>
+      <% const currencyPlural = meta.plural || 'gems'; %>
+      <% const currencySingular = meta.singular || 'gem'; %>
       <h2><%= story.title %></h2>
 
       <% if (node.image) { %>
@@ -41,7 +46,7 @@
             type="submit"
             class="cta-button choice-button locked"
             <%= disabled ? 'disabled' : '' %>
-            aria-label="Unlock &ldquo;<%= c.label %>&rdquo; for <%= c.unlockCost %> gems"
+            aria-label="Unlock &ldquo;<%= c.label %>&rdquo; for <%= c.unlockCost %> <%= c.unlockCost === 1 ? currencySingular.toLowerCase() : currencyPlural.toLowerCase() %>"
           >
             <span class="choice-main">
               <span class="choice-icon" aria-hidden="true">
@@ -55,7 +60,7 @@
               <span class="choice-label"><%= c.label %></span>
             </span>
             <span class="choice-cost">
-              <span class="icon icon-gem" aria-hidden="true">
+              <span class="icon <%= currencyIconClass %>" aria-hidden="true">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path
                     fill="currentColor"
@@ -67,7 +72,10 @@
             </span>
           </button>
           <% if (disabled && c.unlockCost > 0) { %>
-          <p class="unlock-hint">You need <%= remaining %> more gems.</p>
+          <p class="unlock-hint">
+            You need <%= remaining %> more
+            <%= remaining === 1 ? currencySingular.toLowerCase() : currencyPlural.toLowerCase() %>.
+          </p>
           <% } %>
         </form>
 
@@ -92,7 +100,7 @@
           </span>
           <% if (c.isLocked && c.unlockCost > 0) { %>
           <span class="choice-cost">
-            <span class="icon icon-gem" aria-hidden="true">
+            <span class="icon <%= currencyIconClass %>" aria-hidden="true">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path
                   fill="currentColor"
@@ -110,7 +118,7 @@
 
       <% if (hasLockedChoices) { %>
       <div class="currency-readout" aria-live="polite">
-        <span class="icon icon-gem" aria-hidden="true">
+        <span class="icon <%= currencyIconClass %>" aria-hidden="true">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
               fill="currentColor"
@@ -119,7 +127,7 @@
           </svg>
         </span>
         <div class="currency-readout__content">
-          <span class="currency-readout__label">Your gems</span>
+          <span class="currency-readout__label"><%= currencyLabelText %></span>
           <strong class="currency-readout__value"><%= currency || 0 %></strong>
         </div>
       </div>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include('../partials/head') %>
+    <link rel="stylesheet" href="/css/authorBuilder.css" />
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
+  </head>
+  <body>
+    <%- include('../partials/header', { user }) %>
+
+    <main class="story-editor-shell">
+      <section class="panel editor-toolbar">
+        <div class="toolbar-heading">
+          <h1>
+            <%= builderMode === 'edit' ? 'Edit Story' : 'Create a New Story' %>
+          </h1>
+          <% if (storyStatus) { %>
+          <span class="story-status story-status-<%= storyStatus %>">
+            Status: <strong><%= storyStatus %></strong>
+          </span>
+          <% } %>
+        </div>
+        <div class="toolbar-group">
+          <a href="/u/authors" class="btn ghost">Back to Author Library</a>
+          <% if (imageLibraryUrl) { %>
+          <a href="<%= imageLibraryUrl %>" class="btn ghost">Manage Images</a>
+          <% } %>
+          <button type="submit" form="authorStoryForm" class="btn primary">
+            <%= builderMode === 'edit' ? 'Save Changes' : 'Save Draft' %>
+          </button>
+        </div>
+      </section>
+
+      <% if (errors && errors.length) { %>
+      <section class="panel flash flash-error">
+        <p>We found a few issues with your story:</p>
+        <ul>
+          <% errors.forEach(function (err) { %>
+          <li><%= err %></li>
+          <% }) %>
+        </ul>
+      </section>
+      <% } %>
+
+      <form
+        id="authorStoryForm"
+        class="story-builder-form"
+        method="post"
+        data-story-id="<%= builderMode === 'edit' ? storyId : '' %>"
+        action="<%= builderMode === 'edit' ? `/u/authors/stories/${storyId}` : '/u/authors/stories' %>"
+      >
+        <section class="panel story-details-panel">
+          <div class="story-details-grid">
+            <label class="field">
+              <span>Title</span>
+              <input type="text" name="title" value="<%= formData.title || '' %>" required />
+            </label>
+            <label class="field">
+              <span>Start Passage</span>
+              <select name="startNodeId" id="story-start-node">
+                <option value="">-- Select --</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Cover Image</span>
+              <select name="coverImage" id="story-cover-image"></select>
+              <span class="field-hint">
+                <% if (imageLibraryUrl) { %>
+                Add new artwork from the Manage Images panel.
+                <% } else { %>
+                Upload images once your draft is created.
+                <% } %>
+              </span>
+            </label>
+            <label class="field field--wide field--multiline">
+              <span>Description (public)</span>
+              <textarea
+                name="description"
+                rows="5"
+                placeholder="Give readers a sense of what to expect"
+              ><%= formData.description || '' %></textarea>
+            </label>
+          </div>
+          <% if (Array.isArray(availableCategories) && availableCategories.length) { %>
+          <div class="field field--wide field--tags">
+            <span>Categories</span>
+            <div class="tag-options">
+              <% availableCategories.forEach(function (cat) { %>
+              <label class="tag-option">
+                <input
+                  type="checkbox"
+                  name="categories"
+                  value="<%= cat %>"
+                  <%= Array.isArray(formData.categories) && formData.categories.includes(cat) ? 'checked' : '' %>
+                />
+                <span><%= cat %></span>
+              </label>
+              <% }) %>
+            </div>
+          </div>
+          <% } %>
+        </section>
+
+        <section class="map-panel">
+          <div class="map-controls">
+            <p>
+              Drag passages into place. Double-click a node or ending to open its
+              editor.
+            </p>
+            <div class="map-controls-right">
+              <div class="map-zoom-controls" role="group" aria-label="Zoom map view">
+                <button type="button" class="btn small ghost icon-only" id="map-zoom-out-btn" aria-label="Zoom out">
+                  <span aria-hidden="true">&minus;</span>
+                </button>
+                <button type="button" class="btn small ghost icon-only" id="map-zoom-in-btn" aria-label="Zoom in">
+                  <span aria-hidden="true">+</span>
+                </button>
+              </div>
+              <button type="button" class="btn small" id="add-node-btn">+ Passage</button>
+              <button type="button" class="btn small" id="add-ending-btn">+ Ending</button>
+              <button type="button" class="btn small ghost" id="center-selection-btn">Center Selection</button>
+            </div>
+          </div>
+          <div class="map-viewport" id="mapViewport">
+            <div class="map-canvas" id="mapCanvas">
+              <svg class="map-links" id="linkLayer"></svg>
+            </div>
+          </div>
+        </section>
+
+        <div id="builderDataInputs" class="sr-only" aria-hidden="true"></div>
+
+        <div class="builder-actions">
+          <button type="submit" class="btn primary">
+            <%= builderMode === 'edit' ? 'Save Changes' : 'Save Draft' %>
+          </button>
+          <p class="muted">
+            Submit your story for review from your Author Library when you're ready
+            to share it. Stories are private until approved.
+          </p>
+        </div>
+      </form>
+    </main>
+
+    <div class="entity-editor collapsed hidden" id="entityEditor">
+      <div class="entity-editor__header">
+        <div>
+          <h2 id="entityEditorTitle">Passage</h2>
+          <p class="entity-editor__subtitle" id="entityEditorSubtitle"></p>
+        </div>
+        <div class="entity-editor__actions">
+          <button type="button" class="btn small ghost" id="editorCollapseBtn" aria-expanded="false">Expand</button>
+          <button type="button" class="btn small danger hidden" id="node-delete">Delete Passage</button>
+          <button type="button" class="btn small danger hidden" id="ending-delete">Delete Ending</button>
+        </div>
+      </div>
+      <div class="entity-editor__body">
+        <form id="node-form" class="stack hidden" data-editor="node">
+          <label class="field">
+            <span>Passage ID</span>
+            <input type="text" name="_id" required />
+          </label>
+          <label class="field">
+            <span>Border Color</span>
+            <select name="color">
+              <option value="twilight">Twilight Violet</option>
+              <option value="ember">Ember Orange</option>
+              <option value="moss">Moss Green</option>
+              <option value="dusk">Dusk Blue</option>
+              <option value="rose">Rose Magenta</option>
+              <option value="slate">Slate Gray</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Image</span>
+            <select name="image"></select>
+          </label>
+          <label class="field field--multiline">
+            <span>Story Text</span>
+            <textarea name="text" rows="10" class="monospace"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn small">Save Passage</button>
+          </div>
+        </form>
+
+        <div class="choices-block hidden" data-editor="node">
+          <div class="empty-state" id="choicesEmptyState">No choices yet.</div>
+          <div id="choice-list"></div>
+          <form id="choice-add-form" class="choice-form" data-editor="node">
+            <div class="choice-fields">
+              <label class="choice-field choice-field--label">
+                <span>Label</span>
+                <input type="text" name="label" placeholder="Choice label" required />
+              </label>
+              <label class="choice-field">
+                <span>Next</span>
+                <select name="nextNodeId" required></select>
+              </label>
+              <label class="choice-field choice-field--toggle">
+                <span>Locked</span>
+                <input type="checkbox" name="locked" data-lock-toggle />
+              </label>
+              <label class="choice-field choice-field--cost">
+                <span>Unlock Cost</span>
+                <input type="number" name="unlockCost" min="0" step="1" value="0" data-lock-cost />
+              </label>
+            </div>
+            <div class="choice-actions">
+              <button type="submit" class="btn small">Add Choice</button>
+            </div>
+          </form>
+        </div>
+
+        <form id="ending-form" class="stack hidden" data-editor="ending">
+          <label class="field">
+            <span>Ending ID</span>
+            <input type="text" name="_id" required />
+          </label>
+          <label class="field">
+            <span>Ending Type</span>
+            <select name="type">
+              <option value="true">True</option>
+              <option value="death">Death</option>
+              <option value="other">Other</option>
+              <option value="secret">Secret</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Image</span>
+            <select name="image"></select>
+          </label>
+          <label class="field field--multiline">
+            <span>Ending Text</span>
+            <textarea name="text" rows="10" class="monospace"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn small">Save Ending</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+
+    <script id="builder-data" type="application/json"><%- JSON.stringify({
+      title: formData.title || '',
+      description: formData.description || '',
+      coverImage: formData.coverImage || '',
+      categories: formData.categories || [],
+      startNodeId: formData.startNodeId || '',
+      nodes: formData.nodes || [],
+      endings: formData.endings || [],
+      images: imageOptions || []
+    }) %></script>
+    <script src="/js/authorBuilder.js"></script>
+  </body>
+</html>

@@ -1,16 +1,122 @@
 const Story = require("../models/story.model");
 const User = require("../models/user.model");
 const { updateUserMedals } = require("../utils/updateMedals");
+const { getReturnPath } = require("../utils/navigation");
+const { updateCommunityReaderTrophy, ensurePopupQueue } = require("../utils/authorRewards");
+
+const STORY_STATUS_DISPLAY = {
+  public: "Public",
+  coming_soon: "Coming Soon",
+  pending: "Pending Review",
+  under_review: "Under Review",
+  private: "Private",
+  invisible: "Hidden",
+};
+
+const toStringId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value.toString) return value.toString();
+  try {
+    return String(value);
+  } catch (err) {
+    return "";
+  }
+};
+
+const isUserStory = (story) => story?.origin === "user";
+
+const isStoryOwner = (story, user) => {
+  if (!story || !user) return false;
+  const authorId = toStringId(story.author?._id || story.author);
+  return authorId && toStringId(user._id) === authorId;
+};
+
+const isAdminUser = (user) => user?.role === "admin";
+
+const canViewStory = (story, user) => {
+  if (!story) return false;
+  const status = story.status || "invisible";
+  if (isUserStory(story)) {
+    if (status === "private") {
+      return isStoryOwner(story, user) || isAdminUser(user);
+    }
+    return true; // pending/under_review/public visible to all
+  }
+  if (status === "invisible") {
+    return isAdminUser(user);
+  }
+  return true;
+};
+
+const canPlayStory = (story, user) => {
+  if (!story) return false;
+  if (isUserStory(story)) {
+    if (story.status === "public") return true;
+    return isStoryOwner(story, user) || isAdminUser(user);
+  }
+  if (story.status === "public") return true;
+  return isAdminUser(user);
+};
+
+const getCurrencyInfo = (story, user) => {
+  if (isUserStory(story)) {
+    return {
+      field: "authorCurrency",
+      balance: Number(user?.authorCurrency) || 0,
+      label: "Your author gems",
+      singular: "Author gem",
+      plural: "Author gems",
+      iconClass: "icon-author-gem",
+    };
+  }
+  return {
+    field: "currency",
+    balance: Number(user?.currency) || 0,
+    label: "Your gems",
+    singular: "gem",
+    plural: "gems",
+    iconClass: "icon-gem",
+  };
+};
 
 // Landing page for a story
 exports.storyLanding = async (req, res) => {
   const story = await Story.findById(req.params.id);
   if (!story) return res.status(404).send("Story not found");
 
+  if (!canViewStory(story, req.user)) {
+    return res.status(403).render("public/403", {
+      title: "Story Unavailable",
+      user: req.user,
+      backLink: getReturnPath(req),
+    });
+  }
+
   const startNodeId =
     story.startNodeId || (story.nodes.length > 0 ? story.nodes[0]._id : null);
 
-  // Figure out if "Continue" should be shown
+  const canPlay = canPlayStory(story, req.user);
+  const owner = isStoryOwner(story, req.user);
+  const statusLabel =
+    STORY_STATUS_DISPLAY[story.status] || STORY_STATUS_DISPLAY.invisible;
+
+  const adminPreview = req.query.adminPreview === "1" || req.query.from === "admin";
+  let adminReturnUrl = "/admin";
+  if (adminPreview && typeof req.query.return === "string") {
+    try {
+      const decoded = decodeURIComponent(req.query.return);
+      if (decoded.startsWith("/admin")) {
+        adminReturnUrl = decoded;
+      }
+    } catch (err) {
+      adminReturnUrl = "/admin";
+    }
+  }
+  if (!adminReturnUrl.startsWith("/admin")) {
+    adminReturnUrl = "/admin";
+  }
+
   let continueNodeId = null;
   const totalEndings = Array.isArray(story.endings) ? story.endings.length : 0;
   let foundCount = 0;
@@ -51,11 +157,15 @@ exports.storyLanding = async (req, res) => {
     }
   }
 
+  if (!canPlay) {
+    continueNodeId = null;
+  }
+
   res.render("user/storyLanding", {
     title: story.title,
     story,
     startNodeId,
-    continueNodeId, // <-- view will hide button if null
+    continueNodeId,
     user: req.user,
     progress: {
       foundCount,
@@ -65,6 +175,17 @@ exports.storyLanding = async (req, res) => {
       total: totalLockedPaths,
       unlocked: unlockedLockedPaths,
     },
+    storyAccess: {
+      canPlay,
+      isOwner: owner,
+      isAdmin: isAdminUser(req.user),
+      status: story.status,
+      statusLabel,
+      isUserStory: isUserStory(story),
+    },
+    adminPreview: adminPreview && isAdminUser(req.user),
+    adminReturnUrl:
+      adminPreview && isAdminUser(req.user) ? adminReturnUrl : null,
   });
 };
 
@@ -72,6 +193,14 @@ exports.storyLanding = async (req, res) => {
 exports.playNode = async (req, res) => {
   const story = await Story.findById(req.params.id);
   if (!story) return res.status(404).send("Story not found");
+
+  if (!canPlayStory(story, req.user)) {
+    return res.status(403).render("public/403", {
+      title: "Story Unavailable",
+      user: req.user,
+      backLink: getReturnPath(req),
+    });
+  }
 
   const node = story.nodes.find((n) => n._id === req.params.nodeId);
   if (!node || node.type === "divider")
@@ -83,7 +212,8 @@ exports.playNode = async (req, res) => {
   }
 
   let unlockedSet = new Set();
-  let userCurrency = req.user?.currency ?? 0;
+  let currencyMeta = getCurrencyInfo(story, req.user);
+  let userCurrency = currencyMeta.balance;
 
   // Save progress.lastNodeId so "Continue" works and gather unlocked choices
   if (req.session?.userId) {
@@ -92,6 +222,7 @@ exports.playNode = async (req, res) => {
       let p = user.progress.find(
         (pr) => String(pr.story) === String(story._id)
       );
+      let createdProgress = false;
       if (!p) {
         p = {
           story: story._id,
@@ -102,6 +233,7 @@ exports.playNode = async (req, res) => {
           unlockedChoices: [],
         };
         user.progress.push(p);
+        createdProgress = true;
       } else {
         p.lastNodeId = node._id;
         if (!Array.isArray(p.unlockedChoices)) {
@@ -110,7 +242,16 @@ exports.playNode = async (req, res) => {
       }
       unlockedSet = new Set(p.unlockedChoices || []);
       await user.save();
-      userCurrency = user.currency;
+      if (createdProgress && story.origin === "user") {
+        const trophyResult = await updateCommunityReaderTrophy(user, {
+          session: req.session,
+        });
+        if (trophyResult.changed) {
+          await user.save();
+        }
+      }
+      currencyMeta = getCurrencyInfo(story, user);
+      userCurrency = currencyMeta.balance;
       req.user = user;
       res.locals.user = user;
     }
@@ -145,9 +286,11 @@ exports.playNode = async (req, res) => {
     node: nodeData,
     user: req.user,
     currency: userCurrency,
+    currencyMeta,
     showCurrency,
     hasLockedChoices,
     feedback,
+    isUserStory: isUserStory(story),
   });
 };
 
@@ -155,6 +298,14 @@ exports.playNode = async (req, res) => {
 exports.playEnding = async (req, res) => {
   const story = await Story.findById(req.params.id);
   if (!story) return res.status(404).send("Story not found");
+
+  if (!canPlayStory(story, req.user)) {
+    return res.status(403).render("public/403", {
+      title: "Story Unavailable",
+      user: req.user,
+      backLink: getReturnPath(req),
+    });
+  }
 
   const ending = story.endings.find((e) => e._id === req.params.endingId);
   if (!ending) return res.status(404).send("Ending not found");
@@ -183,10 +334,39 @@ exports.playEnding = async (req, res) => {
         }
       }
 
-      // (Optional) If you already track endingsFound/currency/trophies here,
-      // keep your existing logic alongside this. The crucial part is clearing lastNodeId.
+      const endingId = String(ending._id);
+      if (!Array.isArray(p.endingsFound)) {
+        p.endingsFound = [];
+      }
+      const alreadyFound = p.endingsFound.some((id) => String(id) === endingId);
+      if (!alreadyFound) {
+        p.endingsFound.push(endingId);
+        user.totalEndingsFound = (Number(user.totalEndingsFound) || 0) + 1;
+        if (ending.type === "true") {
+          p.trueEndingFound = true;
+        }
+        if (ending.type === "death") {
+          p.deathEndingCount = (Number(p.deathEndingCount) || 0) + 1;
+        }
+        if (story.origin === "user") {
+          const reward = 5;
+          user.authorCurrency = (Number(user.authorCurrency) || 0) + reward;
+          const queue = ensurePopupQueue(req.session);
+          if (queue) {
+            queue.push({
+              message: "You earned author gems for discovering a new ending!",
+              amount: reward,
+              currencyLabel: "author gems",
+            });
+          }
+        }
+      }
+
+      updateUserMedals(user);
 
       await user.save();
+      req.user = user;
+      res.locals.user = user;
     }
   }
 
@@ -215,6 +395,14 @@ exports.unlockChoice = async (req, res) => {
     req.session.choiceUnlockFeedback = {
       type: "error",
       message: "Story not found.",
+    };
+    return res.redirect(redirectUrl);
+  }
+
+  if (!canPlayStory(story, req.user)) {
+    req.session.choiceUnlockFeedback = {
+      type: "error",
+      message: "This story is not available to play right now.",
     };
     return res.redirect(redirectUrl);
   }
@@ -254,6 +442,9 @@ exports.unlockChoice = async (req, res) => {
     return res.redirect(redirectUrl);
   }
 
+  const currencyMeta = getCurrencyInfo(story, user);
+  const balanceBefore = Number(user[currencyMeta.field]) || 0;
+
   let progressEntry = user.progress.find(
     (pr) => String(pr.story) === String(story._id)
   );
@@ -285,15 +476,16 @@ exports.unlockChoice = async (req, res) => {
   }
 
   const cost = Math.max(Number(choice.unlockCost) || 0, 0);
-  if (user.currency < cost) {
+  if (balanceBefore < cost) {
+    const unitsLabel = cost === 1 ? currencyMeta.singular : currencyMeta.plural;
     req.session.choiceUnlockFeedback = {
       type: "error",
-      message: `You need ${cost} gems to unlock this choice.`,
+      message: `You need ${cost} ${unitsLabel.toLowerCase()} to unlock this choice.`,
     };
     return res.redirect(redirectUrl);
   }
 
-  user.currency -= cost;
+  user[currencyMeta.field] = balanceBefore - cost;
   progressEntry.unlockedChoices.push(key);
 
   await user.save();
@@ -302,7 +494,9 @@ exports.unlockChoice = async (req, res) => {
 
   const successMessage =
     cost > 0
-      ? `Unlocked "${choice.label}" for ${cost} gems!`
+      ? `Unlocked "${choice.label}" for ${cost} ${
+          cost === 1 ? currencyMeta.singular.toLowerCase() : currencyMeta.plural.toLowerCase()
+        }!`
       : `Unlocked "${choice.label}"!`;
 
   req.session.choiceUnlockFeedback = {

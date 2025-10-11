@@ -8,6 +8,14 @@
     <%- include('../partials/header', { user }) %>
 
     <main class="container">
+      <% if (adminPreview && storyAccess && storyAccess.isAdmin) { %>
+      <div class="admin-preview-banner">
+        <a href="<%= adminReturnUrl || '/admin' %>" class="cta-button ghost"
+          >&larr; Back to Dashboard</a
+        >
+      </div>
+      <% } %>
+      <% const access = storyAccess || {}; %>
       <h1><%= story?.title || 'Untitled Story' %></h1>
       <img
         src="<%= story?.coverImage || '/images/default-cover.svg' %>"
@@ -15,6 +23,15 @@
         alt="Cover image for <%= story?.title || 'story' %>"
       />
       <p><%= story?.description || '' %></p>
+
+      <% if (access && access.status && access.status !== 'public') { %>
+      <div class="story-status-banner story-status-<%= access.status %>">
+        <span class="story-status-label"><%= access.statusLabel %></span>
+        <% if (access.isOwner && access.canPlay && access.isUserStory) { %>
+        <small>You can preview your own story even while it's under review.</small>
+        <% } %>
+      </div>
+      <% } %>
 
       <% if (Array.isArray(story?.categories) && story.categories.length) { %>
       <section class="story-categories">
@@ -39,16 +56,33 @@
       <% } %>
 
       <div class="actions stack">
-        <% if (startNodeId) { %>
+        <% if (access.canPlay && startNodeId) { %>
         <a
           href="/u/play/<%= story._id %>/<%= startNodeId %>"
           class="cta-button"
         >
           Start from Beginning
         </a>
-        <% } else { %>
+        <% } else if (!access.canPlay) { %>
+        <div class="story-status-message story-status-<%= access.status %>">
+          <span class="story-status-label"><%= access.statusLabel %></span>
+          <p class="muted">
+            <% if (access.status === 'pending') { %>
+            This story is pending review and will be available soon.
+            <% } else if (access.status === 'under_review') { %>
+            This story is currently under review.
+            <% } else if (access.status === 'coming_soon') { %>
+            This adventure is coming soon. Check back later!
+            <% } else { %>
+            This story is not available to play right now.
+            <% } %>
+          </p>
+        </div>
+        <% } else if (!startNodeId) { %>
         <p class="muted">This story doesn't have a starting node yet.</p>
-        <% } %> <% if (continueNodeId) { %>
+        <% } %>
+
+        <% if (access.canPlay && continueNodeId) { %>
         <a
           href="/u/play/<%= story._id %>/<%= continueNodeId %>"
           class="cta-button ghost"
@@ -140,6 +174,16 @@
         margin-top: 2.5rem;
         font-size: 0.85rem;
         color: rgba(148, 163, 184, 0.85);
+      }
+
+      .admin-preview-banner {
+        margin: 1rem 0 1.5rem;
+      }
+
+      .admin-preview-banner .cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
       }
     </style>
   </body>

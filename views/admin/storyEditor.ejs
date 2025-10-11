@@ -712,6 +712,9 @@
             <option value="public" <%= story.status === 'public' ? 'selected' : '' %>>Public</option>
             <option value="coming_soon" <%= story.status === 'coming_soon' ? 'selected' : '' %>>Coming Soon</option>
             <option value="invisible" <%= story.status === 'invisible' ? 'selected' : '' %>>Invisible</option>
+            <option value="pending" <%= story.status === 'pending' ? 'selected' : '' %>>Pending Review</option>
+            <option value="under_review" <%= story.status === 'under_review' ? 'selected' : '' %>>Under Review</option>
+            <option value="private" <%= story.status === 'private' ? 'selected' : '' %>>Private</option>
           </select>
         </label>
         <label class="field">

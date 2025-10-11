@@ -51,6 +51,14 @@ router.use(requireAdmin);
 
 /* ---------------- Dashboard ---------------- */
 router.get("/", controller.dashboard);
+router.post("/user-stories/:id/approve", controller.approveUserStory);
+router.post("/user-stories/:id/reject", controller.rejectUserStory);
+router.post(
+  "/user-stories/:id/under-review",
+  controller.markUserStoryUnderReview
+);
+router.post("/user-stories/:id/remove", controller.removeUserStory);
+router.post("/user-stories/:id/note", controller.updateUserStoryNote);
 
 /* ---------------- Stories ---------------- */
 router.get("/stories", controller.storiesList);
@@ -68,6 +76,7 @@ router.get("/users", controller.usersList);
 router.get("/users/add", controller.userAddForm);
 router.post("/users/add", controller.userAddPost);
 router.get("/users/:id", controller.userDetail);
+router.get("/users/:id/library", controller.userAuthorLibrary);
 router.post("/users/:id", controller.userUpdate);
 router.post("/users/:id/reset-password", controller.userResetPassword);
 router.post("/users/:id/delete", controller.userDelete);

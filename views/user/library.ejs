@@ -7,11 +7,26 @@
     <%- include('../partials/header', { user }) %>
 
     <main class="container library">
-      <h1 class="title">Story Library</h1>
+      <% const currentLibraryType = typeof libraryType === 'string' ? libraryType : 'official'; %>
+      <% const heading = currentLibraryType === 'user' ? 'User Created Stories' : 'Story Library'; %>
+      <h1 class="title"><%= heading %></h1>
       <p class="muted">
+        <% if (currentLibraryType === 'user') { %>
+        Discover community-created adventures. Pending stories are marked as
+        coming soon while they await approval.
+        <% } else { %>
         Browse the adventures you can begin. Your choices will shape the endings
         you find.
+        <% } %>
       </p>
+
+      <% if (Array.isArray(libraryLinks) && libraryLinks.length) { %>
+      <div class="library-nav-links">
+        <% libraryLinks.forEach(function (link) { %>
+        <a class="cta-button ghost" href="<%= link.href %>"><%= link.label %></a>
+        <% }) %>
+      </div>
+      <% } %>
 
       <% const hasStories = Array.isArray(stories) && stories.length > 0; %>
 
@@ -96,6 +111,9 @@
             <% const showProgress = Number(story.totalEndings) > 0; %>
             <% if (hasCategories || showProgress) { %>
             <div class="story-card__meta">
+              <% if (currentLibraryType === 'user' && story.authorName) { %>
+              <p class="story-card__author">By <%= story.authorName %></p>
+              <% } %>
               <% if (hasCategories) { %>
               <ul class="tag-list">
                 <% story.categories.forEach(function(cat) { %>
@@ -114,10 +132,12 @@
             <% } %>
 
             <div class="story-card__actions">
-              <% if (story.status === "public") { %>
+              <% if (story.actionType === 'play') { %>
               <a href="/u/story/<%= story._id %>" class="cta-button">Play</a>
               <% } else { %>
-              <span class="coming-soon">Coming Soon</span>
+              <span class="story-status story-status-<%= story.status %>">
+                <%= story.actionLabel %>
+              </span>
               <% } %>
             </div>
           </div>
@@ -151,7 +171,8 @@
           <%= trophyPopups[0].message %>
         </div>
         <div class="trophy-coins" id="trophy-modal-coins">
-          +<%= trophyPopups[0].amount %> coins
+          +<%= trophyPopups[0].amount %>
+          <%= trophyPopups[0].currencyLabel || 'coins' %>
         </div>
 
         <div class="trophy-actions">
@@ -191,7 +212,8 @@
             const item = queue[i];
             if (!item) { return closeModal(); }
             message.textContent = item.message || 'Achievement unlocked!';
-            coinsEl.textContent = `+${Number(item.amount || 0)} coins`;
+            const label = item.currencyLabel || 'coins';
+            coinsEl.textContent = `+${Number(item.amount || 0)} ${label}`;
             btn.textContent = (i < queue.length - 1) ? 'Next' : 'Got it';
             overlay.classList.remove('hide');
             modal.classList.remove('hide');

@@ -1,29 +1,6 @@
 // controllers/site.controller.js
-const nodemailer = require("nodemailer");
 
-// ---------- SMTP (Gmail) over 587 ----------
-function buildSmtpTransport() {
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = Number(process.env.SMTP_PORT || 587); // STARTTLS
-  const secure = String(process.env.SMTP_SECURE || "false") === "true"; // keep false for 587
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure, // false for 587
-    requireTLS: !secure, // ensures STARTTLS for 587
-    auth: {
-      user: process.env.SMTP_USER, // Gmail that created the App Password
-      pass: process.env.SMTP_PASS, // 16-char App Password (no spaces)
-    },
-    // Harden timeouts + prefer IPv4 + SNI
-    family: 4,
-    tls: { servername: host, minVersion: "TLSv1.2" },
-    connectionTimeout: 12000,
-    greetingTimeout: 12000,
-    socketTimeout: 20000,
-  });
-}
+const RESEND_API_URL = "https://api.resend.com/emails";
 
 function escapeHtml(str) {
   return String(str)
@@ -83,11 +60,8 @@ exports.contactSubmit = async (req, res) => {
     });
   }
 
-  const to = process.env.CONTACT_TO || process.env.SMTP_USER;
-  const from =
-    process.env.CONTACT_FROM ||
-    process.env.SMTP_USER ||
-    "no-reply@shadowpaths.app";
+  const from = process.env.CONTACT_FROM || "no-reply@shadowpaths.app";
+  const to = process.env.CONTACT_TO || process.env.RESEND_TO || from;
 
   const mail = {
     subject: `[Shadow Paths] ${safe.subject}`,
@@ -100,19 +74,31 @@ exports.contactSubmit = async (req, res) => {
       `<hr><p style="white-space:pre-wrap">${escapeHtml(safe.message)}</p>`,
   };
 
-  // --- Try SMTP first if creds exist ---
-  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  // --- Primary: Resend API ---
+  if (process.env.RESEND_API_KEY) {
     try {
-      const transporter = buildSmtpTransport();
-      await transporter.verify(); // can connect/auth?
-      await transporter.sendMail({
-        to,
-        from,
-        replyTo: `"${safe.name}" <${safe.email}>`,
-        subject: mail.subject,
-        text: mail.text,
-        html: mail.html,
+      const resp = await fetch(RESEND_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from,
+          to,
+          subject: mail.subject,
+          text: mail.text,
+          html: mail.html,
+          reply_to: [`"${safe.name}" <${safe.email}>`],
+        }),
       });
+
+      if (!resp.ok) {
+        const detail = await resp.text();
+        throw new Error(
+          `Resend HTTP ${resp.status}${detail ? `: ${detail}` : ""}`
+        );
+      }
 
       return res.render("public/contact", {
         title: "Contact",
@@ -121,7 +107,7 @@ exports.contactSubmit = async (req, res) => {
         form: { name: "", email: "", subject: "", message: "" },
       });
     } catch (err) {
-      console.error("[Contact] SMTP failed:", err?.code || err?.message || err);
+      console.error("[Contact] Resend failed:", err?.message || err);
       // fall through to Apps Script if configured
     }
   }

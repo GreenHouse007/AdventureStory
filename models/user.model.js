@@ -37,6 +37,24 @@ const userSchema = new mongoose.Schema(
 
     // Currency system
     currency: { type: Number, default: 0 },
+    authorCurrency: { type: Number, default: 0 },
+    trophies: {
+      storyBuilder: {
+        type: String,
+        enum: ["none", "bronze", "silver", "gold", "platinum"],
+        default: "none",
+      },
+      publishedAuthor: {
+        type: String,
+        enum: ["none", "bronze", "silver", "gold", "platinum"],
+        default: "none",
+      },
+      communityReader: {
+        type: String,
+        enum: ["none", "bronze", "silver", "gold", "platinum"],
+        default: "none",
+      },
+    },
   },
   { timestamps: true }
 );

@@ -35,6 +35,7 @@
             <th>Email</th>
             <th>Role</th>
             <th>Currency</th>
+            <th>Author Gems</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -45,7 +46,11 @@
             <td><%= u.email %></td>
             <td><%= u.role %></td>
             <td><%= u.currency || 0 %></td>
+            <td><%= u.authorCurrency || 0 %></td>
             <td class="actions">
+              <a href="/admin/users/<%= u._id %>/library" class="cta-button small ghost"
+                >Author Library</a
+              >
               <a href="/admin/users/<%= u._id %>" class="cta-button small"
                 >View</a
               >
