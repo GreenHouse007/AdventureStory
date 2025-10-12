@@ -4,8 +4,9 @@
     <%- include('../partials/head') %>
   </head>
   <body class="about-body">
-    <% const headerConfig = typeof firebaseConfig !== 'undefined' ? firebaseConfig : null; %>
-    <%- include('../partials/header', { user, firebaseConfig: headerConfig }); %>
+    <% const headerConfig = typeof firebaseConfig !== 'undefined' ?
+    firebaseConfig : null; %> <%- include('../partials/header', { user,
+    firebaseConfig: headerConfig }); %>
 
     <main class="about-page" id="top">
       <div class="ambient-particles" aria-hidden="true"></div>
@@ -18,8 +19,8 @@
             role="img"
             aria-label="Lantern light drifting through a shadowed forest path."
           >
-            <span class="overlay-placeholder">
-              Placeholder — Prompt: “Transparent PNG of a glowing lantern guiding a misty forest path, dark fantasy lighting.”
+            <span>
+              <img src="/images/aboutHero.png" alt="path through the woods" />
             </span>
           </div>
         </div>
@@ -27,8 +28,10 @@
           <p class="eyebrow">Shadow Paths</p>
           <h1>The Story Behind the Stories</h1>
           <p class="lead">
-            I’ve always believed every great adventure begins with a single choice.
-            Shadow Paths was born from that belief — a space where readers explore mysterious tales, and creators bring their own to life.
+            I’ve always believed every great adventure begins with a single
+            choice. Shadow Paths was born from that belief — a space where
+            readers explore mysterious tales, and creators bring their own to
+            life.
           </p>
           <div class="hero-buttons">
             <a class="btn btn-primary" href="/u/library">Play a Story</a>
@@ -43,9 +46,11 @@
           <div class="about-copy glass-panel">
             <h2>About Alexander Green</h2>
             <p>
-              Hi, I’m Alexander Green — a software developer, storyteller, and perpetual adventurer.
-              I love blending creativity with technology to build immersive web experiences.
-              I specialize in full-stack JavaScript development (MERN) and I’m always open to collaborations or freelance projects.
+              Hi, I’m Alexander Green — a software developer, storyteller, and
+              perpetual adventurer. I love blending creativity with technology
+              to build immersive web experiences. I specialize in full-stack
+              JavaScript development (MERN) and I’m always open to
+              collaborations or freelance projects.
             </p>
             <div class="cta-buttons">
               <a class="btn btn-primary" href="/contact">Contact Me</a>
@@ -60,11 +65,13 @@
             </div>
           </div>
           <div class="about-visual glass-panel" aria-hidden="true">
-            <div class="image-placeholder">
-              <span>
-                Placeholder — Prompt: “Transparent PNG of a glowing code terminal beside an enchanted lantern, dark fantasy ambiance.”
-              </span>
-            </div>
+            <span>
+              <img
+                src="/images/GlowingCode.png"
+                alt="glowing code terminal"
+                width="600"
+              />
+            </span>
           </div>
         </div>
       </section>
@@ -72,53 +79,76 @@
       <section class="about-section about-shadow" data-motion="fade-up">
         <div class="about-layout">
           <div class="about-visual glass-panel" aria-hidden="true">
-            <div class="image-placeholder">
+            <div>
               <span>
-                Placeholder — Prompt: “Collage of Shadow Paths builder grid, story library, and stats dashboard, transparent layers.”
+                <img src="/images/bookMagic.png" alt="gem" width="600" />
               </span>
             </div>
           </div>
           <div class="about-copy glass-panel">
             <h2>About Shadow Paths</h2>
             <p>
-              Shadow Paths began as a choose-your-own-adventure experiment inspired by dark fantasy and D&amp;D.
-              It’s now a full-stack narrative engine with player stats, trophies, gems, and unlockable paths — and a grid-based story builder where creators bring their tales to life.
+              Shadow Paths began as a choose-your-own-adventure experiment
+              inspired by dark fantasy and D&amp;D. It’s now a full-stack
+              narrative engine with player stats, trophies, gems, and unlockable
+              paths — and a grid-based story builder where creators bring their
+              tales to life.
             </p>
             <ul class="about-list">
               <li>Twine-style visual builder with real-time saving.</li>
-              <li>Player profiles that track endings, medals, and shimmering currencies.</li>
+              <li>
+                Player profiles that track endings, medals, and shimmering
+                currencies.
+              </li>
               <li>Community libraries where adventures evolve together.</li>
             </ul>
           </div>
         </div>
       </section>
 
-      <section class="about-section about-collab" id="collaboration" data-motion="fade-up">
+      <section
+        class="about-section about-collab"
+        id="collaboration"
+        data-motion="fade-up"
+      >
         <div class="about-copy glass-panel">
           <h2>Collaboration &amp; Contact</h2>
           <p>
-            Whether you’re a writer, a developer, or a dreamer — let’s build something together.
+            Whether you’re a writer, a developer, or a dreamer — let’s build
+            something together.
           </p>
           <div class="collab-links">
             <a class="collab-link" href="/contact">💬 /contact</a>
-            <a class="collab-link" href="https://github.com/GreenHouse007/AdventureStory" target="_blank" rel="noreferrer">
+            <a
+              class="collab-link"
+              href="https://github.com/GreenHouse007/AdventureStory"
+              target="_blank"
+              rel="noreferrer"
+            >
               💻 https://github.com/GreenHouse007/AdventureStory
             </a>
           </div>
         </div>
         <div class="about-visual glass-panel" aria-hidden="true">
-          <div class="image-placeholder">
-            <span>
-              Placeholder — Prompt: “Transparent PNG of swirling ember particles surrounding an open notebook and quill.”
-            </span>
-          </div>
+          <span>
+            <img
+              src="/images/bookAndQuill.png"
+              alt="Book and quill"
+              width="600"
+            />
+          </span>
         </div>
       </section>
     </main>
 
     <%- include('../partials/footer') %>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-ApEc/WSavwg+IpYzfsHDyH5c5jMxo/nMB7alfg7K2NuHgZIBt1WvE5wkgh0Mz6/TJPZ2iEs8M0hCWc0sYjC7iA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
+      integrity="sha512-ApEc/WSavwg+IpYzfsHDyH5c5jMxo/nMB7alfg7K2NuHgZIBt1WvE5wkgh0Mz6/TJPZ2iEs8M0hCWc0sYjC7iA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
     <script src="/js/about-animations.js" type="module"></script>
   </body>
 </html>
