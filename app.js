@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const routes = require("./routes");
 const { getReturnPath } = require("./utils/navigation");
+const { buildFirebaseConfig } = require("./utils/firebaseConfig");
 
 require("dotenv").config();
 const connectDB = require("./db");
@@ -16,6 +17,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 // serve static files (css, images, etc.)
 app.use(express.static(path.join(__dirname, "public")));
+
+app.use((req, res, next) => {
+  res.locals.firebaseConfig = buildFirebaseConfig();
+  next();
+});
 
 // connect to database
 connectDB();
